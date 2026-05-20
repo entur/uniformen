@@ -1,0 +1,8 @@
+common:
+  env: dev
+  ingress:
+    host: uniformen.dev.entur.no
+  configmap:
+    enabled: true
+    data:
+      LOG_LEVEL: info
