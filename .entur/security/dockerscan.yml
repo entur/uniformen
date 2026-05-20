@@ -1,0 +1,17 @@
+apiVersion: entur.io/securitytools/v1
+kind: DockerScanConfig
+metadata:
+  id: uniformen
+  name: uniformen
+  owner: team-portal
+spec:
+  allowlist:
+    - cve: "CVE-2026-5450"
+      comment: "Vulnerable package present in the distroless image, but no clear evidence the application is practically exploitable through the CVE"
+      reason: "false_positive"
+    - cve: "CVE-2026-5928"
+      comment: "Vulnerable package present in the distroless image, but no clear evidence the application is practically exploitable through the CVE"
+      reason: "false_positive"
+    - cve: "CVE-2019-1010022"
+      comment: "Disputed by upstream glibc maintainers as non-security bug; no fix available in any Debian release (bullseye/bookworm/trixie/sid)"
+      reason: "false_positive"
