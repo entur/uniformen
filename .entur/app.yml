@@ -1,10 +1,10 @@
 apiVersion: orchestrator.entur.io/apps/v1
 kind: GoogleCloudApplication
 metadata:
-  id: uniformen  # 3-10 characters, must be unique in Entur org, it is refered to as "App ID" in entur documentation, software and tools
+  id: uniformen # 3-10 characters, must be unique in Entur org, it is refered to as "App ID" in entur documentation, software and tools
   displayName: Uniformen # name it as you see fit
   name: uniformen # Your application name, max 63 characters and follow RFC-1123 (a-z0-9 and dashes) - This will also be your kubernetes namespace name
-  owner: team-portal  # your team name
+  owner: team-portal # your team name
   domain: fellestjenester # Choose from: abt,auth,automat,balancing,billettering,data,fellestjenester,journey-planner,mt,offers,ombord,partner,personalisation,plass,plattform,products,sales,security,selvbetjent,service,settlement,ticketing
 spec:
   auth0:

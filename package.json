@@ -2,7 +2,12 @@
   "name": "uniformen",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run src/index.ts"
+    "start": "bun run src/index.ts",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "tsc": "tsc"
   },
   "dependencies": {
     "@hono/prometheus": "1.0.3",
@@ -10,6 +15,9 @@
     "prom-client": "15.1.3"
   },
   "devDependencies": {
-    "@types/bun": "1.3.14"
+    "@types/bun": "1.3.14",
+    "oxfmt": "0.50.0",
+    "oxlint": "1.65.0",
+    "typescript": "6.0.3"
   }
 }
