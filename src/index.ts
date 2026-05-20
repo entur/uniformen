@@ -1,7 +1,7 @@
 import { prometheus } from '@hono/prometheus'
 import { Hono } from 'hono'
 
-const app = new Hono()
+export const app = new Hono()
 
 // Prometheus metrics
 const { printMetrics, registerMetrics } = prometheus()
