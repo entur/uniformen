@@ -1,6 +1,6 @@
 common:
   app: uniformen
-  appId: uniformen
+  shortname: uniformen
   team: portal
   ingress:
     enabled: true
