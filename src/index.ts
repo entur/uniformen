@@ -1,5 +1,6 @@
 import { prometheus } from "@hono/prometheus";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { serveStatic } from "hono/bun";
 import { previewRoutes } from "./ssr/preview";
 import { uniformenSsrRoutes } from "./ssr/ssr";
 
@@ -13,6 +14,8 @@ app.get("/actuator/prometheus", printMetrics);
 // Health checks
 app.get("/actuator/health/liveness", (c) => c.json({ status: "UP" }));
 app.get("/actuator/health/readiness", (c) => c.json({ status: "UP" }));
+
+app.use("/static/*", serveStatic({ root: "./src" }));
 
 uniformenSsrRoutes(app);
 previewRoutes(app);

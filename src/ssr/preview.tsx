@@ -2,6 +2,7 @@ import { createRoute, type OpenAPIHono } from "@hono/zod-openapi";
 import { Footer } from "./Footer";
 import { renderComponentToString } from "./renderComponentToString";
 import { TopNavigation } from "./TopNavigation";
+import { UNIFORMEN_CSS } from "./uniformenStyles";
 
 export function previewRoutes(server: OpenAPIHono): void {
   const previewRoute = createRoute({
@@ -18,37 +19,42 @@ export function previewRoutes(server: OpenAPIHono): void {
     return ctx.html(`
         <html lang="nb">
             <head>
-                <meta charset="UTF-8 />
+                <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <style>
                     @font-face {
                       font-family: "Nationale";
                       font-weight: 500;
-                      src: url("https://entur.github.io/entur-partner-packages/sidebar/latest/fonts/Entur-Nationale-Medium.woff2") format("woff2");
+                      src: url("/static/fonts/Entur-Nationale-Medium.woff2") format("woff2");
                     }
 
                     @font-face {
                       font-family: "Nationale";
                       font-weight: 600;
-                      src: url("https://entur.github.io/entur-partner-packages/sidebar/latest/fonts/Entur-Nationale-Demibold.woff2") format("woff2");
+                      src: url("/static/fonts/Entur-Nationale-Demibold.woff2") format("woff2");
                     }
 
-                    html, body { height: 100%; }
+                    *, *::before, *::after { box-sizing: border-box; }
 
-                    body {
-                        font-family: Nationale, serif;
-                        display: flex;
-                        flex-direction: column;
+                    html, body {
                         height: 100%;
                         margin: 0;
+                        padding: 0;
+                    }
+
+                    body {
+                        font-family: Nationale, sans-serif;
+                        display: flex;
+                        flex-direction: column;
                     }
                     main { flex: 1 0 auto; }
                 </style>
+                <style>${UNIFORMEN_CSS}</style>
             </head>
             <body>
-                ${await renderComponentToString(<TopNavigation nonce="preview-nonce" />)}
+                ${await renderComponentToString(<TopNavigation />)}
                 <main></main>
-                ${await renderComponentToString(<Footer nonce="preview-nonce" />)}
+                ${await renderComponentToString(<Footer />)}
             </body>
         </html>
     `);

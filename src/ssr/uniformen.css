@@ -1,0 +1,223 @@
+.uniformen-top-nav {
+  --top-nav-height: 4rem;
+  background: var(--uniformen-color-brand-blue);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.uniformen-top-nav__nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: var(--top-nav-height);
+  padding: 0 var(--uniformen-space-large);
+  box-shadow:
+    0px 0.3px 1px rgba(0, 0, 0, 0.02),
+    0px 1.14px 4px rgba(0, 0, 0, 0.08);
+}
+
+.uniformen-top-nav__left {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-small);
+  min-width: 0;
+}
+
+.uniformen-top-nav__center {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.uniformen-top-nav__right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-medium);
+  min-width: 0;
+}
+
+/* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
+@media (max-width: 50rem) {
+  .uniformen-top-nav {
+    --top-nav-height: 3.5rem;
+  }
+  .uniformen-top-nav__nav {
+    padding: 0 var(--uniformen-space-medium);
+    grid-template-columns: 2fr auto 1fr;
+    column-gap: var(--uniformen-space-small);
+  }
+}
+
+.uniformen-logo {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--uniformen-space-small);
+}
+
+.uniformen-logo__app {
+  color: var(--uniformen-color-brand-coral);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  padding: 0;
+  margin: 0;
+  transform: translateY(0.2em);
+}
+
+.uniformen-app-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.uniformen-app-switcher__backdrop {
+  position: fixed;
+  top: var(--top-nav-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--uniformen-z-popover);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+.uniformen-app-switcher__panel {
+  position: fixed;
+  top: var(--top-nav-height);
+  left: var(--uniformen-space-medium);
+  width: 20rem;
+  font-family: Nationale, sans-serif;
+  z-index: calc(var(--uniformen-z-popover) + 1);
+  background: var(--uniformen-color-brand-white);
+  border: 1px solid var(--uniformen-color-blue-50);
+  border-top: none;
+  border-radius: 0 0 0.75rem 0.75rem;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.uniformen-app-switcher__header {
+  background: var(--uniformen-color-brand-white);
+  flex-shrink: 0;
+}
+
+.uniformen-app-switcher__title {
+  font-size: 1.25rem;
+  font-weight: var(--uniformen-weight-heading);
+  color: var(--uniformen-color-blue-10);
+  padding: var(--uniformen-space-medium);
+  margin: 0;
+  user-select: none;
+}
+
+.uniformen-app-switcher__favorites-row {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--uniformen-color-blue-70);
+  justify-content: space-between;
+  min-height: 3rem;
+  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
+}
+
+.uniformen-app-switcher__section-label {
+  font-size: var(--uniformen-font-xs);
+  font-weight: var(--uniformen-weight-body);
+  line-height: var(--uniformen-line-xs);
+  letter-spacing: 0.08em;
+  color: var(--uniformen-color-blue-40);
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.uniformen-app-switcher__add-favorite {
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-xs2);
+  color: var(--uniformen-color-blue-10);
+  font-size: var(--uniformen-font-md);
+  border-radius: var(--uniformen-radius-md);
+  padding: 6px var(--uniformen-space-small);
+  height: 2rem;
+}
+
+.uniformen-app-switcher__body {
+  background: var(--uniformen-color-blue-90);
+  padding: 0;
+  overflow-y: auto;
+  max-height: 15.5rem;
+}
+
+.uniformen-app-switcher__body-section-label {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
+  border-top: 1px solid var(--uniformen-color-blue-70);
+}
+
+.uniformen-app-switcher__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.uniformen-app-switcher__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
+  color: var(--uniformen-color-blue-10);
+  text-decoration: none;
+  transition: background 0.15s ease;
+  font-size: var(--uniformen-font-lg);
+}
+
+.uniformen-app-switcher__item:hover {
+  background: var(--uniformen-color-brand-lavender);
+}
+
+.uniformen-app-switcher__item:focus-visible {
+  box-shadow: var(--uniformen-shadow-focus);
+  outline: none;
+}
+
+.uniformen-app-switcher__item--active {
+  background: var(--uniformen-color-blue-80);
+  font-weight: var(--uniformen-weight-heading);
+}
+
+.uniformen-app-switcher__item--active:hover {
+  background: var(--uniformen-color-blue-80);
+}
+
+.uniformen-footer__inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: start;
+  padding: var(--uniformen-space-large);
+  background: var(--uniformen-color-brand-blue);
+}
+
+.uniformen-footer__sections {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: start;
+  width: 100%;
+}
+
+.uniformen-footer__section {
+  color: white;
+}

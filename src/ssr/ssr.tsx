@@ -2,6 +2,8 @@ import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { Footer } from "./Footer";
 import { renderComponentToString } from "./renderComponentToString";
 import { TopNavigation } from "./TopNavigation";
+import { UNIFORMEN_CSS } from "./uniformenStyles";
+import { html } from "hono/html";
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
@@ -12,6 +14,7 @@ const uniformenQuerySchema = z.object({
 });
 
 const uniformenBodySchema = z.object({
+  headAssets: z.string(),
   headerHtml: z.string(),
   footerHtml: z.string(),
 });
@@ -36,8 +39,11 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     const { nonce } = ctx.req.valid("query");
 
     return ctx.json({
-      headerHtml: await renderComponentToString(<TopNavigation nonce={nonce} />),
-      footerHtml: await renderComponentToString(<Footer nonce={nonce} />),
+      headAssets: await html`<style nonce="${nonce}">
+        ${UNIFORMEN_CSS}
+      </style>`,
+      headerHtml: await renderComponentToString(<TopNavigation />),
+      footerHtml: await renderComponentToString(<Footer />),
     });
   });
 }

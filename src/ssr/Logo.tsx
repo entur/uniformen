@@ -1,23 +1,3 @@
-import { colors, space } from "@entur/tokens";
-import { css } from "hono/css";
-
-const logoClass = css`
-  display: flex;
-  align-items: flex-end;
-  gap: ${space.extraSmall};
-`;
-
-const appClass = css`
-  color: ${colors.brand.coral};
-  font-size: 1.2rem;
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
-  padding: 0;
-  margin: 0 0 0 0.5rem;
-  transform: translateY(0.2rem);
-`;
-
 const EnturBaseLogo = () => (
   <svg
     width="67"
@@ -61,8 +41,8 @@ const EnturBaseLogo = () => (
 );
 
 export const Logo = (props: { appName: string }) => (
-  <div class={logoClass}>
+  <div class="uniformen-logo">
     <EnturBaseLogo />
-    <span class={appClass}>{props.appName}</span>
+    <span class="uniformen-logo__app">{props.appName}</span>
   </div>
 );
