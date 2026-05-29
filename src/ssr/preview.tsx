@@ -3,6 +3,8 @@ import { Footer } from "./Footer";
 import { renderComponentToString } from "./renderComponentToString";
 import { TopNavigation } from "./TopNavigation";
 import { UNIFORMEN_CSS } from "./uniformenStyles";
+import { raw } from "hono/html";
+import { UNIFORMEN_SCRIPTS } from "./uniformenScripts";
 
 export function previewRoutes(server: OpenAPIHono): void {
   const previewRoute = createRoute({
@@ -55,6 +57,7 @@ export function previewRoutes(server: OpenAPIHono): void {
                 ${await renderComponentToString(<TopNavigation />)}
                 <main></main>
                 ${await renderComponentToString(<Footer />)}
+                <script>${raw(UNIFORMEN_SCRIPTS)}</script>
             </body>
         </html>
     `);

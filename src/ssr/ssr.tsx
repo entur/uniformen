@@ -2,8 +2,9 @@ import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { Footer } from "./Footer";
 import { renderComponentToString } from "./renderComponentToString";
 import { TopNavigation } from "./TopNavigation";
+import { UNIFORMEN_SCRIPTS } from "./uniformenScripts";
 import { UNIFORMEN_CSS } from "./uniformenStyles";
-import { html } from "hono/html";
+import { html, raw } from "hono/html";
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
@@ -17,6 +18,7 @@ const uniformenBodySchema = z.object({
   headAssets: z.string(),
   headerHtml: z.string(),
   footerHtml: z.string(),
+  scripts: z.string(),
 });
 
 export function uniformenSsrRoutes(server: OpenAPIHono): void {
@@ -44,6 +46,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       </style>`,
       headerHtml: await renderComponentToString(<TopNavigation />),
       footerHtml: await renderComponentToString(<Footer />),
+      scripts: `<script nonce="${nonce}">${raw(UNIFORMEN_SCRIPTS)}</script>`,
     });
   });
 }

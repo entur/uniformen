@@ -75,17 +75,35 @@
   align-items: center;
 }
 
-.uniformen-app-switcher__backdrop {
-  position: fixed;
-  top: var(--top-nav-height);
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: var(--uniformen-z-popover);
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: default;
+.uniformen-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--uniformen-space-xs2);
+  background: none;
+  border: 0.125rem solid transparent;
+  border-radius: var(--uniformen-radius-md);
+  color: var(--uniformen-color-brand-white);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.uniformen-icon-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.uniformen-icon-button:active {
+  background: var(--uniformen-color-brand-lavender);
+  color: var(--uniformen-color-blue-10);
+}
+
+.uniformen-icon-button:focus-visible {
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
+}
+
+.uniformen-icon-button[aria-expanded="false"] ~ .uniformen-app-switcher__panel {
+  display: none;
 }
 
 .uniformen-app-switcher__panel {
