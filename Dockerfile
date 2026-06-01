@@ -1,6 +1,6 @@
 FROM oven/bun:1.3.14 AS builder
 WORKDIR /app
-COPY package.json bun.lock bunfig.toml ./
+COPY package.json bun.lock bunfig.toml tsconfig.json ./
 RUN bun install --frozen-lockfile --production
 COPY src ./src
 

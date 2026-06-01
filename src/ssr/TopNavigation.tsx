@@ -7,7 +7,7 @@ export function TopNavigation() {
       <nav class="uniformen-top-nav__nav" aria-label="Toppnavigasjon">
         <div class="uniformen-top-nav__left">
           <AppSwitcher />
-          <Logo appName="Portal" />
+          <Logo appName="Uniformen" />
         </div>
         <div class="uniformen-top-nav__center"></div>
         <div class="uniformen-top-nav__right"></div>
