@@ -23,8 +23,8 @@ updates:
     cooldown:
       default-days: 7
 
-  # Group patch and minor, but major updates will not be grouped together for npm updates
-  - package-ecosystem: "npm"
+  # Group patch and minor, but major updates will not be grouped together for bun updates
+  - package-ecosystem: "bun"
     directory: "/"
     registries:
       - jfrog-artifactory
