@@ -9,3 +9,5 @@ common:
     enabled: true
     data:
       LOG_LEVEL: info
+      AUTH0_DOMAIN: internal.entur.org
+      AUTH0_AUDIENCE: https://api.entur.io

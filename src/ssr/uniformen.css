@@ -40,6 +40,13 @@
   min-width: 0;
 }
 
+.uniformen-top-nav__user {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 16rem;
+}
+
 /* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
 @media (max-width: 50rem) {
   .uniformen-top-nav {
