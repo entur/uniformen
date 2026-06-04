@@ -71,9 +71,9 @@ describe("/ssr", () => {
     }
   });
 
-  test("missing nonce returns 400", async () => {
+  test("missing nonce returns 200", async () => {
     const res = await app.request("/ssr");
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
   });
 
   test("nonce with invalid characters returns 400", async () => {
@@ -89,12 +89,24 @@ describe("/ssr", () => {
   test("nonce is injected into headAssets style tag", async () => {
     const res = await app.request("/ssr?nonce=abc123");
     const body = await res.json();
-    expect(body.headAssets).toContain('<style nonce="abc123">');
+    expect(body.headAssets).toContain('nonce="abc123"');
   });
 
   test("nonce is injected into scripts script tag", async () => {
     const res = await app.request("/ssr?nonce=abc123");
     const body = await res.json();
-    expect(body.scripts).toContain('<script nonce="abc123">');
+    expect(body.scripts).toContain('nonce="abc123"');
+  });
+
+  test("no nonce omits nonce attribute from headAssets", async () => {
+    const res = await app.request("/ssr");
+    const body = await res.json();
+    expect(body.headAssets).not.toContain("nonce=");
+  });
+
+  test("no nonce omits nonce attribute from scripts", async () => {
+    const res = await app.request("/ssr");
+    const body = await res.json();
+    expect(body.scripts).not.toContain("nonce=");
   });
 });

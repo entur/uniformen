@@ -12,7 +12,10 @@ const uniformenHeaderSchema = z.object({
 });
 
 const uniformenQuerySchema = z.object({
-  nonce: z.string().regex(/^[a-zA-Z0-9_-]+$/),
+  nonce: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]+$/)
+    .optional(),
 });
 
 const uniformenBodySchema = z.object({
@@ -52,18 +55,19 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
 
   server.openapi(rootRoute, async (ctx) => {
     const { nonce } = ctx.req.valid("query");
+    const nonceAttr = nonce ? ` nonce="${nonce}"` : "";
 
     const payload = ctx.get("jwtPayload");
     const user = payload?.name ?? payload?.sub;
 
     return ctx.json(
       {
-        headAssets: await html`<style nonce="${nonce}">
+        headAssets: await html`<style${raw(nonceAttr)}>
           ${UNIFORMEN_CSS}
         </style>`,
         headerHtml: await renderComponentToString(<TopNavigation user={user} />),
         footerHtml: await renderComponentToString(<Footer />),
-        scripts: `<script nonce="${nonce}">${raw(UNIFORMEN_SCRIPTS)}</script>`,
+        scripts: `<script${nonceAttr}>${raw(UNIFORMEN_SCRIPTS)}</script>`,
       },
       200,
     );
