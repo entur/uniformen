@@ -9,28 +9,23 @@ export type AuthTenant = {
   issuer: string;
   audience: string;
   jwksUri: string;
+  userInfoUri: string;
 };
-
-const auth0InternalDomain = requiredEnv("AUTH0_INTERNAL_DOMAIN");
 
 const internalTenant: AuthTenant = {
   name: "internal",
   audience: requiredEnv("AUTH0_INTERNAL_AUDIENCE"),
-  // Derived from the domain, but overridable for Auth0 custom domains and tests.
-  issuer: process.env["AUTH0_INTERNAL_ISSUER"] ?? `https://${auth0InternalDomain}/`,
-  jwksUri:
-    process.env["AUTH0_INTERNAL_JWKS_URI"] ??
-    `https://${auth0InternalDomain}/.well-known/jwks.json`,
+  issuer: requiredEnv("AUTH0_INTERNAL_ISSUER"),
+  jwksUri: requiredEnv("AUTH0_INTERNAL_JWKS_URI"),
+  userInfoUri: requiredEnv("AUTH0_INTERNAL_USERINFO_URI"),
 };
-
-const auth0PartnerDomain = requiredEnv("AUTH0_PARTNER_DOMAIN");
 
 const partnerTenant: AuthTenant = {
   name: "partner",
   audience: requiredEnv("AUTH0_PARTNER_AUDIENCE"),
-  issuer: process.env["AUTH0_PARTNER_ISSUER"] ?? `https://${auth0PartnerDomain}/`,
-  jwksUri:
-    process.env["AUTH0_PARTNER_JWKS_URI"] ?? `https://${auth0PartnerDomain}/.well-known/jwks.json`,
+  issuer: requiredEnv("AUTH0_PARTNER_ISSUER"),
+  jwksUri: requiredEnv("AUTH0_PARTNER_JWKS_URI"),
+  userInfoUri: requiredEnv("AUTH0_PARTNER_USERINFO_URI"),
 };
 
 export const config = {

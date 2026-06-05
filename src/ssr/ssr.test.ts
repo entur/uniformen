@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import { userInfoMock } from "../test/authTestSetup";
 import {
   INTERNAL_AUDIENCE,
   INTERNAL_ISSUER,
@@ -11,6 +12,8 @@ import { app } from "../index";
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
 }
+
+beforeEach(() => userInfoMock.reset());
 
 describe("/ssr auth (optional)", () => {
   test("no token returns 200 (public) with empty user slot", async () => {
@@ -47,13 +50,15 @@ describe("/ssr auth (optional)", () => {
 });
 
 describe("/ssr auth (partner tenant)", () => {
-  test("valid partner token renders sub in the right nav slot", async () => {
+  test("valid partner token renders the userinfo name, not the sub", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Ollvar O. Kleppvold" });
     const token = await signPartnerToken({ sub: "auth0|partner123" });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.headerHtml).toContain('class="uniformen-top-nav__user"');
-    expect(body.headerHtml).toContain("auth0|partner123");
+    expect(body.headerHtml).toContain("Ollvar O. Kleppvold");
+    expect(body.headerHtml).not.toContain("auth0|partner123");
   });
 
   test("partner-issued token with internal audience is rejected (no cross-pairing)", async () => {
@@ -82,21 +87,25 @@ describe("/ssr auth (partner tenant)", () => {
 });
 
 describe("/ssr user in top navigation", () => {
-  test("valid token renders sub in the right nav slot", async () => {
+  test("valid token renders the userinfo name, not the sub", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.headerHtml).toContain('class="uniformen-top-nav__user"');
-    expect(body.headerHtml).toContain("auth0|abc123");
+    expect(body.headerHtml).toContain("Hallstein Bronskimlet");
+    expect(body.headerHtml).not.toContain("auth0|abc123");
   });
 
-  test("name claim takes priority over sub", async () => {
-    const token = await signInternalToken({ sub: "auth0|abc123", name: "Ada Lovelace" });
+  test("userinfo failure renders anonymous nav, never the sub", async () => {
+    userInfoMock.respond = () => new Response("server error", { status: 500 });
+    const token = await signInternalToken({ sub: "auth0|fail500" });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.headerHtml).toContain("Ada Lovelace");
-    expect(body.headerHtml).not.toContain("auth0|abc123");
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__user");
+    expect(body.headerHtml).not.toContain("auth0|fail500");
   });
 });
 

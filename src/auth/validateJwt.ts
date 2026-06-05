@@ -8,6 +8,8 @@ declare module "hono" {
   interface ContextVariableMap {
     authTenant: AuthTenant["name"] | undefined;
     jwtPayload: (JWTPayload & { name?: string }) | undefined;
+    /** Raw verified bearer token, for forwarding to Auth0's userinfo endpoint. */
+    authToken: string | undefined;
   }
 }
 
@@ -108,6 +110,7 @@ export function createValidateJwt(tenants: AuthTenant[]) {
 
     c.set("jwtPayload", payload);
     c.set("authTenant", validator.tenant.name);
+    c.set("authToken", token);
     await next();
   });
 }

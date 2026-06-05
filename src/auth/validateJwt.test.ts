@@ -128,6 +128,7 @@ describe("JWKS endpoint unavailable", () => {
       issuer: INTERNAL_ISSUER,
       audience: INTERNAL_AUDIENCE,
       jwksUri,
+      userInfoUri: "http://localhost:0/unused/userinfo",
     };
   }
 
