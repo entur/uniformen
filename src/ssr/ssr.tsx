@@ -52,7 +52,6 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
 
   server.openapi(rootRoute, async (ctx) => {
     const { nonce } = ctx.req.valid("query");
-
     const payload = ctx.get("jwtPayload");
     const user = payload?.name ?? payload?.sub;
 

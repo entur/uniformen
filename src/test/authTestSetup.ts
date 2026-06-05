@@ -1,24 +1,41 @@
 import { afterAll } from "bun:test";
-import { AUDIENCE, ISSUER, jwks } from "./authTestKeys";
+import {
+  INTERNAL_AUDIENCE,
+  INTERNAL_ISSUER,
+  internalJwks,
+  PARTNER_AUDIENCE,
+  PARTNER_ISSUER,
+  partnerJwks,
+} from "./authTestKeys";
 
 /**
  * Test-only auth harness. Loaded via `preload` in bunfig.toml so it runs
  * before any test module (and thus before `config.ts`) reads env:
- *  - serves the test JWKS from a local endpoint,
- *  - points the app's Auth0 config at that endpoint via env vars.
+ *  - serves the test JWKS (one endpoint per tenant) from a local server,
+ *  - points the app's Auth0 config at those endpoints via env vars.
  */
 const server = Bun.serve({
   port: 0,
   fetch(req) {
-    if (new URL(req.url).pathname === "/.well-known/jwks.json") {
-      return Response.json(jwks);
+    const pathname = new URL(req.url).pathname;
+    if (pathname === "/internal/.well-known/jwks.json") {
+      return Response.json(internalJwks);
+    }
+    if (pathname === "/partner/.well-known/jwks.json") {
+      return Response.json(partnerJwks);
     }
     return new Response("not found", { status: 404 });
   },
 });
 
 afterAll(() => server.stop());
-process.env["AUTH0_DOMAIN"] = "test.local";
-process.env["AUTH0_AUDIENCE"] = AUDIENCE;
-process.env["AUTH0_ISSUER"] = ISSUER;
-process.env["AUTH0_JWKS_URI"] = `http://localhost:${server.port}/.well-known/jwks.json`;
+process.env["AUTH0_INTERNAL_DOMAIN"] = "internal.test.local";
+process.env["AUTH0_INTERNAL_AUDIENCE"] = INTERNAL_AUDIENCE;
+process.env["AUTH0_INTERNAL_ISSUER"] = INTERNAL_ISSUER;
+process.env["AUTH0_INTERNAL_JWKS_URI"] =
+  `http://localhost:${server.port}/internal/.well-known/jwks.json`;
+process.env["AUTH0_PARTNER_DOMAIN"] = "partner.test.local";
+process.env["AUTH0_PARTNER_AUDIENCE"] = PARTNER_AUDIENCE;
+process.env["AUTH0_PARTNER_ISSUER"] = PARTNER_ISSUER;
+process.env["AUTH0_PARTNER_JWKS_URI"] =
+  `http://localhost:${server.port}/partner/.well-known/jwks.json`;

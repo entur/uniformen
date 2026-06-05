@@ -6,5 +6,7 @@ common:
     enabled: true
     data:
       LOG_LEVEL: info
-      AUTH0_DOMAIN: internal.dev.entur.org
-      AUTH0_AUDIENCE: https://api.dev.entur.io
+      AUTH0_INTERNAL_DOMAIN: internal.dev.entur.org
+      AUTH0_INTERNAL_AUDIENCE: https://api.dev.entur.io
+      AUTH0_PARTNER_DOMAIN: partner.dev.entur.org
+      AUTH0_PARTNER_AUDIENCE: https://portal.dev.entur.org

@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { signToken } from "../test/authTestKeys";
+import {
+  INTERNAL_AUDIENCE,
+  INTERNAL_ISSUER,
+  PARTNER_AUDIENCE,
+  signPartnerToken,
+  signInternalToken,
+} from "../test/authTestKeys";
 import { app } from "../index";
 
 function bearer(token: string): { Authorization: string } {
@@ -15,7 +21,7 @@ describe("/ssr auth (optional)", () => {
   });
 
   test("token with wrong audience is ignored, returns 200 anonymous", async () => {
-    const token = await signToken({ aud: "https://wrong.audience" });
+    const token = await signInternalToken({ aud: "https://wrong.audience" });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -23,7 +29,7 @@ describe("/ssr auth (optional)", () => {
   });
 
   test("token with wrong issuer is ignored, returns 200 anonymous", async () => {
-    const token = await signToken({ iss: "https://evil.example/" });
+    const token = await signInternalToken({ iss: "https://evil.example/" });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -32,7 +38,42 @@ describe("/ssr auth (optional)", () => {
 
   test("expired token is ignored, returns 200 anonymous", async () => {
     const past = Math.floor(Date.now() / 1000) - 60;
-    const token = await signToken({ exp: past, iat: past - 3600 });
+    const token = await signInternalToken({ exp: past, iat: past - 3600 });
+    const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__user");
+  });
+});
+
+describe("/ssr auth (partner tenant)", () => {
+  test("valid partner token renders sub in the right nav slot", async () => {
+    const token = await signPartnerToken({ sub: "auth0|partner123" });
+    const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain('class="uniformen-top-nav__user"');
+    expect(body.headerHtml).toContain("auth0|partner123");
+  });
+
+  test("partner-issued token with internal audience is rejected (no cross-pairing)", async () => {
+    const token = await signPartnerToken({ aud: INTERNAL_AUDIENCE });
+    const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__user");
+  });
+
+  test("internal-issued token with partner audience is rejected (no cross-pairing)", async () => {
+    const token = await signInternalToken({ aud: PARTNER_AUDIENCE });
+    const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__user");
+  });
+
+  test("token signed with partner key but claiming internal issuer is rejected", async () => {
+    const token = await signPartnerToken({ iss: INTERNAL_ISSUER, aud: INTERNAL_AUDIENCE });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -42,7 +83,7 @@ describe("/ssr auth (optional)", () => {
 
 describe("/ssr user in top navigation", () => {
   test("valid token renders sub in the right nav slot", async () => {
-    const token = await signToken({ sub: "auth0|abc123" });
+    const token = await signInternalToken({ sub: "auth0|abc123" });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -51,7 +92,7 @@ describe("/ssr user in top navigation", () => {
   });
 
   test("name claim takes priority over sub", async () => {
-    const token = await signToken({ sub: "auth0|abc123", name: "Ada Lovelace" });
+    const token = await signInternalToken({ sub: "auth0|abc123", name: "Ada Lovelace" });
     const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
     const body = await res.json();
     expect(body.headerHtml).toContain("Ada Lovelace");
