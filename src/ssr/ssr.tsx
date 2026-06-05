@@ -59,7 +59,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     return ctx.json(
       {
         headAssets: await html`<style nonce="${nonce}">
-          ${UNIFORMEN_CSS}
+          ${raw(UNIFORMEN_CSS)}
         </style>`,
         headerHtml: await renderComponentToString(<TopNavigation user={user} />),
         footerHtml: await renderComponentToString(<Footer />),
