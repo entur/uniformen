@@ -1,29 +1,14 @@
 import { createRoute, type OpenAPIHono } from "@hono/zod-openapi";
-import { raw } from "hono/html";
 import { Footer } from "./Footer";
 import { renderComponentToString } from "./renderComponentToString";
+import { sha256Source } from "./sha256";
 import { TopNavigation } from "./TopNavigation";
-import { UNIFORMEN_SCRIPTS } from "./uniformenScripts";
-import { UNIFORMEN_CSS } from "./uniformenStyles";
+import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
+import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 
-export function previewRoutes(server: OpenAPIHono): void {
-  const previewRoute = createRoute({
-    method: "get",
-    path: "/",
-    responses: {
-      200: {
-        description: "Preview HTML for header and footer.",
-      },
-    },
-  });
-
-  server.openapi(previewRoute, async (ctx) => {
-    return ctx.html(`
-        <html lang="nb">
-            <head>
-                <meta charset="UTF-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <style>
+// The preview page's own base styles (fonts + layout reset). Held as a const so
+// its exact bytes can be hashed for the CSP `style-src` directive.
+const PREVIEW_BASE_CSS = `
                     @font-face {
                       font-family: "Nationale";
                       font-weight: 500;
@@ -50,14 +35,42 @@ export function previewRoutes(server: OpenAPIHono): void {
                         flex-direction: column;
                     }
                     main { flex: 1 0 auto; }
-                </style>
-                <style>${UNIFORMEN_CSS}</style>
+`.trim();
+
+const previewBaseCssHash = await sha256Source(PREVIEW_BASE_CSS);
+
+// CSP restricting inline scripts/styles to the exact hashed blocks we render.
+const previewCsp = [
+  `script-src ${uniformenScriptsHash}`,
+  `style-src ${previewBaseCssHash} ${uniformenCssHash}`,
+].join("; ");
+
+export function previewRoutes(server: OpenAPIHono): void {
+  const previewRoute = createRoute({
+    method: "get",
+    path: "/",
+    responses: {
+      200: {
+        description: "Preview HTML for header and footer.",
+      },
+    },
+  });
+
+  server.openapi(previewRoute, async (ctx) => {
+    ctx.header("Content-Security-Policy", previewCsp);
+    return ctx.html(`
+        <html lang="nb">
+            <head>
+                <meta charset="UTF-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <style>${PREVIEW_BASE_CSS}</style>
+                ${renderUniformenStyleTag()}
             </head>
             <body>
                 ${await renderComponentToString(<TopNavigation />)}
                 <main></main>
                 ${await renderComponentToString(<Footer />)}
-                <script>${raw(UNIFORMEN_SCRIPTS)}</script>
+                ${renderUniformenScripts()}
             </body>
         </html>
     `);

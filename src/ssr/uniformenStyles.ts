@@ -9,6 +9,7 @@ import {
   zIndexes,
 } from "@entur/tokens";
 import uniformenCss from "./uniformen.css" with { type: "text" };
+import { sha256Source } from "./sha256";
 
 // @entur/tokens *.rem fields are unitless numbers (px/16). Append the unit here.
 const rem = (n: number) => `${n}rem`;
@@ -40,4 +41,10 @@ const rootVars = `:root {
 }
 `;
 
-export const UNIFORMEN_CSS = rootVars + uniformenCss;
+const UNIFORMEN_CSS = rootVars.trim() + uniformenCss.trim();
+
+export const uniformenCssHash = await sha256Source(UNIFORMEN_CSS);
+
+export const renderUniformenStyleTag = () => {
+  return `<style>${UNIFORMEN_CSS}</style>` as const;
+};

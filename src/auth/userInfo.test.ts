@@ -20,7 +20,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
   test("nickname is not used as a display name", async () => {
     userInfoMock.respond = () => Response.json({ nickname: "ada" });
     const token = await signInternalToken({ sub: "auth0|nickname-only" });
-    const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    const res = await app.request("/ssr", { headers: bearer(token) });
     const body = await res.json();
     expect(body.headerHtml).not.toContain("ada");
     expect(body.headerHtml).toContain("Bruker uten navn");
@@ -29,7 +29,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
   test("falls back to email when name and nickname are missing", async () => {
     userInfoMock.respond = () => Response.json({ email: "ada@example.org" });
     const token = await signInternalToken({ sub: "auth0|email-only" });
-    const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    const res = await app.request("/ssr", { headers: bearer(token) });
     const body = await res.json();
     expect(body.headerHtml).toContain("ada@example.org");
   });
@@ -37,7 +37,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
   test("2xx with no name or email renders the placeholder", async () => {
     userInfoMock.respond = () => Response.json({});
     const token = await signInternalToken({ sub: "auth0|empty-body" });
-    const res = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    const res = await app.request("/ssr", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.headerHtml).toContain("Bruker uten navn");
@@ -45,8 +45,8 @@ describe("userinfo via /ssr (end-to-end)", () => {
 
   test("sequential requests for the same user hit upstream once (cache)", async () => {
     const token = await signInternalToken({ sub: "auth0|cache-hit" });
-    await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
-    await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    await app.request("/ssr", { headers: bearer(token) });
+    await app.request("/ssr", { headers: bearer(token) });
     expect(userInfoMock.calls).toBe(1);
   });
 
@@ -59,8 +59,8 @@ describe("userinfo via /ssr (end-to-end)", () => {
     };
     const token = await signInternalToken({ sub: "auth0|in-flight" });
     const [a, b] = await Promise.all([
-      app.request("/ssr?nonce=abc123", { headers: bearer(token) }),
-      app.request("/ssr?nonce=abc123", { headers: bearer(token) }),
+      app.request("/ssr", { headers: bearer(token) }),
+      app.request("/ssr", { headers: bearer(token) }),
     ]);
     expect((await a.json()).headerHtml).toContain("Slow Ada");
     expect((await b.json()).headerHtml).toContain("Slow Ada");
@@ -70,8 +70,8 @@ describe("userinfo via /ssr (end-to-end)", () => {
   test("failures are negative-cached: second request does not re-hit upstream", async () => {
     userInfoMock.respond = () => new Response("nope", { status: 429 });
     const token = await signInternalToken({ sub: "auth0|negative-cache" });
-    const first = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
-    const second = await app.request("/ssr?nonce=abc123", { headers: bearer(token) });
+    const first = await app.request("/ssr", { headers: bearer(token) });
+    const second = await app.request("/ssr", { headers: bearer(token) });
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
     expect((await second.json()).headerHtml).not.toContain("uniformen-top-nav__user");
@@ -79,7 +79,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
   });
 
   test("no token means no upstream call and anonymous nav", async () => {
-    const res = await app.request("/ssr?nonce=abc123");
+    const res = await app.request("/ssr");
     expect(res.status).toBe(200);
     expect((await res.json()).headerHtml).not.toContain("uniformen-top-nav__user");
     expect(userInfoMock.calls).toBe(0);

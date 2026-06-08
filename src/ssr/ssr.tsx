@@ -1,26 +1,29 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { optionalAuth } from "../auth/optionalAuth";
 import { userInfoService } from "../auth/userInfo";
-import { Footer } from "./Footer";
-import { renderComponentToString } from "./renderComponentToString";
+import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { TopNavigation } from "./TopNavigation";
-import { UNIFORMEN_SCRIPTS } from "./uniformenScripts";
-import { UNIFORMEN_CSS } from "./uniformenStyles";
-import { html, raw } from "hono/html";
+import { renderComponentToString } from "./renderComponentToString";
+import { Footer } from "./Footer";
+import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
 });
 
 const uniformenQuerySchema = z.object({
-  nonce: z.string().regex(/^[a-zA-Z0-9_-]+$/),
+  // Define query parameters here.
 });
+
+// Per-directive CSP sources the consumer unions into its own page CSP header.
+const cspContributionSchema = z.record(z.string(), z.array(z.string()));
 
 const uniformenBodySchema = z.object({
   headAssets: z.string(),
   headerHtml: z.string(),
   footerHtml: z.string(),
   scripts: z.string(),
+  csp: cspContributionSchema,
 });
 
 export function uniformenSsrRoutes(server: OpenAPIHono): void {
@@ -52,7 +55,6 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
   });
 
   server.openapi(rootRoute, async (ctx) => {
-    const { nonce } = ctx.req.valid("query");
     const payload = ctx.get("jwtPayload");
     const token = ctx.get("authToken");
     const tenant = ctx.get("authTenant");
@@ -68,12 +70,14 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
 
     return ctx.json(
       {
-        headAssets: await html`<style nonce="${nonce}">
-          ${raw(UNIFORMEN_CSS)}
-        </style>`,
+        headAssets: renderUniformenStyleTag(),
         headerHtml: await renderComponentToString(<TopNavigation user={user} />),
         footerHtml: await renderComponentToString(<Footer />),
-        scripts: `<script nonce="${nonce}">${raw(UNIFORMEN_SCRIPTS)}</script>`,
+        scripts: renderUniformenScripts(),
+        csp: {
+          "style-src": [uniformenCssHash],
+          "script-src": [uniformenScriptsHash],
+        },
       },
       200,
     );
