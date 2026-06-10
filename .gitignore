@@ -59,7 +59,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Misc 
+# Build output
+dist/
+
+# Misc
 .DS_Store
 .idea/
 .vscode/

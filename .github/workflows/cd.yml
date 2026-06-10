@@ -23,7 +23,7 @@ jobs:
       - name: Format check
         run: bun run fmt:check
       - name: Test
-        run: bun test
+        run: bun run test
       - name: Audit (fail on critical)
         run: bun audit --audit-level=critical
 

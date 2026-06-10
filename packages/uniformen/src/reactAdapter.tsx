@@ -1,0 +1,34 @@
+import { type FC } from "react";
+import parse from "html-react-parser";
+import { fetchUniformenLayout } from "./lib/fetchUniformenLayout";
+
+type UniformenComponents = {
+  HeadAssets: FC;
+  Header: FC;
+  Footer: FC;
+  Scripts: FC;
+};
+
+const Empty: FC = () => null;
+const EMPTY_COMPONENTS: UniformenComponents = {
+  HeadAssets: Empty,
+  Header: Empty,
+  Footer: Empty,
+  Scripts: Empty,
+};
+
+export async function fetchUniformenComponents(): Promise<UniformenComponents> {
+  const layout = await fetchUniformenLayout();
+
+  if (!layout) return EMPTY_COMPONENTS;
+
+  // `parse()` turns the HTML strings into real React elements, so head assets
+  // sit directly inside `<head>` with no wrapper element and `<script>` tags
+  // render as real `<script>` elements.
+  return {
+    HeadAssets: () => parse(layout.headAssets),
+    Header: () => parse(layout.headerHtml),
+    Footer: () => parse(layout.footerHtml),
+    Scripts: () => parse(layout.scripts),
+  };
+}
