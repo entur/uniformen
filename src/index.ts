@@ -29,6 +29,6 @@ app.doc("/doc", {
 });
 
 export default {
-  port: 3000,
+  port: 4123,
   fetch: app.fetch,
 };

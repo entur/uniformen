@@ -103,4 +103,37 @@ describe("fetchUniformenLayout", () => {
       headers: undefined,
     });
   });
+
+  it("defaults to production URL", async () => {
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    await fetchUniformenLayout();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://uniformen.entur.no/ssr",
+      expect.anything(),
+    );
+  });
+
+  it("uses local URL for local environment", async () => {
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    await fetchUniformenLayout(undefined, "local");
+    expect(globalThis.fetch).toHaveBeenCalledWith("http://localhost:4123/ssr", expect.anything());
+  });
+
+  it("uses dev URL for dev environment", async () => {
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    await fetchUniformenLayout(undefined, "dev");
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://uniformen.dev.entur.no/ssr",
+      expect.anything(),
+    );
+  });
+
+  it("uses staging URL for staging environment", async () => {
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    await fetchUniformenLayout(undefined, "staging");
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://uniformen.staging.entur.no/ssr",
+      expect.anything(),
+    );
+  });
 });

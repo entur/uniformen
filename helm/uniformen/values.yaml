@@ -6,7 +6,7 @@ common:
     enabled: true
     trafficType: public
   service:
-    internalPort: 3000
+    internalPort: 4123
   deployment:
     #prometheus:
     #  enabled: true

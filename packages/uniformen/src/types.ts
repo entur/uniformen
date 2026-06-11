@@ -1,3 +1,5 @@
+export type Environment = "local" | "dev" | "staging" | "production";
+
 export type UniformenLayout = {
   headerHtml: string;
   footerHtml: string;

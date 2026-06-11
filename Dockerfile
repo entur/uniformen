@@ -9,5 +9,5 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder --chown=nonroot:nonroot /app /app
 USER nonroot
-EXPOSE 3000
+EXPOSE 4123
 CMD ["run", "src/index.ts"]

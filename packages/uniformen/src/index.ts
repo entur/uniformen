@@ -1,2 +1,2 @@
-export type { UniformenLayout } from "./types";
+export type { Environment, UniformenLayout } from "./types";
 export { fetchUniformenLayout } from "./lib/fetchUniformenLayout";
