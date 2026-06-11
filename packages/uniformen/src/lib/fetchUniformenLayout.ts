@@ -6,9 +6,11 @@ import type { UniformenLayout } from "../types";
 
 const UNIFORMEN_SSR_URL = "https://uniformen.entur.no/ssr";
 
-export async function fetchUniformenLayout(): Promise<UniformenLayout | null> {
+export async function fetchUniformenLayout(token?: string): Promise<UniformenLayout | null> {
   try {
-    const res = await fetch(UNIFORMEN_SSR_URL);
+    const res = await fetch(UNIFORMEN_SSR_URL, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
     if (!res.ok) return null;
     const {
       headerHtml = "",

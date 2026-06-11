@@ -87,4 +87,20 @@ describe("fetchUniformenLayout", () => {
     expect(layout?.headAssets).toBe("");
     expect(layout?.scripts).toBe("");
   });
+
+  it("forwards a token as a Bearer Authorization header", async () => {
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    await fetchUniformenLayout("abc.def.ghi");
+    expect(globalThis.fetch).toHaveBeenCalledWith(expect.any(String), {
+      headers: { Authorization: "Bearer abc.def.ghi" },
+    });
+  });
+
+  it("sends no Authorization header when no token is given", async () => {
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    await fetchUniformenLayout();
+    expect(globalThis.fetch).toHaveBeenCalledWith(expect.any(String), {
+      headers: undefined,
+    });
+  });
 });

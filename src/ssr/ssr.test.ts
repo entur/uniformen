@@ -109,6 +109,27 @@ describe("/ssr user in top navigation", () => {
   });
 });
 
+describe("/ssr login link", () => {
+  test("anonymous request renders a login link to /auth/login", async () => {
+    const res = await app.request("/ssr");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain('class="uniformen-top-nav__login"');
+    expect(body.headerHtml).toContain('href="/auth/login"');
+    expect(body.headerHtml).toContain("Logg inn");
+  });
+
+  test("authenticated request omits the login link", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    const token = await signInternalToken({ sub: "auth0|abc123" });
+    const res = await app.request("/ssr", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__login");
+    expect(body.headerHtml).not.toContain('href="/auth/login"');
+  });
+});
+
 describe("/ssr", () => {
   test("returns 200 with all body keys as non-empty strings", async () => {
     const res = await app.request("/ssr");

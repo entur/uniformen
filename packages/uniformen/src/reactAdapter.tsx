@@ -17,8 +17,8 @@ const EMPTY_COMPONENTS: UniformenComponents = {
   Scripts: Empty,
 };
 
-export async function fetchUniformenComponents(): Promise<UniformenComponents> {
-  const layout = await fetchUniformenLayout();
+export async function fetchUniformenComponents(token?: string): Promise<UniformenComponents> {
+  const layout = await fetchUniformenLayout(token);
 
   if (!layout) return EMPTY_COMPONENTS;
 

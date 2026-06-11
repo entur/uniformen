@@ -10,6 +10,9 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   height: var(--top-nav-height);
   padding: 0 var(--uniformen-space-large);
   box-shadow:
@@ -41,10 +44,50 @@
 }
 
 .uniformen-top-nav__user {
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-small);
+  padding: var(--uniformen-space-xs2) var(--uniformen-space-medium);
+  color: var(--uniformen-color-brand-white);
+  font-size: 1rem;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.uniformen-top-nav__user-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 16rem;
+}
+
+.uniformen-top-nav__login {
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-small);
+  padding: var(--uniformen-space-xs2) var(--uniformen-space-medium);
+  border: 0.125rem solid transparent;
+  border-radius: var(--uniformen-radius-md);
+  color: var(--uniformen-color-brand-white);
+  font-size: 1rem;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.uniformen-top-nav__login:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.uniformen-top-nav__login:active {
+  background: var(--uniformen-color-brand-lavender);
+  color: var(--uniformen-color-blue-10);
+}
+
+.uniformen-top-nav__login:focus-visible {
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
 }
 
 /* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
