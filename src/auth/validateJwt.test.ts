@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import {
   INTERNAL_AUDIENCE,
   INTERNAL_ISSUER,
+  PARTNER_AUDIENCE,
+  PARTNER_ISSUER,
   signPartnerToken,
   signInternalToken,
 } from "../test/authTestKeys";
@@ -102,6 +104,50 @@ describe("validateJwt (strict)", () => {
   test("token with the wrong audience is rejected", async () => {
     const token = await signInternalToken({ aud: "https://other.example" });
     const res = await app.request("/protected", { headers: bearer(token) });
+    expectUnauthorized(res, "invalid_token", "token verification failure");
+  });
+});
+
+describe("validateJwt (multiple audiences)", () => {
+  const SECOND_AUDIENCE = "https://api.uniformen.test";
+
+  const multiAudiencePartner: AuthTenant = {
+    name: "partner",
+    issuer: PARTNER_ISSUER,
+    audience: [PARTNER_AUDIENCE, SECOND_AUDIENCE],
+    // authTestSetup points these at the local test server.
+    jwksUri: process.env["AUTH0_PARTNER_JWKS_URI"]!,
+    userInfoUri: process.env["AUTH0_PARTNER_USERINFO_URI"]!,
+  };
+
+  function appWithMultiAudience() {
+    const a = new Hono();
+    a.use("/protected", createValidateJwt([multiAudiencePartner]));
+    a.get("/protected", (c) => c.json({ tenant: c.get("authTenant") }));
+    return a;
+  }
+
+  test("accepts a token for either configured audience", async () => {
+    const a = appWithMultiAudience();
+    for (const aud of [PARTNER_AUDIENCE, SECOND_AUDIENCE]) {
+      const token = await signPartnerToken({ aud });
+      const res = await a.request("/protected", { headers: bearer(token) });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ tenant: "partner" });
+    }
+  });
+
+  test("accepts a token whose aud array contains one configured audience", async () => {
+    const a = appWithMultiAudience();
+    const token = await signPartnerToken({ aud: [PARTNER_AUDIENCE, "https://extra.example"] });
+    const res = await a.request("/protected", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+  });
+
+  test("still rejects an audience not in the list", async () => {
+    const a = appWithMultiAudience();
+    const token = await signPartnerToken({ aud: "https://not-allowed.example" });
+    const res = await a.request("/protected", { headers: bearer(token) });
     expectUnauthorized(res, "invalid_token", "token verification failure");
   });
 });

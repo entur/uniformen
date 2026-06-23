@@ -39,7 +39,7 @@ function unauthorized(_ctx: { req: { url: string } }, error: string, description
  * Builds the validation middleware for a set of tenants.
  */
 export function createValidateJwt(tenants: AuthTenant[]) {
-  // One validator per tenant so issuer, audience and JWKS endpoint are strictly paired
+  // One validator per tenant so issuer, audiences and JWKS endpoint are strictly paired
   const validators = new Map(
     tenants.map((tenant) => {
       // jose caches the JWKS for 10 minutes, dedupes concurrent fetches,
