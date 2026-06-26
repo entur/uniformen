@@ -17,7 +17,7 @@ const EnturBaseLogo = () => (
       fillRule="evenodd"
       clipRule="evenodd"
       d="M0 23.5436H29.2654V20.75H0V23.5436Z"
-      fill="#FF5959"
+      class="uniformen__fill-env-color"
     />
     <path
       fillRule="evenodd"
@@ -40,9 +40,9 @@ const EnturBaseLogo = () => (
   </svg>
 );
 
-export const Logo = (props: { appName: string }) => (
+export const Logo = (props: { appName?: string }) => (
   <div class="uniformen-logo">
     <EnturBaseLogo />
-    <span class="uniformen-logo__app">{props.appName}</span>
+    {props.appName && <span class="uniformen-logo__app">{props.appName}</span>}
   </div>
 );

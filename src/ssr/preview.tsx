@@ -1,10 +1,11 @@
-import { createRoute, type OpenAPIHono } from "@hono/zod-openapi";
+import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { Footer } from "./Footer";
 import { renderComponentToString } from "./renderComponentToString";
 import { sha256Source } from "./sha256";
 import { TopNavigation } from "./TopNavigation";
 import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
+import { parseAppName } from "./appName";
 
 // The preview page's own base styles (fonts + layout reset). Held as a const so
 // its exact bytes can be hashed for the CSP `style-src` directive.
@@ -49,6 +50,11 @@ export function previewRoutes(server: OpenAPIHono): void {
   const previewRoute = createRoute({
     method: "get",
     path: "/",
+    request: {
+      query: z.object({
+        app: z.enum(["partner", "sorvis", "cleos"]).optional(),
+      }),
+    },
     responses: {
       200: {
         description: "Preview HTML for header and footer.",
@@ -58,6 +64,8 @@ export function previewRoutes(server: OpenAPIHono): void {
 
   server.openapi(previewRoute, async (ctx) => {
     ctx.header("Content-Security-Policy", previewCsp);
+    const { app } = ctx.req.valid("query");
+    const appName = parseAppName(app);
     return ctx.html(`
         <html lang="nb">
             <head>
@@ -67,7 +75,7 @@ export function previewRoutes(server: OpenAPIHono): void {
                 ${renderUniformenStyleTag()}
             </head>
             <body>
-                ${await renderComponentToString(<TopNavigation />)}
+                ${await renderComponentToString(<TopNavigation appName={appName} />)}
                 <main></main>
                 ${await renderComponentToString(<Footer />)}
                 ${renderUniformenScripts()}

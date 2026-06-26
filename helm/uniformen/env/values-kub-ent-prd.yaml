@@ -8,6 +8,7 @@ common:
   configmap:
     enabled: true
     data:
+      ENVIRONMENT: production
       LOG_LEVEL: info
       AUTH0_INTERNAL_AUDIENCE: https://api.entur.io
       AUTH0_INTERNAL_ISSUER: https://internal.entur.org/

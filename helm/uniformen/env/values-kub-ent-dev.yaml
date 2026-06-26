@@ -5,6 +5,7 @@ common:
   configmap:
     enabled: true
     data:
+      ENVIRONMENT: dev
       LOG_LEVEL: info
       AUTH0_INTERNAL_AUDIENCE: https://api.dev.entur.io
       AUTH0_INTERNAL_ISSUER: https://internal.dev.entur.org/

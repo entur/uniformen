@@ -3,13 +3,13 @@ import { LogInIcon } from "../components/icons/LogInIcon";
 import { UserIcon } from "../components/icons/UserIcon";
 import { Logo } from "./Logo";
 
-export function TopNavigation({ user }: { user?: string }) {
+export function TopNavigation({ user, appName }: { user?: string; appName?: string }) {
   return (
     <header id="top-navigation" class="uniformen-top-nav">
       <nav class="uniformen-top-nav__nav" aria-label="Toppnavigasjon">
         <div class="uniformen-top-nav__left">
           <AppSwitcher />
-          <Logo appName="Uniformen" />
+          <Logo appName={appName} />
         </div>
         <div class="uniformen-top-nav__center"></div>
         <div class="uniformen-top-nav__right">

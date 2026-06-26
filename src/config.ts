@@ -17,6 +17,24 @@ function requiredAudiences(name: string): string | string[] {
   return rest.length === 0 ? first : [first, ...rest];
 }
 
+export type Environment = "local" | "dev" | "staging" | "production";
+
+const parseEnvironment = (value: string): Environment => {
+  switch (value) {
+    case "local":
+    case "dev":
+    case "staging":
+    case "production":
+      return value;
+    default:
+      throw new Error(
+        `Invalid ENVIRONMENT: ${value} (expected local, dev, staging, or production)`,
+      );
+  }
+};
+
+export const environment: Environment = parseEnvironment(requiredEnv("ENVIRONMENT"));
+
 export type AuthTenant = {
   name: "internal" | "partner";
   issuer: string;

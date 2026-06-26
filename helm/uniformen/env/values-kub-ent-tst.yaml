@@ -5,6 +5,7 @@ common:
   configmap:
     enabled: true
     data:
+      ENVIRONMENT: staging
       LOG_LEVEL: info
       AUTH0_INTERNAL_AUDIENCE: https://api.staging.entur.io
       AUTH0_INTERNAL_ISSUER: https://internal.staging.entur.org/
