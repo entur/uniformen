@@ -171,3 +171,67 @@ describe("/ssr", () => {
     expect(body.csp["script-src"]).toContain(await sha256(scriptBody));
   });
 });
+
+describe("/ssr app query param", () => {
+  const APP_NAMES: [slug: string, rendered: string][] = [
+    ["partner", "Partner"],
+    ["sorvis", "Sørvis"],
+    ["cleos", "CLEOS"],
+  ];
+
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+
+  for (const [slug, rendered] of APP_NAMES) {
+    test(`app=${slug} renders "${rendered}" in the logo slot`, async () => {
+      const res = await ssr(`?app=${slug}`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.headerHtml).toContain(`<span class="uniformen-logo__app">${rendered}</span>`);
+    });
+  }
+
+  test("no app param renders the logo without an app name slot", async () => {
+    const res = await app.request("/ssr");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain('class="uniformen-logo"');
+    expect(body.headerHtml).not.toContain("uniformen-logo__app");
+  });
+
+  test("app param does not affect the footer or csp hashes", async () => {
+    const plain = await (await ssr()).json();
+    const withApp = await (await ssr("?app=partner")).json();
+    expect(withApp.footerHtml).toBe(plain.footerHtml);
+    expect(withApp.csp).toEqual(plain.csp);
+    expect(withApp.headAssets).toBe(plain.headAssets);
+    expect(withApp.scripts).toBe(plain.scripts);
+  });
+
+  test("app param works alongside an authenticated user", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Kari Nordmann" });
+    const token = await signInternalToken({ sub: "auth0|appparam" });
+    const res = await app.request("/ssr?app=cleos", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain("uniformen-top-nav__user");
+    expect(body.headerHtml).toContain("Kari Nordmann");
+    expect(body.headerHtml).toContain("CLEOS");
+  });
+
+  test("unknown app value is rejected by query validation", async () => {
+    const res = await ssr("?app=evil");
+    expect(res.status).toBe(400);
+  });
+
+  test("empty app value is rejected by query validation", async () => {
+    const res = await ssr("?app=");
+    expect(res.status).toBe(400);
+  });
+
+  test("unrecognised query params are ignored", async () => {
+    const res = await ssr("?app=partner&nonsense=1");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain("Partner");
+  });
+});

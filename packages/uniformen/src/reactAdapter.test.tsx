@@ -70,6 +70,22 @@ describe("fetchUniformenComponents", () => {
     expect(renderToStaticMarkup(createElement(Scripts))).toBe("");
   });
 
+  it("forwards token, environment and params to the layout fetch", async () => {
+    mockFetch(baseLayout);
+    await fetchUniformenComponents({
+      token: "abc.def.ghi",
+      environment: "dev",
+      params: { app: "partner" },
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://uniformen.dev.entur.no/ssr?app=partner",
+      {
+        headers: { Authorization: "Bearer abc.def.ghi" },
+      },
+    );
+  });
+
   it("renders nothing for every component when the layout fetch fails", async () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
     mockFetch({}, false);

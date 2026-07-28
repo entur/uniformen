@@ -1,2 +1,2 @@
-export type { Environment, UniformenLayout } from "./types";
+export type { Environment, FetchUniformenParams, UniformenLayout } from "./types";
 export * from "./lib/fetchUniformenLayout";

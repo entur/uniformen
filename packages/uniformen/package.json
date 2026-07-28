@@ -1,6 +1,6 @@
 {
   "name": "@entur/uniformen",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Header and footer for Entur apps via the Uniformen layout service.",
   "keywords": [
     "entur",
@@ -20,6 +20,7 @@
   },
   "files": [
     "dist",
+    "CHANGELOG.md",
     "LICENSE",
     "README.md"
   ],

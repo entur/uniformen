@@ -1,7 +1,6 @@
 import { type FC } from "react";
 import parse from "html-react-parser";
-import { fetchUniformenLayout } from "./lib/fetchUniformenLayout";
-import type { Environment } from "./types";
+import { fetchUniformenLayout, type FetchUniformenLayoutProps } from "./lib/fetchUniformenLayout";
 
 type UniformenComponents = {
   HeadAssets: FC;
@@ -19,10 +18,9 @@ const EMPTY_COMPONENTS: UniformenComponents = {
 };
 
 export async function fetchUniformenComponents(
-  token?: string,
-  environment: Environment = "production",
+  props: FetchUniformenLayoutProps = {},
 ): Promise<UniformenComponents> {
-  const layout = await fetchUniformenLayout(token, environment);
+  const layout = await fetchUniformenLayout(props);
 
   if (!layout) return EMPTY_COMPONENTS;
 

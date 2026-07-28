@@ -51,6 +51,24 @@ export default function app() {
 
 Returns `UniformenLayout | null`. Returns `null` if the request fails.
 
+All options are optional and passed as a single object:
+
+```ts
+const layout = await fetchUniformenLayout({
+  token, // Auth0 access token; adds the user to the nav
+  environment: "dev", // "local" | "dev" | "staging" | "production" (default)
+  params: { app: "partner" }, // query params for the SSR endpoint
+});
+```
+
+`params.app` (`"partner" | "sorvis" | "cleos"`) renders the app name next to the
+Entur logo. Params with an `undefined` value are omitted from the query string,
+and array-valued params serialise as a repeated key (`?key=a&key=b`).
+An unknown `app` value is rejected by the service with `400`, so the call
+returns `null`.
+
+The same options apply to `fetchUniformenComponents` below.
+
 ### React adapter
 
 ```tsx
