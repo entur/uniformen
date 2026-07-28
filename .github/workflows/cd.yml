@@ -36,6 +36,8 @@ jobs:
     uses: entur/gha-security/.github/workflows/docker-scan.yml@v2.15.0
     with:
       image_artifact: ${{ needs.docker-build.outputs.image_artifact }}
+    secrets:
+      external_repository_token: ${{ secrets.EXTERNAL_REPOSITORY_TOKEN }}
 
   docker-push:
     needs: [docker-build, build]
