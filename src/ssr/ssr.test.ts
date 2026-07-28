@@ -235,3 +235,89 @@ describe("/ssr app query param", () => {
     expect(body.headerHtml).toContain("Partner");
   });
 });
+
+describe("/ssr sidebar query param", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+
+  test("sidebar=expanded renders the collapse control, expanded", async () => {
+    const res = await ssr("?sidebar=expanded");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain("data-uniformen-sidebar-toggle");
+    expect(body.headerHtml).toContain('aria-label="Skjul eller vis sidemeny"');
+    expect(body.headerHtml).toContain('aria-expanded="true"');
+  });
+
+  test("sidebar=collapsed ships the control matching the app's own state", async () => {
+    const body = await (await ssr("?sidebar=collapsed")).json();
+    expect(body.headerHtml).toContain("data-uniformen-sidebar-toggle");
+    // The app switcher toggle is also aria-expanded="false", so pin the state
+    // to the sidebar button itself.
+    expect(body.headerHtml).toMatch(/aria-expanded="false"[^>]*data-uniformen-sidebar-toggle/);
+  });
+
+  test("no param omits the collapse control", async () => {
+    const body = await (await ssr()).json();
+    expect(body.headerHtml).not.toContain("data-uniformen-sidebar-toggle");
+  });
+
+  test("the handler ships regardless, so the same script hash serves both", async () => {
+    const withToggle = await (await ssr("?sidebar=expanded")).json();
+    const without = await (await ssr()).json();
+    expect(withToggle.scripts).toContain("uniformen:toggle-sidebar");
+    expect(withToggle.scripts).toBe(without.scripts);
+    expect(withToggle.csp).toEqual(without.csp);
+  });
+
+  test("unknown sidebar value is rejected by query validation", async () => {
+    for (const query of ["?sidebar=yes", "?sidebar=true"]) {
+      expect((await ssr(query)).status).toBe(400);
+    }
+  });
+});
+
+describe("/ssr top bar chrome", () => {
+  test("renders the environment badge for the running environment", async () => {
+    const body = await (await app.request("/ssr")).json();
+    // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
+    expect(body.headerHtml).toContain('data-uniformen-environment="dev"');
+    expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');
+    // Non-prod environments carry the strip pointer; production drops both.
+    expect(body.headerHtml).toContain("uniformen-env-badge__pointer");
+    expect(body.headAssets).toContain("--uniformen-env-strip-height: 0.25rem");
+  });
+
+  test("renders the right-hand action cluster", async () => {
+    const body = await (await app.request("/ssr")).json();
+    expect(body.headerHtml).toContain('aria-label="Velg applikasjon"');
+    expect(body.headerHtml).toContain("uniformen-top-nav__divider");
+  });
+
+  test("notifications ride along with the user, not the anonymous bar", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    const token = await signInternalToken({ sub: "auth0|abc123" });
+    const authed = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(authed.headerHtml).toContain('aria-label="Varsler"');
+
+    const anonymous = await (await app.request("/ssr")).json();
+    expect(anonymous.headerHtml).not.toContain('aria-label="Varsler"');
+  });
+
+  test("the app switcher panel is still wired to its toggle", async () => {
+    const body = await (await app.request("/ssr")).json();
+    expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
+    expect(body.headerHtml).toContain('id="app-switcher-panel"');
+  });
+
+  test("style tag carries the environment palette", async () => {
+    const body = await (await app.request("/ssr")).json();
+    for (const name of [
+      "--uniformen-color-env:",
+      "--uniformen-color-env-tint:",
+      "--uniformen-color-env-border:",
+      "--uniformen-color-env-text:",
+    ]) {
+      expect(body.headAssets).toContain(name);
+    }
+  });
+});

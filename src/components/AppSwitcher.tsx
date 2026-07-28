@@ -1,3 +1,5 @@
+import { AppGridIcon } from "./icons/AppGridIcon";
+
 export type PortalApplication = { id: string; label: string; url: string };
 
 export const PORTAL_APPLICATION_LIST: PortalApplication[] = [
@@ -26,20 +28,14 @@ export function AppSwitcher() {
     <div class="uniformen-app-switcher">
       <button
         type="button"
-        class="uniformen-icon-button"
+        class="uniformen-top-nav__action"
         aria-label="Velg applikasjon"
         aria-expanded="false"
         aria-controls="app-switcher-panel"
         data-uniformen-app-switcher-toggle
       >
-        <svg aria-hidden="true" viewBox="0 0 16 16" width="1em" height="1em" color="currentColor">
-          <path
-            fill="currentColor"
-            fill-rule="evenodd"
-            d="M6.843 1H1.636A.636.636 0 0 0 1 1.636v5.207c0 .351.285.636.636.636h5.207a.636.636 0 0 0 .636-.636V1.636A.636.636 0 0 0 6.843 1m-.637 1.273v3.933H2.273V2.273zM14.364 1H9.157a.636.636 0 0 0-.636.636v5.207c0 .351.285.636.636.636h5.207A.636.636 0 0 0 15 6.843V1.636A.636.636 0 0 0 14.364 1m-.637 1.273v3.933H9.793V2.273zM6.843 8.52H1.636A.636.636 0 0 0 1 9.157v5.207c0 .351.285.636.636.636h5.207a.636.636 0 0 0 .636-.636V9.157a.636.636 0 0 0-.636-.636m-.637 1.272v3.934H2.273V9.793zm8.158-1.272H9.157a.636.636 0 0 0-.636.636v5.207c0 .351.285.636.636.636h5.207a.636.636 0 0 0 .636-.636V9.157a.636.636 0 0 0-.636-.636m-.637 1.272v3.934H9.793V9.793z"
-            clip-rule="evenodd"
-          />
-        </svg>
+        <AppGridIcon />
+        <span class="uniformen-top-nav__action-label">App</span>
       </button>
       <div
         id="app-switcher-panel"

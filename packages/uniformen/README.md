@@ -57,7 +57,7 @@ All options are optional and passed as a single object:
 const layout = await fetchUniformenLayout({
   token, // Auth0 access token; adds the user to the nav
   environment: "dev", // "local" | "dev" | "staging" | "production" (default)
-  params: { app: "partner" }, // query params for the SSR endpoint
+  params: { app: "partner", sidebar: "expanded" }, // query params for the SSR endpoint
 });
 ```
 
@@ -66,6 +66,19 @@ Entur logo. Params with an `undefined` value are omitted from the query string,
 and array-valued params serialise as a repeated key (`?key=a&key=b`).
 An unknown `app` value is rejected by the service with `400`, so the call
 returns `null`.
+
+`params.sidebar` (`"expanded" | "collapsed"`) renders a collapse control at the
+far left of the top bar. Set it only if your app has a side navigation to
+collapse, and pass the state your app starts in — the button ships with a
+matching `aria-expanded`, so an app that restores a collapsed sidebar must send
+`"collapsed"`. Clicking the button flips `aria-expanded` and dispatches a
+`uniformen:toggle-sidebar` event on `window`; reacting to it is up to your app.
+
+```ts
+window.addEventListener("uniformen:toggle-sidebar", (event) => {
+  setSidebarCollapsed((event as CustomEvent<{ collapsed: boolean }>).detail.collapsed);
+});
+```
 
 The same options apply to `fetchUniformenComponents` below.
 

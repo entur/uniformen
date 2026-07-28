@@ -6,15 +6,10 @@ import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
 import { Footer } from "./Footer";
 import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
-import { parseAppName } from "./appName";
+import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
-});
-
-const uniformenQuerySchema = z.object({
-  // Define query parameters here.
-  app: z.enum(["partner", "sorvis", "cleos"]).optional(),
 });
 
 // Per-directive CSP sources the consumer unions into its own page CSP header.
@@ -69,13 +64,12 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     // Only authenticated users get a label; a nameless profile still shows
     // a placeholder, but anonymous/failed lookups render an empty slot.
     const user = info ? (info.name ?? info.email ?? "Bruker uten navn") : undefined;
-    const { app } = ctx.req.valid("query");
-    const appName = parseAppName(app);
+    const navProps = topNavigationProps(ctx.req.valid("query"));
 
     return ctx.json(
       {
         headAssets: renderUniformenStyleTag(),
-        headerHtml: await renderComponentToString(<TopNavigation user={user} appName={appName} />),
+        headerHtml: await renderComponentToString(<TopNavigation user={user} {...navProps} />),
         footerHtml: await renderComponentToString(<Footer />),
         scripts: renderUniformenScripts(),
         csp: {

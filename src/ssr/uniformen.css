@@ -1,57 +1,115 @@
 .uniformen-top-nav {
   --top-nav-height: 4rem;
-  background: var(--uniformen-color-brand-blue);
+  /* Strip along the very top, tinted by the environment. Its pointer lives on
+     the env badge so it stays centred on the chip. Zero height in production,
+     where there is no non-prod environment to warn about. */
+  border-top: var(--uniformen-env-strip-height) solid var(--uniformen-color-env);
+  background: var(--uniformen-color-brand-white);
+  color: var(--uniformen-color-brand-blue);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .uniformen-top-nav__nav {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
   height: var(--top-nav-height);
-  padding: 0 var(--uniformen-space-large);
+  padding: 0 var(--uniformen-space-medium);
+  /* Three offset layers, matching the design's stacked drop shadows. */
   box-shadow:
-    0px 0.3px 1px rgba(0, 0, 0, 0.02),
-    0px 1.14px 4px rgba(0, 0, 0, 0.08);
+    1px 1px 2px rgba(204, 205, 212, 0.3),
+    3px 3px 6px rgba(229, 229, 233, 0.35),
+    6px 6px 10px rgba(229, 229, 233, 0.15);
 }
 
 .uniformen-top-nav__left {
-  justify-self: start;
   display: flex;
   align-items: center;
-  gap: var(--uniformen-space-small);
-  min-width: 0;
-}
-
-.uniformen-top-nav__center {
-  justify-self: center;
-  display: flex;
-  align-items: center;
+  gap: var(--uniformen-space-medium);
+  /* The left cluster absorbs the squeeze on narrow viewports (the app name
+     ellipsises), while the right-hand controls keep their size. Deliberately not
+     `overflow: hidden`: the env pointer sits above this box and would be clipped. */
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .uniformen-top-nav__right {
-  justify-self: end;
   display: flex;
   align-items: center;
   gap: var(--uniformen-space-medium);
+  flex: 0 0 auto;
+}
+
+.uniformen-top-nav__sidebar-toggle {
+  height: 2rem;
+  width: 2rem;
+}
+
+/* Icon + label controls on the right: notifications, user, app switcher. */
+.uniformen-top-nav__action,
+.uniformen-top-nav__user,
+.uniformen-top-nav__login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--uniformen-space-xs);
+  box-sizing: border-box;
+  height: 2rem;
+  padding: 0 var(--uniformen-space-xs);
+  background: none;
+  border: none;
+  border-radius: var(--uniformen-radius-md);
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--uniformen-font-lg);
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
   min-width: 0;
 }
 
-.uniformen-top-nav__user {
-  display: flex;
-  align-items: center;
-  gap: var(--uniformen-space-small);
-  padding: var(--uniformen-space-xs2) var(--uniformen-space-medium);
-  color: var(--uniformen-color-brand-white);
-  font-size: 1rem;
-  line-height: 1.5;
-  min-width: 0;
+/* Optical centring. `align-items: center` centres the icon box against the
+   label's *line box*, but the label's visual mass sits between its baseline and
+   cap height — roughly 0.08em above that centre — so a geometrically centred
+   icon reads as sitting low. Lift the icons by the same amount. */
+.uniformen-top-nav__action > svg,
+.uniformen-top-nav__user > svg,
+.uniformen-top-nav__login > svg {
+  flex: none;
+  transform: translateY(-0.08em);
+}
+
+.uniformen-top-nav__action,
+.uniformen-top-nav__login {
+  cursor: pointer;
+}
+
+.uniformen-top-nav__action:hover,
+.uniformen-top-nav__login:hover {
+  background: var(--uniformen-color-blue-20);
+}
+
+.uniformen-top-nav__action:active,
+.uniformen-top-nav__login:active {
+  background: var(--uniformen-color-brand-lavender);
+}
+
+.uniformen-top-nav__action:focus-visible,
+.uniformen-top-nav__login:focus-visible {
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
+}
+
+.uniformen-top-nav__divider {
+  flex: none;
+  width: 1px;
+  height: 2rem;
+  background: var(--uniformen-color-grey-30);
 }
 
 .uniformen-top-nav__user-name {
@@ -61,33 +119,44 @@
   max-width: 16rem;
 }
 
-.uniformen-top-nav__login {
+.uniformen-env-badge {
+  --env-badge-height: 1.6875rem;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--uniformen-space-small);
-  padding: var(--uniformen-space-xs2) var(--uniformen-space-medium);
-  border: 0.125rem solid transparent;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--env-badge-height);
+  min-width: 6rem;
+  padding: 0 var(--uniformen-space-small);
+  background: var(--uniformen-color-env-tint);
+  border: 1px solid var(--uniformen-color-env-border);
   border-radius: var(--uniformen-radius-md);
-  color: var(--uniformen-color-brand-white);
-  font-size: 1rem;
-  line-height: 1.5;
-  text-decoration: none;
+  color: var(--uniformen-color-env-text);
+  font-size: var(--uniformen-font-md);
+  line-height: 1;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-  cursor: pointer;
+  user-select: none;
 }
 
-.uniformen-top-nav__login:hover {
-  background: rgba(255, 255, 255, 0.12);
+/* Tail of the top strip, pointing down at the badge. Offset from the bar rather
+   than from the badge, so the tip stays 0.5rem below the strip at both bar
+   heights — anchored to the badge it would ride up into the strip on mobile and
+   disappear into it. */
+.uniformen-env-badge__pointer {
+  position: absolute;
+  left: 50%;
+  top: -20px;
+  width: 1rem;
+  height: 0.5rem;
+  transform: translateX(-50%);
+  background: var(--uniformen-color-env);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
-.uniformen-top-nav__login:active {
-  background: var(--uniformen-color-brand-lavender);
-  color: var(--uniformen-color-blue-10);
-}
-
-.uniformen-top-nav__login:focus-visible {
-  outline: none;
-  box-shadow: var(--uniformen-shadow-focus);
+.uniformen-env-badge__label--short {
+  display: none;
 }
 
 /* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
@@ -97,30 +166,81 @@
   }
   .uniformen-top-nav__nav {
     padding: 0 var(--uniformen-space-medium);
-    grid-template-columns: 2fr auto 1fr;
     column-gap: var(--uniformen-space-small);
+  }
+  /* Icons only: the labels are the first thing to go when width runs out. The
+     buttons and links keep an aria-label, so their accessible names survive. */
+  .uniformen-top-nav__action-label {
+    display: none;
+  }
+  /* The user name and the environment are text with no aria-label behind them,
+     so they are taken out of the layout without leaving the accessibility tree:
+     `display: none` here would leave a screen reader with a bare icon. */
+  .uniformen-top-nav__user-name,
+  .uniformen-env-badge__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* Visual stand-in for the hidden env label; aria-hidden in the markup, so it
+     does not double up on the announced text. */
+  .uniformen-env-badge__label--short {
+    display: inline;
+  }
+  /* The env badge is a warning, so it keeps its size; the app name gives way. */
+  .uniformen-env-badge {
+    min-width: 0;
+    flex: none;
+  }
+  .uniformen-logo__app {
+    font-size: var(--uniformen-font-xl);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Phone widths: the logo lockup and the env badge are all that fit alongside the
+   right-hand icons, so the app name drops out. */
+@media (max-width: 30rem) {
+  .uniformen-top-nav__nav {
+    padding: 0 var(--uniformen-space-small);
+  }
+  .uniformen-top-nav__left,
+  .uniformen-top-nav__right {
+    gap: var(--uniformen-space-xs);
+  }
+  .uniformen-logo__app {
+    display: none;
   }
 }
 
 .uniformen-logo {
   display: flex;
   align-items: flex-end;
-  gap: var(--uniformen-space-xs);
+  gap: var(--uniformen-space-small);
+  min-width: 0;
 }
 
-.uniformen__fill-env-color {
-  fill: var(--uniformen-color-environment);
+.uniformen__fill-coral {
+  fill: var(--uniformen-color-brand-coral);
 }
 
 .uniformen-logo__app {
-  color: var(--uniformen-color-environment);
-  font-size: 1.2rem;
+  color: var(--uniformen-color-brand-coral);
+  font-size: var(--uniformen-font-xl2);
   font-weight: 400;
   line-height: 1.05;
   letter-spacing: 0;
   padding: 0;
   margin: 0;
-  transform: translateY(0.2em);
+  transform: translateY(0.05em);
 }
 
 .uniformen-app-switcher {
@@ -137,18 +257,17 @@
   background: none;
   border: 0.125rem solid transparent;
   border-radius: var(--uniformen-radius-md);
-  color: var(--uniformen-color-brand-white);
+  color: inherit;
   font-size: 1rem;
   cursor: pointer;
 }
 
 .uniformen-icon-button:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--uniformen-color-blue-20);
 }
 
 .uniformen-icon-button:active {
   background: var(--uniformen-color-brand-lavender);
-  color: var(--uniformen-color-blue-10);
 }
 
 .uniformen-icon-button:focus-visible {
@@ -156,21 +275,23 @@
   box-shadow: var(--uniformen-shadow-focus);
 }
 
-.uniformen-icon-button[aria-expanded="false"] ~ .uniformen-app-switcher__panel {
+/* Keyed off the data attribute, not a class: the toggle is styled as a top-nav
+   action, so it no longer carries the icon-button class. */
+[data-uniformen-app-switcher-toggle][aria-expanded="false"] ~ .uniformen-app-switcher__panel {
   display: none;
 }
 
 .uniformen-app-switcher__panel {
   position: fixed;
-  top: var(--top-nav-height);
-  left: var(--uniformen-space-medium);
+  /* Sits a 4px gap below the bar: nav height, plus the env strip (zero-height in
+     production), plus the gap. */
+  top: calc(var(--top-nav-height) + var(--uniformen-env-strip-height) + var(--uniformen-space-xs2));
+  right: var(--uniformen-space-medium);
   width: 20rem;
   font-family: Nationale, sans-serif;
   z-index: calc(var(--uniformen-z-popover) + 1);
   background: var(--uniformen-color-brand-white);
-  border: 1px solid var(--uniformen-color-blue-50);
-  border-top: none;
-  border-radius: 0 0 0.75rem 0.75rem;
+  border-radius: 0.75rem;
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
   overflow: hidden;
   display: flex;
@@ -225,7 +346,7 @@
   background: var(--uniformen-color-blue-90);
   padding: 0;
   overflow-y: auto;
-  max-height: 15.5rem;
+  max-height: 18rem;
 }
 
 .uniformen-app-switcher__body-section-label {

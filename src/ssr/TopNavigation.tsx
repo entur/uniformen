@@ -1,29 +1,49 @@
 import { AppSwitcher } from "../components/AppSwitcher";
+import { NotificationsButton } from "../components/NotificationsButton";
+import { SidebarToggle } from "../components/SidebarToggle";
 import { LogInIcon } from "../components/icons/LogInIcon";
 import { UserIcon } from "../components/icons/UserIcon";
+import { EnvironmentBadge } from "./EnvironmentBadge";
 import { Logo } from "./Logo";
 
-export function TopNavigation({ user, appName }: { user?: string; appName?: string }) {
+export function TopNavigation({
+  user,
+  appName,
+  sidebar,
+}: {
+  user?: string;
+  appName?: string;
+  /**
+   * Render the side navigation collapse control, starting in this state.
+   * Omitted means the app has no sidebar and gets no control.
+   */
+  sidebar?: "expanded" | "collapsed";
+}) {
   return (
     <header id="top-navigation" class="uniformen-top-nav">
       <nav class="uniformen-top-nav__nav" aria-label="Toppnavigasjon">
         <div class="uniformen-top-nav__left">
-          <AppSwitcher />
+          {sidebar && <SidebarToggle expanded={sidebar === "expanded"} />}
           <Logo appName={appName} />
+          <EnvironmentBadge />
         </div>
-        <div class="uniformen-top-nav__center"></div>
         <div class="uniformen-top-nav__right">
           {user ? (
-            <span class="uniformen-top-nav__user">
-              <UserIcon />
-              <span class="uniformen-top-nav__user-name">{user}</span>
-            </span>
+            <>
+              <NotificationsButton />
+              <span class="uniformen-top-nav__user">
+                <UserIcon />
+                <span class="uniformen-top-nav__user-name">{user}</span>
+              </span>
+            </>
           ) : (
-            <a class="uniformen-top-nav__login" href="/auth/login">
+            <a class="uniformen-top-nav__login" href="/auth/login" aria-label="Logg inn">
               <LogInIcon />
-              <span>Logg inn</span>
+              <span class="uniformen-top-nav__action-label">Logg inn</span>
             </a>
           )}
+          <span class="uniformen-top-nav__divider" aria-hidden="true"></span>
+          <AppSwitcher />
         </div>
       </nav>
     </header>
