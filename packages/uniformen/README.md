@@ -61,11 +61,17 @@ const layout = await fetchUniformenLayout({
 });
 ```
 
-`params.app` (`"partner" | "sorvis" | "cleos"`) renders the app name next to the
-Entur logo. Params with an `undefined` value are omitted from the query string,
+`params.app` (`"cleos" | "nplan" | "ops-center" | "partner" | "sorvis"`) names the
+portal application asking for the layout: it renders the app
+name next to the Entur logo, and marks that application as the current page in the
+app switcher. Params with an `undefined` value are omitted from the query string,
 and array-valued params serialise as a repeated key (`?key=a&key=b`).
 An unknown `app` value is rejected by the service with `400`, so the call
 returns `null`.
+
+The app switcher links to the environment you fetched the layout from — a `dev`
+layout hands your users the dev instances of the other portal applications, never
+production.
 
 `params.sidebar` (`boolean`) renders a collapse control at the far left of the top
 bar. Set it only if your app has a side navigation to collapse. Uniformen renders

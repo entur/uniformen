@@ -177,6 +177,8 @@ describe("/ssr app query param", () => {
     ["partner", "Partner"],
     ["sorvis", "Sørvis"],
     ["cleos", "CLEOS"],
+    ["nplan", "Nplan"],
+    ["ops-center", "Ops Center"],
   ];
 
   const ssr = (query = "") => app.request(`/ssr${query}`);
@@ -333,6 +335,27 @@ describe("/ssr top bar chrome", () => {
     const body = await (await app.request("/ssr")).json();
     expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
     expect(body.headerHtml).toContain('id="app-switcher-panel"');
+  });
+
+  test("the switcher links to the environment this instance serves", async () => {
+    const body = await (await app.request("/ssr")).json();
+    // Tests run with ENVIRONMENT=dev (see test/authTestSetup): a dev header must
+    // not hand its user production apps.
+    expect(body.headerHtml).toContain('href="https://sorvis.dev.entur.io"');
+    expect(body.headerHtml).not.toContain('href="https://sorvis.entur.io"');
+  });
+
+  test("the requesting app is marked as the current one", async () => {
+    // The `app` value and the switcher entry it marks are the same string, so
+    // `?app=partner` marks the Partner entry, whose host is `entur-partner`.
+    const withApp = await (await app.request("/ssr?app=partner")).json();
+    expect(withApp.headerHtml).toContain('aria-current="page"');
+    expect(withApp.headerHtml).toMatch(
+      /entur-partner\.dev\.entur\.org[\s\S]{0,200}aria-current="page"/,
+    );
+
+    const withoutApp = await (await app.request("/ssr")).json();
+    expect(withoutApp.headerHtml).not.toContain('aria-current="page"');
   });
 
   test("style tag carries the environment palette", async () => {

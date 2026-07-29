@@ -4,7 +4,11 @@ export type Environment = "local" | "dev" | "staging" | "production";
  * Parameters for fetching Uniformen layouts.
  */
 export type FetchUniformenParams = {
-  app?: "partner" | "sorvis" | "cleos";
+  /**
+   * The portal application asking for the layout. It gets its name beside the
+   * Entur logo, and its entry in the app switcher marked as the current page.
+   */
+  app?: "cleos" | "nplan" | "ops-center" | "partner" | "sorvis";
   /**
    * Render the side navigation collapse control in the top bar. Set it only if the
    * app has a sidebar to collapse.

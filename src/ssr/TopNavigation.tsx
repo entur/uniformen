@@ -1,4 +1,5 @@
 import { AppSwitcher } from "../components/AppSwitcher";
+import type { PortalApplicationId } from "../components/portalApplications";
 import { NotificationsButton } from "../components/NotificationsButton";
 import { SidebarToggle } from "../components/SidebarToggle";
 import { LogInIcon } from "../components/icons/LogInIcon";
@@ -9,10 +10,13 @@ import { Logo } from "./Logo";
 export function TopNavigation({
   user,
   appName,
+  activeAppId,
   sidebar,
 }: {
   user?: string;
   appName?: string;
+  /** The portal application this header is rendered for. */
+  activeAppId?: PortalApplicationId;
   /**
    * Whether to render the side navigation collapse control. Off means the app has
    * no sidebar. The control's state is not ours to know: it lives on the root
@@ -44,7 +48,7 @@ export function TopNavigation({
             </a>
           )}
           <span class="uniformen-top-nav__divider" aria-hidden="true"></span>
-          <AppSwitcher />
+          <AppSwitcher activeAppId={activeAppId} />
         </div>
       </nav>
     </header>

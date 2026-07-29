@@ -2,6 +2,29 @@
 
 All notable changes to `@entur/uniformen`.
 
+## 0.5.0 — 2026-07-29
+
+The app switcher now links within the environment it is served from, so a dev
+layout no longer hands your users production apps. Served by the Uniformen
+service: apps on 0.4.0 pick it up on their next request.
+
+### Added
+
+- `params.app` accepts `"nplan"` and `"ops-center"` alongside `"cleos"`,
+  `"partner"` and `"sorvis"`.
+- `params.app` also marks your application as the current page in the app switcher,
+  on top of naming it beside the logo.
+
+### Changed
+
+- The app switcher links to the environment the layout was fetched from, rather
+  than always to production.
+- The switcher lists the portal applications ordered by name.
+
+### Fixed
+
+- The app switcher highlighted Entur Partner as the current page in every app.
+
 ## 0.4.0 — 2026-07-29
 
 The sidebar contract is now a single DOM attribute rather than a pair of events

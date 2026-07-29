@@ -1,25 +1,25 @@
+import { environment as runningEnvironment, type Environment } from "../config";
 import { AppGridIcon } from "./icons/AppGridIcon";
+import { PORTAL_APPLICATIONS, type PortalApplicationId } from "./portalApplications";
 
-export type PortalApplication = { id: string; label: string; url: string };
-
-export const PORTAL_APPLICATION_LIST: PortalApplication[] = [
-  { id: "sorvis", label: "Sørvis", url: "https://sorvis.entur.io" },
-  {
-    id: "entur-partner",
-    label: "Entur Partner",
-    url: "https://entur-partner.entur.org",
-  },
-  {
-    id: "skoleskyss",
-    label: "Skoleskyss",
-    url: "https://skoleskyss.entur.no",
-  },
-  { id: "nplan", label: "Nplan", url: "https://nplan.entur.org" },
-  { id: "ops-center", label: "Ops Center", url: "https://ops-center.entur.io" },
-];
-
-export function AppSwitcher() {
-  const activeAppId = "entur-partner";
+/**
+ * The switcher links to the environment the header is served from, never across
+ * environments: a dev instance of an app hands its user dev instances of the
+ * others. The environment defaults to the one this instance serves; the prop
+ * exists so every environment's links can be exercised from a test.
+ *
+ * `activeAppId` is the application the header is being rendered for, marked as
+ * the current page. Absent when the consumer sends no `app` query param, and
+ * matching nothing in environments the named application is not deployed to.
+ */
+export function AppSwitcher({
+  activeAppId,
+  environment = runningEnvironment,
+}: {
+  activeAppId?: PortalApplicationId;
+  environment?: Environment;
+}) {
+  const applications = PORTAL_APPLICATIONS[environment];
 
   // TODO focus first item when opening
   // TODO close app switcher when clicking escape, and focus the open button
@@ -73,7 +73,7 @@ export function AppSwitcher() {
             Alle tjenester
           </div>
           <ul class="uniformen-app-switcher__list">
-            {PORTAL_APPLICATION_LIST.map((app) => (
+            {applications.map((app) => (
               <li key={app.id}>
                 <a
                   href={app.url}
@@ -84,7 +84,7 @@ export function AppSwitcher() {
                   }
                   aria-current={activeAppId === app.id ? "page" : undefined}
                 >
-                  {app.label}
+                  {app.appName}
                 </a>
               </li>
             ))}
