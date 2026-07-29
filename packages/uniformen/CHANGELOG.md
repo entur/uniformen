@@ -2,6 +2,47 @@
 
 All notable changes to `@entur/uniformen`.
 
+## 0.4.0 — 2026-07-29
+
+The sidebar contract is now a single DOM attribute rather than a pair of events
+plus a query param. Most of it is served by the Uniformen service, so apps on
+0.3.0 pick up the new behaviour on their next request — including the changes that
+break them. See [Sidebar](./README.md#sidebar) for the whole contract.
+
+### Changed
+
+- **Breaking:** `params.sidebar` is a `boolean` — whether the app has a sidebar at
+  all. It no longer carries the state, which was never something a server render
+  could know. `"expanded"` / `"collapsed"` are rejected with `400`, so
+  `fetchUniformenLayout` returns `null`.
+- **Breaking:** the sidebar's state is `data-uniformen-sidebar` on `<html>`
+  (`"expanded" | "collapsed"`), and it is the only place the state lives. Style your
+  sidebar off that selector, and collapse it from anywhere by writing the
+  attribute: `document.documentElement.dataset.uniformenSidebar = "collapsed"`.
+  Replaces both the `uniformen:set-sidebar` event and the app-side state that had to
+  be kept in sync with the button.
+- **Breaking:** `uniformen:toggle-sidebar` is now `uniformen:sidebar`, with the
+  same `{ collapsed: boolean }` detail. It fires for every change, not just button
+  clicks, and is a convenience — the attribute is the contract.
+- The collapse button's chevron follows the state in CSS, so it no longer looks the
+  same expanded and collapsed.
+- `headAssets` now contains an inline `<script>` alongside the styles, and it must be
+  in `<head>`. Its hash is included in `csp["script-src"]` (that directive now
+  carries two hashes). The whole sidebar lives there rather than in `scripts`: it
+  restores the state before the first paint, and it has to be watching the attribute
+  before the app's own scripts run, so that an early write is announced and persisted
+  like any other.
+
+### Added
+
+- The collapsed/expanded preference persists in `localStorage` under
+  `uniformen:sidebar`, restored before paint. Apps no longer have to store it, and
+  a server-rendered app no longer has to guess it.
+- An app can pick its own default by server-rendering
+  `<html data-uniformen-sidebar="collapsed">`. The head script only writes the
+  attribute when the user has a stored preference, or when nothing has set it at all,
+  so a value the app rendered is left alone.
+
 ## 0.3.0 — 2026-07-28
 
 ### Changed

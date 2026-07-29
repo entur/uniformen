@@ -14,16 +14,17 @@ export function TopNavigation({
   user?: string;
   appName?: string;
   /**
-   * Render the side navigation collapse control, starting in this state.
-   * Omitted means the app has no sidebar and gets no control.
+   * Whether to render the side navigation collapse control. Off means the app has
+   * no sidebar. The control's state is not ours to know: it lives on the root
+   * element, restored client-side before paint.
    */
-  sidebar?: "expanded" | "collapsed";
+  sidebar?: boolean;
 }) {
   return (
     <header id="top-navigation" class="uniformen-top-nav">
       <nav class="uniformen-top-nav__nav" aria-label="Toppnavigasjon">
         <div class="uniformen-top-nav__left">
-          {sidebar && <SidebarToggle expanded={sidebar === "expanded"} />}
+          {sidebar && <SidebarToggle />}
           <Logo appName={appName} />
           <EnvironmentBadge />
         </div>

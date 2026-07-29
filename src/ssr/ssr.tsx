@@ -6,6 +6,7 @@ import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
 import { Footer } from "./Footer";
 import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
+import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenHeadScript";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 
 const uniformenHeaderSchema = z.object({
@@ -68,13 +69,13 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
 
     return ctx.json(
       {
-        headAssets: renderUniformenStyleTag(),
+        headAssets: `${renderUniformenStyleTag()}${renderUniformenHeadScript()}`,
         headerHtml: await renderComponentToString(<TopNavigation user={user} {...navProps} />),
         footerHtml: await renderComponentToString(<Footer />),
         scripts: renderUniformenScripts(),
         csp: {
           "style-src": [uniformenCssHash],
-          "script-src": [uniformenScriptsHash],
+          "script-src": [uniformenHeadScriptHash, uniformenScriptsHash],
         },
       },
       200,

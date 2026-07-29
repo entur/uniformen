@@ -239,40 +239,66 @@ describe("/ssr app query param", () => {
 describe("/ssr sidebar query param", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
 
-  test("sidebar=expanded renders the collapse control, expanded", async () => {
-    const res = await ssr("?sidebar=expanded");
+  test("sidebar=true renders the collapse control", async () => {
+    const res = await ssr("?sidebar=true");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.headerHtml).toContain("data-uniformen-sidebar-toggle");
     expect(body.headerHtml).toContain('aria-label="Skjul eller vis sidemeny"');
-    expect(body.headerHtml).toContain('aria-expanded="true"');
   });
 
-  test("sidebar=collapsed ships the control matching the app's own state", async () => {
-    const body = await (await ssr("?sidebar=collapsed")).json();
-    expect(body.headerHtml).toContain("data-uniformen-sidebar-toggle");
-    // The app switcher toggle is also aria-expanded="false", so pin the state
-    // to the sidebar button itself.
-    expect(body.headerHtml).toMatch(/aria-expanded="false"[^>]*data-uniformen-sidebar-toggle/);
+  test("sidebar=false and no param omit the collapse control", async () => {
+    for (const query of ["", "?sidebar=false"]) {
+      const body = await (await ssr(query)).json();
+      expect(body.headerHtml).not.toContain("data-uniformen-sidebar-toggle");
+    }
   });
 
-  test("no param omits the collapse control", async () => {
-    const body = await (await ssr()).json();
-    expect(body.headerHtml).not.toContain("data-uniformen-sidebar-toggle");
+  test("the param says whether the app has a sidebar, never which state it is in", async () => {
+    // The state is a per-user preference restored on the client, so it must not
+    // reach the markup — one response body serves every user of the app.
+    const body = await (await ssr("?sidebar=true")).json();
+    expect(body.headerHtml).not.toContain('data-uniformen-sidebar="');
+    for (const query of ["?sidebar=expanded", "?sidebar=collapsed", "?sidebar=yes"]) {
+      expect((await ssr(query)).status).toBe(400);
+    }
   });
 
-  test("the handler ships regardless, so the same script hash serves both", async () => {
-    const withToggle = await (await ssr("?sidebar=expanded")).json();
+  test("the handlers ship regardless, so the same script hashes serve both", async () => {
+    const withToggle = await (await ssr("?sidebar=true")).json();
     const without = await (await ssr()).json();
-    expect(withToggle.scripts).toContain("uniformen:toggle-sidebar");
+    expect(withToggle.headAssets).toContain("uniformen:sidebar");
+    expect(withToggle.headAssets).toBe(without.headAssets);
     expect(withToggle.scripts).toBe(without.scripts);
     expect(withToggle.csp).toEqual(without.csp);
   });
 
-  test("unknown sidebar value is rejected by query validation", async () => {
-    for (const query of ["?sidebar=yes", "?sidebar=true"]) {
-      expect((await ssr(query)).status).toBe(400);
-    }
+  test("the whole sidebar ships from the head, not the end of the body", async () => {
+    const body = await (await ssr("?sidebar=true")).json();
+    // `scripts` ships at the end of the body, which is too late twice over: the
+    // expanded sidebar would paint first and then collapse, and an app that writes
+    // the state attribute before that point would have the write go unobserved.
+    expect(body.headAssets).toContain("data-uniformen-sidebar");
+    expect(body.headAssets).toContain("uniformen:sidebar");
+    expect(body.headAssets).toContain("MutationObserver");
+    expect(body.scripts).not.toContain("data-uniformen-sidebar");
+    // Both inline blocks are hashed for the consumer's script-src.
+    expect(body.csp["script-src"]).toHaveLength(2);
+    for (const source of body.csp["script-src"]) expect(source).toStartWith("'sha256-");
+  });
+
+  test("the icon ships both chevron directions, and the stylesheet picks one per state", async () => {
+    const body = await (await ssr("?sidebar=true")).json();
+    expect(body.headerHtml).toContain("uniformen-sidebar-toggle__chevron--collapse");
+    expect(body.headerHtml).toContain("uniformen-sidebar-toggle__chevron--expand");
+    // Only CSS distinguishes the two, so the rules have to be in the served
+    // stylesheet — otherwise the button looks identical expanded and collapsed.
+    expect(body.headAssets).toMatch(
+      /:root\[data-uniformen-sidebar="collapsed"\]\s*\.uniformen-sidebar-toggle__chevron--collapse/,
+    );
+    expect(body.headAssets).toMatch(
+      /:root:not\(\[data-uniformen-sidebar="collapsed"\]\)\s*\.uniformen-sidebar-toggle__chevron--expand/,
+    );
   });
 });
 

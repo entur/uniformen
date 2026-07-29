@@ -57,7 +57,7 @@ All options are optional and passed as a single object:
 const layout = await fetchUniformenLayout({
   token, // Auth0 access token; adds the user to the nav
   environment: "dev", // "local" | "dev" | "staging" | "production" (default)
-  params: { app: "partner", sidebar: "expanded" }, // query params for the SSR endpoint
+  params: { app: "partner", sidebar: true }, // query params for the SSR endpoint
 });
 ```
 
@@ -67,18 +67,9 @@ and array-valued params serialise as a repeated key (`?key=a&key=b`).
 An unknown `app` value is rejected by the service with `400`, so the call
 returns `null`.
 
-`params.sidebar` (`"expanded" | "collapsed"`) renders a collapse control at the
-far left of the top bar. Set it only if your app has a side navigation to
-collapse, and pass the state your app starts in — the button ships with a
-matching `aria-expanded`, so an app that restores a collapsed sidebar must send
-`"collapsed"`. Clicking the button flips `aria-expanded` and dispatches a
-`uniformen:toggle-sidebar` event on `window`; reacting to it is up to your app.
-
-```ts
-window.addEventListener("uniformen:toggle-sidebar", (event) => {
-  setSidebarCollapsed((event as CustomEvent<{ collapsed: boolean }>).detail.collapsed);
-});
-```
+`params.sidebar` (`boolean`) renders a collapse control at the far left of the top
+bar. Set it only if your app has a side navigation to collapse. Uniformen renders
+the button; you render the sidebar. See [Sidebar](#sidebar) for the contract.
 
 The same options apply to `fetchUniformenComponents` below.
 
@@ -114,6 +105,73 @@ The adapter parses the layout HTML into real React elements.
 - Place `<Header />` inside `<body>` before `<main>`.
 - If needed, place `<Footer />` inside `<body>` after `<main>`.
 - Place `<Scripts />` inside `<body>` as the last element.
+
+## Sidebar
+
+Pass `params.sidebar: true` and the top bar renders a collapse control at its far
+left. Uniformen never renders a sidebar.
+
+The state is one attribute on the root element, and that is the only place it
+lives:
+
+```html
+<html data-uniformen-sidebar="expanded | collapsed"></html>
+```
+
+The whole sidebar ships in `headAssets`, so `<HeadAssets />` has to be in `<head>`.
+It restores the stored state before the first paint — a collapsed sidebar paints
+collapsed rather than jumping — and it starts watching the attribute before your own
+scripts run, so a write from anywhere is picked up, however early.
+
+**Style your sidebar off the attribute.** No JavaScript state, nothing to keep in
+sync, and it is correct on the first frame — including in a server-rendered app,
+whose server can't know the preference:
+
+```css
+:root[data-uniformen-sidebar="collapsed"] .my-sidebar {
+  width: 0;
+  /* Hide it from the a11y tree and the tab order too. Width alone only hides it
+     from the eye: the links stay focusable and announced, so a collapsed sidebar
+     becomes a run of invisible tab stops. */
+  visibility: hidden;
+}
+```
+
+If the collapse animates, transition `visibility` alongside the width
+(`transition: width 150ms ease, visibility 150ms ease`) so the content stays visible
+until the animation has finished.
+
+**To pick a different default**, server-render `<html data-uniformen-sidebar="collapsed">`.
+Uniformen only writes the attribute itself when the user has a stored preference, or
+when nothing has set it at all, so the value you rendered survives.
+
+A value you rendered is treated as the state the page starts in, not as a change: it
+is not copied into `localStorage`, and no `uniformen:sidebar` event fires for it. The
+first time the user collapses or expands the sidebar themselves, that choice _is_
+stored — and from then on it wins over the default you render. An app that keeps the
+preference server-side and wants to stay authoritative should clear the
+`uniformen:sidebar` key when it writes its own copy.
+
+**Collapse it from anywhere** — a close button inside the sidebar, a keyboard
+shortcut, a route change — by writing the same attribute. That is the whole API;
+the top bar button does exactly this:
+
+```ts
+document.documentElement.dataset.uniformenSidebar = "collapsed";
+```
+
+**React in script** if you need to, though prefer the CSS above. The event fires
+for every change, whoever made it, and carries the new state:
+
+```ts
+window.addEventListener("uniformen:sidebar", (event) => {
+  setCollapsed((event as CustomEvent<{ collapsed: boolean }>).detail.collapsed);
+});
+```
+
+Uniformen derives the rest from the attribute: the button's chevron direction (in
+CSS, so it differs open and closed with no work from you), its `aria-expanded`, and
+persisting the preference to `localStorage` under `uniformen:sidebar`.
 
 ## Project structure
 

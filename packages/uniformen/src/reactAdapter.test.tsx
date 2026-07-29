@@ -37,6 +37,22 @@ describe("fetchUniformenComponents", () => {
     expect(html).toContain("<style>body{margin:0}</style>");
   });
 
+  it("renders the inline script in head assets verbatim, so the CSP hash still matches", async () => {
+    // `headAssets` carries the sidebar's pre-paint script. A hash is over exact
+    // bytes, so anything the adapter rewrites — escaping, reordering, a wrapper —
+    // gets the block dropped by the browser instead of run.
+    const source = 'if (a && b < "c") d();';
+    mockFetch({
+      ...baseLayout,
+      headAssets: `<style>body{margin:0}</style><script>${source}</script>`,
+    });
+    const { HeadAssets } = await fetchUniformenComponents();
+    const html = renderToStaticMarkup(createElement(HeadAssets));
+
+    expect(html).not.toContain("<div");
+    expect(html).toContain(`<script>${source}</script>`);
+  });
+
   it("renders scripts as real <script> elements", async () => {
     mockFetch({
       ...baseLayout,

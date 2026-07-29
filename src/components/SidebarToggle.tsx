@@ -2,20 +2,21 @@ import { SidebarToggleIcon } from "./icons/SidebarToggleIcon";
 
 /**
  * Collapse/expand control for the consuming app's side navigation. Uniformen
- * renders no sidebar itself, so the button only flips `aria-expanded` and
- * dispatches `uniformen:toggle-sidebar` on `window`.
+ * renders no sidebar itself. Clicking flips `data-uniformen-sidebar` on `<html>`
+ * and the app reacts to that (see `sidebarHandlers`).
  *
- * `expanded` is the app's starting state: an app that restores a collapsed
- * sidebar has to say so, or the button ships out of sync with what the user
- * sees and the first click looks like a no-op.
+ * Nothing is bound here: the head script delegates the click and restores the state
+ * before this markup is parsed, and the icon follows the root attribute in CSS.
+ * `aria-expanded` is the one thing rendered here that script has to correct on load,
+ * since it can't be derived in CSS. The default matches an expanded sidebar.
  */
-export function SidebarToggle({ expanded }: { expanded: boolean }) {
+export function SidebarToggle() {
   return (
     <button
       type="button"
       class="uniformen-icon-button uniformen-top-nav__sidebar-toggle"
       aria-label="Skjul eller vis sidemeny"
-      aria-expanded={expanded ? "true" : "false"}
+      aria-expanded="true"
       data-uniformen-sidebar-toggle
     >
       <SidebarToggleIcon />

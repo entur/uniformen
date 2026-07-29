@@ -1,20 +1,30 @@
 export type Environment = "local" | "dev" | "staging" | "production";
 
+/**
+ * Parameters for fetching Uniformen layouts.
+ */
 export type FetchUniformenParams = {
-  // Add any query parameters that should be sent to the Uniformen SSR endpoint here.
-  // Array-valued params are serialised as a repeated key (`key=a&key=b`).
   app?: "partner" | "sorvis" | "cleos";
   /**
-   * Render the side navigation collapse control in the top bar, starting in the
-   * given state. Only set this if the app has a sidebar to collapse: the button
-   * dispatches a `uniformen:toggle-sidebar` CustomEvent on `window` carrying
-   * `{ collapsed: boolean }`, and the app is responsible for reacting to it.
+   * Render the side navigation collapse control in the top bar. Set it only if the
+   * app has a sidebar to collapse.
    *
-   * Pass the state the app actually renders with — an app that restores a
-   * collapsed sidebar must send `"collapsed"`, or the button starts out of sync
-   * and the first click appears to do nothing.
+   * The sidebar's state is `data-uniformen-sidebar` on `<html>`
+   * (`"expanded" | "collapsed"`), restored from the user's stored preference before
+   * first paint. Style your sidebar off that attribute and it needs no JavaScript
+   * state at all:
+   *
+   *   :root[data-uniformen-sidebar="collapsed"] .my-sidebar {
+   *     width: 0;
+   *     visibility: hidden; // else the collapsed links stay focusable
+   *   }
+   *
+   * Write the attribute to collapse from elsewhere in the app, and listen for
+   * `uniformen:sidebar` on `window` if you need to react in script. Server-render the
+   * attribute to pick a different default: it is only written for you when the user
+   * has a stored preference, or when nothing has set it at all.
    */
-  sidebar?: "expanded" | "collapsed";
+  sidebar?: boolean;
 };
 
 export type UniformenLayout = {

@@ -7,15 +7,15 @@ import { parseAppName } from "./appName";
  */
 export const uniformenQuerySchema = z.object({
   app: z.enum(["partner", "sorvis", "cleos"]).optional(),
-  // Opt in to the side navigation collapse control. The value is the app's
-  // starting state, not just an on/off switch: the button ships with a matching
-  // `aria-expanded`.
-  sidebar: z.enum(["expanded", "collapsed"]).optional(),
+  // Whether the app has a side navigation to collapse — a capability, not a
+  // state. The state is restored on the client from storage, so the same markup
+  // serves every user of the app.
+  sidebar: z.enum(["true", "false"]).optional(),
 });
 
 export type UniformenQuery = z.infer<typeof uniformenQuerySchema>;
 
 /** Query params as the props `TopNavigation` takes. */
 export function topNavigationProps({ app, sidebar }: UniformenQuery) {
-  return { appName: parseAppName(app), sidebar };
+  return { appName: parseAppName(app), sidebar: sidebar === "true" };
 }

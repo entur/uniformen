@@ -50,6 +50,15 @@
   width: 2rem;
 }
 
+/* The icon carries both chevron directions; the sidebar state on the root element
+   picks one, so the button never looks the same open as closed. Keyed with
+   `:not(...="collapsed")` rather than `="expanded"` so a missing attribute — script
+   blocked, or an app that never sets it — still renders the expanded state. */
+:root[data-uniformen-sidebar="collapsed"] .uniformen-sidebar-toggle__chevron--collapse,
+:root:not([data-uniformen-sidebar="collapsed"]) .uniformen-sidebar-toggle__chevron--expand {
+  display: none;
+}
+
 /* Icon + label controls on the right: notifications, user, app switcher. */
 .uniformen-top-nav__action,
 .uniformen-top-nav__user,
