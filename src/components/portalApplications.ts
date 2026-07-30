@@ -7,6 +7,20 @@ export type PortalApplication = { id: PortalApplicationId; appName: string; url:
 type Hosts = Record<"dev" | "staging" | "production", string>;
 
 /**
+ * The environments an application can be switched to from another environment.
+ * `local` is absent on purpose: a localhost URL means nothing to anyone but the
+ * developer running it, so a local instance offers the three deployed ones.
+ */
+export type SwitchableEnvironment = keyof Hosts;
+
+/** Declaration order, and the order the environment switcher lists them in. */
+export const SWITCHABLE_ENVIRONMENTS: readonly SwitchableEnvironment[] = [
+  "dev",
+  "staging",
+  "production",
+];
+
+/**
  * Every B2B application the portal knows about. An entry's `id` is the value apps
  * send as the `app` query param, and `appName` names it in both the switcher and
  * the logo slot.
@@ -66,8 +80,31 @@ export const PORTAL_APPLICATION_IDS = APPLICATIONS.map(({ id }) => id);
 
 export type PortalApplicationId = (typeof APPLICATIONS)[number]["id"];
 
-const resolve = (key: keyof Hosts): PortalApplication[] =>
-  APPLICATIONS.map(({ id, appName, hosts }) => ({ id, appName, url: `https://${hosts[key]}` }));
+/**
+ * One application's hosts as the URLs the header links to, keyed by environment.
+ * The single place a host becomes a URL, so both tables below — every app in one
+ * environment, and one app in every environment — read the same scheme and the
+ * same set of environments.
+ */
+const urlsFor = (hosts: Hosts): Readonly<Record<SwitchableEnvironment, string>> =>
+  Object.fromEntries(
+    SWITCHABLE_ENVIRONMENTS.map((env) => [env, `https://${hosts[env]}`]),
+  ) as Readonly<Record<SwitchableEnvironment, string>>;
+
+/**
+ * Every application with its hosts already turned into URLs, resolved once at
+ * module load. Both tables below are views onto this one pass: the app switcher
+ * needs every app in one environment, the environment switcher needs one app in
+ * every environment.
+ */
+const APPLICATIONS_WITH_URLS = APPLICATIONS.map(({ id, appName, hosts }) => ({
+  id,
+  appName,
+  urls: urlsFor(hosts),
+}));
+
+const resolve = (key: SwitchableEnvironment): PortalApplication[] =>
+  APPLICATIONS_WITH_URLS.map(({ id, appName, urls }) => ({ id, appName, url: urls[key] }));
 
 /**
  * The link list per environment, resolved once at module load so rendering a
@@ -79,6 +116,25 @@ export const PORTAL_APPLICATIONS: Record<Environment, PortalApplication[]> = {
   staging: resolve("staging"),
   production: resolve("production"),
 };
+
+/** One application's own URL in every switchable environment, keyed by id. */
+const APPLICATION_URLS = new Map<string, Readonly<Record<SwitchableEnvironment, string>>>(
+  APPLICATIONS_WITH_URLS.map(({ id, urls }) => [id, urls]),
+);
+
+/**
+ * Where the same application lives in each switchable environment. Undefined for
+ * an unknown or absent id — an app the portal does not know about cannot be
+ * followed across environments, and the environment badge stays static.
+ *
+ * The record is the shared instance from the table, so it is handed out readonly:
+ * mutating it would change what every later render links to.
+ */
+export function portalApplicationUrls(
+  id?: string,
+): Readonly<Record<SwitchableEnvironment, string>> | undefined {
+  return id === undefined ? undefined : APPLICATION_URLS.get(id);
+}
 
 const APP_NAMES = new Map<string, string>(APPLICATIONS.map(({ id, appName }) => [id, appName]));
 

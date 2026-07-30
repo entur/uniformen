@@ -144,6 +144,22 @@ describe("/ssr", () => {
     expect(body.scripts).toContain("<script>");
   });
 
+  test("every handler ships in the inline bundle", async () => {
+    // The failure this covers is silent: drop a handler from the array and the
+    // control it wires up simply never responds in a consumer's page, with no
+    // markup missing and no other assertion to notice. Each handler is keyed by
+    // the attribute it queries for.
+    const res = await app.request("/ssr");
+    const body = await res.json();
+    for (const attribute of [
+      "data-uniformen-app-switcher-toggle",
+      "data-uniformen-env-switcher-toggle",
+      "data-uniformen-env-switcher-link",
+    ]) {
+      expect(body.scripts).toContain(attribute);
+    }
+  });
+
   test("csp field carries sha256 hashes for the inline blocks", async () => {
     const res = await app.request("/ssr");
     const body = await res.json();

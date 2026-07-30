@@ -30,7 +30,7 @@ export function TopNavigation({
         <div class="uniformen-top-nav__left">
           {sidebar && <SidebarToggle />}
           <Logo appName={appName} />
-          <EnvironmentBadge />
+          <EnvironmentBadge activeAppId={activeAppId} />
         </div>
         <div class="uniformen-top-nav__right">
           {user ? (

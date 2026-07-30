@@ -67,6 +67,7 @@ export function buildRootVars(env: Environment): string {
   --uniformen-color-blue-10: ${colors.blues.blue10};
   --uniformen-color-blue-20: ${primitive.blue._20};
   --uniformen-color-blue-40: ${colors.blues.blue40};
+  --uniformen-color-blue-60: ${primitive.blue._60};
   --uniformen-color-blue-70: ${colors.blues.blue70};
   --uniformen-color-blue-80: ${colors.blues.blue80};
   --uniformen-color-blue-90: ${colors.blues.blue90};
@@ -87,6 +88,7 @@ export function buildRootVars(env: Environment): string {
   --uniformen-font-xl: ${rem(fontSizes.rem.extraLarge)};
   --uniformen-font-xl2: ${rem(fontSizes.rem.extraLarge2)};
   --uniformen-line-xs: ${rem(lineHeights.rem.extraSmall)};
+  --uniformen-line-md: ${rem(lineHeights.rem.medium)};
   --uniformen-weight-body: ${fontWeights.body};
   --uniformen-weight-heading: ${fontWeights.heading};
   --uniformen-radius-md: ${rem(borderRadiuses.rem.medium)};

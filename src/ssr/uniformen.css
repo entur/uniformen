@@ -164,8 +164,102 @@
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
-.uniformen-env-badge__label--short {
+/* The switcher wraps the chip so the panel can be positioned against it: the chip
+   itself is `position: relative` for the strip pointer, and hanging the panel off
+   that would put it inside the element the pointer is measured from. */
+.uniformen-env-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Same chip, now a button: undo the UA styling the div never had to fight. */
+.uniformen-env-badge--interactive {
+  gap: var(--uniformen-space-xs2);
+  font-family: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.uniformen-env-badge--interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
+}
+
+/* Optical centring, matching the top bar's other icon + label controls. */
+.uniformen-env-badge--interactive > svg {
+  flex: none;
+  transform: translateY(-0.08em);
+}
+
+.uniformen-env-badge--interactive[aria-expanded="true"] > svg {
+  transform: translateY(-0.08em) rotate(180deg);
+}
+
+[data-uniformen-env-switcher-toggle][aria-expanded="false"] + .uniformen-env-switcher__panel {
   display: none;
+}
+
+.uniformen-env-switcher__panel {
+  position: absolute;
+  /* Hangs off the chip rather than the bar: the chip is the thing it belongs to,
+     and unlike the app switcher panel it is narrow enough to never need pinning
+     to the viewport edge. */
+  top: calc(100% + var(--uniformen-space-xs2));
+  left: 0;
+  /* Border-box so the 1px border does not push the panel past the chip it is
+     measured against. */
+  box-sizing: border-box;
+  min-width: 100%;
+  font-family: Nationale, sans-serif;
+  z-index: calc(var(--uniformen-z-popover) + 1);
+  background: var(--uniformen-color-blue-90);
+  border: 1px solid var(--uniformen-color-blue-60);
+  border-radius: var(--uniformen-radius-md);
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.uniformen-env-switcher__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.uniformen-env-switcher__item {
+  display: flex;
+  align-items: center;
+  /* 3rem a row, so the three rows measure the design's 144px however the
+     consuming app's inherited line-height happens to be set. */
+  box-sizing: border-box;
+  min-height: 3rem;
+  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
+  color: var(--uniformen-color-blue-10);
+  font-size: var(--uniformen-font-lg);
+  line-height: var(--uniformen-line-md);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.uniformen-env-switcher__item:hover {
+  background: var(--uniformen-color-brand-lavender);
+}
+
+.uniformen-env-switcher__item:focus-visible {
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
+}
+
+/* The environment the header is served from. Reads as selected rather than as
+   hoverable, so hover leaves it alone. */
+.uniformen-env-switcher__item--current,
+.uniformen-env-switcher__item--current:hover {
+  background: var(--uniformen-color-brand-lavender);
+  font-weight: var(--uniformen-weight-heading);
 }
 
 /* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
@@ -182,11 +276,11 @@
   .uniformen-top-nav__action-label {
     display: none;
   }
-  /* The user name and the environment are text with no aria-label behind them,
-     so they are taken out of the layout without leaving the accessibility tree:
-     `display: none` here would leave a screen reader with a bare icon. */
-  .uniformen-top-nav__user-name,
-  .uniformen-env-badge__label {
+  /* The user name is text with no aria-label behind it, so it is taken out of the
+     layout without leaving the accessibility tree: `display: none` here would
+     leave a screen reader with a bare icon. The env label stays visible — it is
+     the badge's only text, and the switcher button's accessible name. */
+  .uniformen-top-nav__user-name {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -197,13 +291,9 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  /* Visual stand-in for the hidden env label; aria-hidden in the markup, so it
-     does not double up on the announced text. */
-  .uniformen-env-badge__label--short {
-    display: inline;
-  }
   /* The env badge is a warning, so it keeps its size; the app name gives way. */
-  .uniformen-env-badge {
+  .uniformen-env-badge,
+  .uniformen-env-switcher {
     min-width: 0;
     flex: none;
   }
