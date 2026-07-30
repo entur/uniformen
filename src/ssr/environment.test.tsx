@@ -100,8 +100,8 @@ describe("environment switcher", () => {
     );
     expect(html).toContain("data-uniformen-env-switcher-toggle");
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain('aria-controls="environment-switcher-panel"');
-    expect(html).toContain('id="environment-switcher-panel"');
+    expect(html).toContain('aria-controls="uniformen-environment-switcher-panel"');
+    expect(html).toContain('id="uniformen-environment-switcher-panel"');
     // The chip keeps its label, and the label is the button's accessible name:
     // no aria-label to shadow it.
     expect(html).toContain('class="uniformen-env-badge__label">STAGING');

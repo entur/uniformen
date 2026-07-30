@@ -62,15 +62,24 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       payload?.sub && token && tenant
         ? await userInfoService.getUserInfo(tenant, token, payload.sub)
         : undefined;
-    // Only authenticated users get a label; a nameless profile still shows
-    // a placeholder, but anonymous/failed lookups render an empty slot.
-    const user = info ? (info.name ?? info.email ?? "Bruker uten navn") : undefined;
+    // Only authenticated users get a menu; a nameless profile still shows a
+    // placeholder, but anonymous/failed lookups render an empty slot. The email is
+    // the menu's second line, and only when there is a name for it to sit under —
+    // a profile labelled by its email does not repeat it underneath.
+    const user = info
+      ? {
+          name: info.name ?? info.email ?? "Bruker uten navn",
+          email: info.name ? info.email : undefined,
+        }
+      : undefined;
     const navProps = topNavigationProps(ctx.req.valid("query"));
 
     return ctx.json(
       {
         headAssets: `${renderUniformenStyleTag()}${renderUniformenHeadScript()}`,
-        headerHtml: await renderComponentToString(<TopNavigation user={user} {...navProps} />),
+        // `user` last: `navProps` is the query's half of the props, and who is
+        // signed in is the token's to say, never a URL's.
+        headerHtml: await renderComponentToString(<TopNavigation {...navProps} user={user} />),
         footerHtml: await renderComponentToString(<Footer />),
         scripts: renderUniformenScripts(),
         csp: {

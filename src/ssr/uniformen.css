@@ -93,23 +93,32 @@
   transform: translateY(-0.08em);
 }
 
+/* The user chip is a button too, so it takes the same interaction states. It is
+   not given the action class: its label is a name rather than a fixed word, and
+   the two behave differently at the mobile breakpoint. */
 .uniformen-top-nav__action,
-.uniformen-top-nav__login {
+.uniformen-top-nav__login,
+.uniformen-top-nav__user {
   cursor: pointer;
 }
 
 .uniformen-top-nav__action:hover,
-.uniformen-top-nav__login:hover {
+.uniformen-top-nav__login:hover,
+.uniformen-top-nav__user:hover {
   background: var(--uniformen-color-blue-20);
 }
 
 .uniformen-top-nav__action:active,
-.uniformen-top-nav__login:active {
+.uniformen-top-nav__login:active,
+.uniformen-top-nav__user:active,
+/* Open reads as held down: the chip stays tinted for as long as its panel is up. */
+.uniformen-top-nav__user[aria-expanded="true"] {
   background: var(--uniformen-color-brand-lavender);
 }
 
 .uniformen-top-nav__action:focus-visible,
-.uniformen-top-nav__login:focus-visible {
+.uniformen-top-nav__login:focus-visible,
+.uniformen-top-nav__user:focus-visible {
   outline: none;
   box-shadow: var(--uniformen-shadow-focus);
 }
@@ -491,6 +500,148 @@
 
 .uniformen-app-switcher__item--active:hover {
   background: var(--uniformen-color-blue-80);
+}
+
+/* Wraps the chip so the panel can be positioned against it horizontally: the panel
+   is narrow, and the chip is what it belongs to. */
+.uniformen-user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+[data-uniformen-user-menu-toggle][aria-expanded="false"] + .uniformen-user-menu__panel {
+  display: none;
+}
+
+.uniformen-user-menu__panel {
+  /* The row icons' size, and the indent the iconless row uses to line its label up
+     with the others. One number, because that is what makes the labels agree. The
+     icons carry it as their own attributes too, as the size before any stylesheet. */
+  --menu-icon-size: 1.25rem;
+  position: absolute;
+  /* The same 4px gap below the bar the app switcher panel sits at, so two panels
+     opened from the same bar line up along their top edge.
+
+     Measured from the chip's centre out to the bar's edge, rather than from the
+     chip's own bottom: the chip is 2rem in a 4rem bar, so `100%` is a full 1rem
+     short of the bar's underside. Everything in the bar is centred on one line, so
+     the chip's centre is the bar's centre, and half the bar's height from there is
+     its underside — at both bar heights, without repeating either of them.
+
+     The app switcher panel does the same sum the other way round: it is positioned
+     against the viewport, so it adds the bar's full height to the top of the page. */
+  top: calc(50% + var(--top-nav-height) / 2 + var(--uniformen-space-xs2));
+  /* Left-aligned with the chip, growing rightwards, which is where the room is
+     for everything but the narrowest viewports — see the breakpoint below. */
+  left: 0;
+  box-sizing: border-box;
+  /* A floor of 15rem, but never past the viewport's gutters: `min-width` outranks
+     `max-width`, so the floor has to yield on its own. */
+  min-width: min(15rem, calc(100vw - 2 * var(--uniformen-space-medium)));
+  max-width: min(20rem, calc(100vw - 2 * var(--uniformen-space-medium)));
+  font-family: Nationale, sans-serif;
+  z-index: calc(var(--uniformen-z-popover) + 1);
+  background: var(--uniformen-color-brand-white);
+  border-radius: 0.75rem;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.uniformen-user-menu__identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uniformen-space-xs2);
+  padding: var(--uniformen-space-medium);
+  user-select: none;
+}
+
+/* Same size as the rows below it, set apart by weight rather than by scale: it is
+   the panel's subject, not a page heading. */
+.uniformen-user-menu__name {
+  font-size: var(--uniformen-font-lg);
+  font-weight: var(--uniformen-weight-heading);
+  line-height: var(--uniformen-line-md);
+  color: var(--uniformen-color-blue-10);
+  /* A name has no length limit and the panel does; wrap rather than overflow the
+     rounded corner. */
+  overflow-wrap: anywhere;
+}
+
+.uniformen-user-menu__email {
+  font-size: var(--uniformen-font-md);
+  line-height: var(--uniformen-line-xs);
+  letter-spacing: 0.02em;
+  color: var(--uniformen-color-blue-40);
+  /* Addresses break at their own separators before anywhere else. */
+  overflow-wrap: anywhere;
+}
+
+.uniformen-user-menu__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.uniformen-user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-small);
+  box-sizing: border-box;
+  min-height: 3rem;
+  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
+  /* Each row is separated from what is above it, so the identity block, the
+     links and the way out read as three groups however many links there are. */
+  border-top: 1px solid var(--uniformen-color-blue-70);
+  color: var(--uniformen-color-blue-10);
+  font-size: var(--uniformen-font-lg);
+  line-height: var(--uniformen-line-md);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+/* Optical centring, matching the top bar's icon + label controls. */
+.uniformen-user-menu__item > svg {
+  flex: none;
+  width: var(--menu-icon-size);
+  height: var(--menu-icon-size);
+  transform: translateY(-0.08em);
+}
+
+.uniformen-user-menu__item:hover {
+  background: var(--uniformen-color-brand-lavender);
+}
+
+.uniformen-user-menu__item:focus-visible {
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uniformen-user-menu__item {
+    transition: none;
+  }
+}
+
+/* Iconless, so its label lines up with the labels above rather than with their
+   icons: the indent is what an icon and its gap would have taken. */
+.uniformen-user-menu__logout {
+  padding-left: calc(
+    var(--uniformen-space-medium) + var(--menu-icon-size) + var(--uniformen-space-small)
+  );
+}
+
+/* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
+@media (max-width: 50rem) {
+  /* The chip is down to its icon here, and the panel is several times wider than
+     it, so left-aligning it would push it off the right edge. Pinned to the
+     chip's right instead: everything to the left of it is bar, with room. */
+  .uniformen-user-menu__panel {
+    left: auto;
+    right: 0;
+  }
 }
 
 .uniformen-footer__inner {

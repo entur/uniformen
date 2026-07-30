@@ -2,11 +2,15 @@
 
 All notable changes to `@entur/uniformen`.
 
+The header and footer are rendered by the Uniformen service rather than by the
+package, and changes to that markup reach every app on its next request, whatever
+version it has installed. Those are dated rather than versioned, and listed in
+[the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
+
 ## 0.5.0 — 2026-07-29
 
 The app switcher now links within the environment it is served from, so a dev
-layout no longer hands your users production apps. Served by the Uniformen
-service: apps on 0.4.0 pick it up on their next request.
+layout no longer hands your users production apps.
 
 ### Added
 

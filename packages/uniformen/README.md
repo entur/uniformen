@@ -2,6 +2,10 @@
 
 Client library for consuming the Uniformen layout service. Fetches the shared header, footer, and head assets from Uniformen and provides ready-to-use React components for rendering them in your app.
 
+Because the layout is rendered by the service, changes to the header and footer
+reach your app without a release of this package. They are changelogged separately,
+in [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
+
 ## What it does
 
 Uniformen is Entur's shared navigation shell. This package fetches the SSR layout from the Uniformen service and gives you typed data and React components to embed it in your application.

@@ -107,20 +107,43 @@ const resolve = (key: SwitchableEnvironment): PortalApplication[] =>
   APPLICATIONS_WITH_URLS.map(({ id, appName, urls }) => ({ id, appName, url: urls[key] }));
 
 /**
+ * Whose hosts an instance hands out. Every environment serves its own, except
+ * `local`, which has none deployed and rides dev: nobody can be sent to localhost.
+ * The single statement of that rule — everything resolving a link for a running
+ * instance reads it from here.
+ */
+const LINKED_ENVIRONMENT: Record<Environment, SwitchableEnvironment> = {
+  local: "dev",
+  dev: "dev",
+  staging: "staging",
+  production: "production",
+};
+
+/**
  * The link list per environment, resolved once at module load so rendering a
  * header costs no work beyond the markup.
  */
 export const PORTAL_APPLICATIONS: Record<Environment, PortalApplication[]> = {
-  local: resolve("dev"),
-  dev: resolve("dev"),
-  staging: resolve("staging"),
-  production: resolve("production"),
+  local: resolve(LINKED_ENVIRONMENT.local),
+  dev: resolve(LINKED_ENVIRONMENT.dev),
+  staging: resolve(LINKED_ENVIRONMENT.staging),
+  production: resolve(LINKED_ENVIRONMENT.production),
 };
 
-/** One application's own URL in every switchable environment, keyed by id. */
-const APPLICATION_URLS = new Map<string, Readonly<Record<SwitchableEnvironment, string>>>(
+/**
+ * One application's own URL in every switchable environment, keyed by id. Keyed by
+ * the id union rather than by `string`, so looking an application up with an id
+ * from the table is total: no absent case to handle, and dropping an application
+ * from the table breaks every link into it at compile time instead of resolving to
+ * `undefined` at runtime. Reaching that from `Object.fromEntries`, whose keys are
+ * `string` however narrow the input, is what the assertion is for.
+ */
+const APPLICATION_URLS = Object.fromEntries(
   APPLICATIONS_WITH_URLS.map(({ id, urls }) => [id, urls]),
-);
+) as Readonly<Record<PortalApplicationId, Readonly<Record<SwitchableEnvironment, string>>>>;
+
+const isPortalApplicationId = (id: string): id is PortalApplicationId =>
+  Object.hasOwn(APPLICATION_URLS, id);
 
 /**
  * Where the same application lives in each switchable environment. Undefined for
@@ -133,7 +156,19 @@ const APPLICATION_URLS = new Map<string, Readonly<Record<SwitchableEnvironment, 
 export function portalApplicationUrls(
   id?: string,
 ): Readonly<Record<SwitchableEnvironment, string>> | undefined {
-  return id === undefined ? undefined : APPLICATION_URLS.get(id);
+  return id !== undefined && isPortalApplicationId(id) ? APPLICATION_URLS[id] : undefined;
+}
+
+/**
+ * One application's host in the environment given, as the base for a link to a
+ * page inside it. `local` gets dev's, like every other link the header renders.
+ *
+ * Takes an id from the application list rather than any string: a link to a page
+ * of an application is only ever written for one the portal knows, and listing it
+ * here is what makes its hosts known.
+ */
+export function portalApplicationUrl(id: PortalApplicationId, environment: Environment): string {
+  return APPLICATION_URLS[id][LINKED_ENVIRONMENT[environment]];
 }
 
 const APP_NAMES = new Map<string, string>(APPLICATIONS.map(({ id, appName }) => [id, appName]));

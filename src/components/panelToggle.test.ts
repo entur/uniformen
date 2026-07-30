@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import environmentSwitcherHandlers from "./environmentSwitcherHandlers";
+import panelToggle from "./panelToggle";
+import retargetEnvironmentLinks from "./retargetEnvironmentLinks";
 
 /**
  * The handler ships as serialized source to the browser, so it only touches
@@ -58,6 +59,8 @@ class FakePanel extends FakeElement {
 
 class FakeDocument {
   private readonly listeners = new Map<string, ((event: unknown) => void)[]>();
+  /** What the handler went looking for, so a caller's selectors can be checked. */
+  readonly asked: { selector?: string; id?: string } = {};
 
   constructor(
     private readonly toggle: FakeToggle | null,
@@ -65,12 +68,12 @@ class FakeDocument {
   ) {}
 
   querySelector(selector: string): FakeToggle | null {
-    expect(selector).toBe("[data-uniformen-env-switcher-toggle]");
+    this.asked.selector = selector;
     return this.toggle;
   }
 
   getElementById(id: string): FakePanel | null {
-    expect(id).toBe("environment-switcher-panel");
+    this.asked.id = id;
     return this.panel;
   }
 
@@ -105,10 +108,12 @@ function install({
   location = { pathname: "/", search: "", hash: "" },
   toggle: withToggle = true,
   panel: withPanel = true,
+  beforeOpen,
 }: {
   location?: { pathname: string; search: string; hash: string };
   toggle?: boolean;
   panel?: boolean;
+  beforeOpen?: (panel: HTMLElement) => void;
 } = {}) {
   const toggle = withToggle ? new FakeToggle() : null;
   toggle?.setAttribute("aria-expanded", "false");
@@ -122,8 +127,9 @@ function install({
   globals["document"] = doc;
   globals["window"] = { location };
 
-  environmentSwitcherHandlers();
+  panelToggle("[data-uniformen-test-toggle]", "uniformen-test-panel", beforeOpen);
   return {
+    asked: () => doc.asked,
     hrefs: () => links.map((link) => link.href),
     aria: () => toggle?.getAttribute("aria-expanded"),
     focused: () => toggle?.focused ?? 0,
@@ -143,7 +149,15 @@ afterEach(() => {
   globals["window"] = saved.window;
 });
 
-describe("environmentSwitcherHandlers opening and closing", () => {
+describe("panelToggle opening and closing", () => {
+  test("the toggle and the panel are the ones the call names", () => {
+    const dom = install();
+    expect(dom.asked()).toEqual({
+      selector: "[data-uniformen-test-toggle]",
+      id: "uniformen-test-panel",
+    });
+  });
+
   test("clicking the chip opens it, clicking again closes it", () => {
     const dom = install();
     dom.toggleClick();
@@ -193,11 +207,32 @@ describe("environmentSwitcherHandlers opening and closing", () => {
   });
 });
 
-describe("environmentSwitcherHandlers retargeting the links", () => {
+describe("panelToggle beforeOpen", () => {
+  test("runs on the way up, with the panel, and not on the way down", () => {
+    const seen: unknown[] = [];
+    const dom = install({ beforeOpen: (panel) => seen.push(panel) });
+    // Nothing before the first click: a link must never be rewritten while the
+    // panel it is in is still hidden.
+    expect(seen).toHaveLength(0);
+    dom.toggleClick();
+    expect(seen).toEqual([expect.any(FakePanel)]);
+    dom.toggleClick();
+    expect(seen).toHaveLength(1);
+  });
+
+  test("a panel without one opens all the same", () => {
+    const dom = install();
+    dom.toggleClick();
+    expect(dom.aria()).toBe("true");
+  });
+});
+
+describe("retargetEnvironmentLinks", () => {
+  const installEnv = (location: { pathname: string; search: string; hash: string }) =>
+    install({ location, beforeOpen: retargetEnvironmentLinks });
+
   test("the current page's path and hash follow the user across", () => {
-    const dom = install({
-      location: { pathname: "/orders/42", search: "", hash: "#row-3" },
-    });
+    const dom = installEnv({ pathname: "/orders/42", search: "", hash: "#row-3" });
     dom.toggleClick();
     expect(dom.hrefs()).toEqual([
       "https://cleos-client.staging.entur.io/orders/42#row-3",
@@ -207,9 +242,7 @@ describe("environmentSwitcherHandlers retargeting the links", () => {
   });
 
   test("the query string is left behind: its ids and filters mean nothing there", () => {
-    const dom = install({
-      location: { pathname: "/orders", search: "?id=8f21&tab=lines", hash: "" },
-    });
+    const dom = installEnv({ pathname: "/orders", search: "?id=8f21&tab=lines", hash: "" });
     dom.toggleClick();
     expect(dom.hrefs()).toEqual([
       "https://cleos-client.staging.entur.io/orders",
@@ -219,13 +252,13 @@ describe("environmentSwitcherHandlers retargeting the links", () => {
   });
 
   test("nothing is rewritten before the panel opens, so the fallback href survives", () => {
-    const dom = install({ location: { pathname: "/orders", search: "", hash: "" } });
+    const dom = installEnv({ pathname: "/orders", search: "", hash: "" });
     expect(dom.hrefs()).toEqual(HOSTS);
   });
 
   test("the path is not compounded when the panel is opened again", () => {
     const location = { pathname: "/orders", search: "", hash: "" };
-    const dom = install({ location });
+    const dom = installEnv(location);
     dom.toggleClick();
     dom.toggleClick();
     // A client-side route change between the two opens: the second open must

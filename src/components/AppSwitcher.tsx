@@ -23,6 +23,7 @@ export function AppSwitcher({
 
   // TODO focus first item when opening
   // TODO close app switcher when clicking escape, and focus the open button
+  // TODO on click handler for removing an app from favorites
 
   return (
     <div class="uniformen-app-switcher">
@@ -31,14 +32,15 @@ export function AppSwitcher({
         class="uniformen-top-nav__action"
         aria-label="Velg applikasjon"
         aria-expanded="false"
-        aria-controls="app-switcher-panel"
+        aria-haspopup="dialog"
+        aria-controls="uniformen-app-switcher-panel"
         data-uniformen-app-switcher-toggle
       >
         <AppGridIcon />
         <span class="uniformen-top-nav__action-label">App</span>
       </button>
       <div
-        id="app-switcher-panel"
+        id="uniformen-app-switcher-panel"
         class="uniformen-app-switcher__panel"
         role="dialog"
         aria-label="Velg tjeneste"

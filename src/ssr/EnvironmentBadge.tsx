@@ -65,7 +65,8 @@ export function EnvironmentBadge({
         type="button"
         class="uniformen-env-badge uniformen-env-badge--interactive"
         aria-expanded="false"
-        aria-controls="environment-switcher-panel"
+        aria-haspopup="dialog"
+        aria-controls="uniformen-environment-switcher-panel"
         data-uniformen-env-switcher-toggle
       >
         {pointer}
@@ -73,7 +74,7 @@ export function EnvironmentBadge({
         <ChevronDownIcon />
       </button>
       <div
-        id="environment-switcher-panel"
+        id="uniformen-environment-switcher-panel"
         class="uniformen-env-switcher__panel"
         role="dialog"
         aria-label="Bytt miljø"

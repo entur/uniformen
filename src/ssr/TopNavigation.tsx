@@ -3,7 +3,7 @@ import type { PortalApplicationId } from "../components/portalApplications";
 import { NotificationsButton } from "../components/NotificationsButton";
 import { SidebarToggle } from "../components/SidebarToggle";
 import { LogInIcon } from "../components/icons/LogInIcon";
-import { UserIcon } from "../components/icons/UserIcon";
+import { UserMenu, type UserMenuUser } from "../components/UserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { Logo } from "./Logo";
 
@@ -13,7 +13,8 @@ export function TopNavigation({
   activeAppId,
   sidebar,
 }: {
-  user?: string;
+  /** The signed-in user. Absent renders the anonymous bar, with a login link. */
+  user?: UserMenuUser;
   appName?: string;
   /** The portal application this header is rendered for. */
   activeAppId?: PortalApplicationId;
@@ -36,10 +37,7 @@ export function TopNavigation({
           {user ? (
             <>
               <NotificationsButton />
-              <span class="uniformen-top-nav__user">
-                <UserIcon />
-                <span class="uniformen-top-nav__user-name">{user}</span>
-              </span>
+              <UserMenu user={user} />
             </>
           ) : (
             <a class="uniformen-top-nav__login" href="/auth/login" aria-label="Logg inn">

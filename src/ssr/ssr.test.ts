@@ -109,6 +109,48 @@ describe("/ssr user in top navigation", () => {
   });
 });
 
+describe("/ssr user menu", () => {
+  test("the signed-in user gets a menu, with the email under the name", async () => {
+    userInfoMock.respond = () =>
+      Response.json({ name: "Hallstein Bronskimlet", email: "hallstein@entur.org" });
+    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime,
+    // so a sub another test has already fetched would serve that test's profile.
+    const token = await signInternalToken({ sub: "auth0|withemail" });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(body.headerHtml).toContain('id="uniformen-user-menu-panel"');
+    expect(body.headerHtml).toContain("hallstein@entur.org");
+    // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
+    expect(body.headerHtml).toContain(
+      'href="https://entur-partner.dev.entur.org/permission-admin/my-profile"',
+    );
+    expect(body.headerHtml).toContain('href="/auth/logout"');
+  });
+
+  test("a nameless profile is labelled by its email, which is then not repeated", async () => {
+    userInfoMock.respond = () => Response.json({ email: "navnlos@entur.org" });
+    const token = await signInternalToken({ sub: "auth0|nameless" });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(body.headerHtml.match(/navnlos@entur\.org/g)).toHaveLength(2);
+    expect(body.headerHtml).not.toContain("uniformen-user-menu__email");
+    expect(body.headerHtml).not.toContain("auth0|nameless");
+  });
+
+  test("a profile with neither name nor email still gets a menu", async () => {
+    userInfoMock.respond = () => Response.json({});
+    const token = await signInternalToken({ sub: "auth0|bare" });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(body.headerHtml).toContain("Bruker uten navn");
+    expect(body.headerHtml).not.toContain("uniformen-user-menu__email");
+    expect(body.headerHtml).not.toContain("auth0|bare");
+  });
+
+  test("anonymous requests carry no menu and no account links", async () => {
+    const body = await (await app.request("/ssr")).json();
+    expect(body.headerHtml).not.toContain("uniformen-user-menu");
+    expect(body.headerHtml).not.toContain("/auth/logout");
+  });
+});
+
 describe("/ssr login link", () => {
   test("anonymous request renders a login link to /auth/login", async () => {
     const res = await app.request("/ssr");
@@ -155,9 +197,31 @@ describe("/ssr", () => {
       "data-uniformen-app-switcher-toggle",
       "data-uniformen-env-switcher-toggle",
       "data-uniformen-env-switcher-link",
+      "data-uniformen-user-menu-toggle",
     ]) {
       expect(body.scripts).toContain(attribute);
     }
+  });
+
+  test("the panels share one copy of their behaviour, called once each", async () => {
+    const body = await (await app.request("/ssr")).json();
+    expect(body.scripts.match(/function panelToggle/g)).toHaveLength(1);
+    expect(body.scripts.match(/panelToggle\("/g)).toHaveLength(3);
+  });
+
+  test("the inline bundle is valid JavaScript", async () => {
+    // The bundle is assembled as source text, so nothing but a browser would
+    // otherwise notice a syntax error. Emitting the handlers as the declarations
+    // they are is what makes them callable by name below them: rewrite one as an
+    // arrow function, or rename it without the call following, and this is where it
+    // surfaces rather than in a consumer's console.
+    const body = await (await app.request("/ssr")).json();
+    const scripts = body.scripts.trim();
+    const hasOpenTag = scripts.slice(0, 8).toLowerCase() === "<script>";
+    const hasCloseTag = scripts.slice(-9).toLowerCase() === "</script>";
+    const source =
+      hasOpenTag && hasCloseTag ? scripts.slice("<script>".length, -"</script>".length) : scripts;
+    expect(() => new Function(source)).not.toThrow();
   });
 
   test("csp field carries sha256 hashes for the inline blocks", async () => {
@@ -350,7 +414,7 @@ describe("/ssr top bar chrome", () => {
   test("the app switcher panel is still wired to its toggle", async () => {
     const body = await (await app.request("/ssr")).json();
     expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
-    expect(body.headerHtml).toContain('id="app-switcher-panel"');
+    expect(body.headerHtml).toContain('id="uniformen-app-switcher-panel"');
   });
 
   test("the switcher links to the environment this instance serves", async () => {

@@ -3,6 +3,7 @@ import {
   PORTAL_APPLICATION_IDS,
   PORTAL_APPLICATIONS,
   portalApplicationName,
+  portalApplicationUrl,
 } from "./portalApplications";
 import { expectedUrls } from "../test/expectedPortalUrls";
 import type { Environment } from "../config";
@@ -66,6 +67,25 @@ describe("application ids", () => {
 
   test("ids are unique", () => {
     expect(new Set(PORTAL_APPLICATION_IDS).size).toBe(PORTAL_APPLICATION_IDS.length);
+  });
+});
+
+describe("portalApplicationUrl", () => {
+  test("agrees with the list the switcher renders, for every app in every environment", () => {
+    // Both read one host table, so this is what keeps a link to a page of an
+    // application pointing at the same host the switcher sends people to.
+    for (const env of ENVIRONMENTS) {
+      for (const { id, url } of PORTAL_APPLICATIONS[env]) {
+        expect(portalApplicationUrl(id, env)).toBe(url);
+      }
+    }
+  });
+
+  test("local rides dev here too", () => {
+    for (const id of PORTAL_APPLICATION_IDS) {
+      expect(portalApplicationUrl(id, "local")).toBe(portalApplicationUrl(id, "dev"));
+      expect(portalApplicationUrl(id, "local")).not.toBe(portalApplicationUrl(id, "production"));
+    }
   });
 });
 
