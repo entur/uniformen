@@ -7,6 +7,17 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.6.0 — 2026-08-03
+
+The header and footer can be asked for in nynorsk or English.
+
+### Added
+
+- `params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) sets the
+  language of the header and footer. Tags match exactly; an unknown value is rejected
+  by the service with `400`, so the call returns `null`.
+- The `Locale` type is exported.
+
 ## 0.5.0 — 2026-07-29
 
 The app switcher now links within the environment it is served from, so a dev

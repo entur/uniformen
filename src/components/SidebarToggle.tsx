@@ -1,4 +1,11 @@
+import type { Locale } from "../types";
 import { SidebarToggleIcon } from "./icons/SidebarToggleIcon";
+
+const texts = {
+  "nb-NO": { skjulEllerVisSidemeny: "Skjul eller vis sidemeny" },
+  "nn-NO": { skjulEllerVisSidemeny: "Skjul eller vis sidemeny" },
+  "en-GB": { skjulEllerVisSidemeny: "Hide or show side menu" },
+} as const;
 
 /**
  * Collapse/expand control for the consuming app's side navigation. Uniformen
@@ -10,12 +17,13 @@ import { SidebarToggleIcon } from "./icons/SidebarToggleIcon";
  * `aria-expanded` is the one thing rendered here that script has to correct on load,
  * since it can't be derived in CSS. The default matches an expanded sidebar.
  */
-export function SidebarToggle() {
+export function SidebarToggle({ locale }: { locale: Locale }) {
+  const txt = texts[locale];
   return (
     <button
       type="button"
       class="uniformen-icon-button uniformen-top-nav__sidebar-toggle"
-      aria-label="Skjul eller vis sidemeny"
+      aria-label={txt.skjulEllerVisSidemeny}
       aria-expanded="true"
       data-uniformen-sidebar-toggle
     >

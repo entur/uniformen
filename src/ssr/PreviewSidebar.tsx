@@ -14,6 +14,8 @@ const SECTIONS = [
  * `data-uniformen-sidebar` on the root element (see the preview's own styles), and
  * the close button in the header writes that same attribute. Nothing here mirrors
  * the top bar's state or listens for an event.
+ *
+ * No locale: it stands in for app content, and `?locale=` is the chrome only.
  */
 export function PreviewSidebar() {
   return (

@@ -450,3 +450,68 @@ describe("/ssr top bar chrome", () => {
     }
   });
 });
+
+describe("/ssr locale", () => {
+  test("no locale is bokmål, so a consumer that sends none keeps its markup", async () => {
+    const body = await (await app.request("/ssr")).json();
+    expect(body.headerHtml).toContain('aria-label="Toppnavigasjon"');
+    expect(body.headerHtml).toContain(">Logg inn<");
+    expect(body.footerHtml).toContain(">Informasjon<");
+  });
+
+  test("every string in the bar follows the locale, header and footer alike", async () => {
+    const en = await (await app.request("/ssr?locale=en-GB&sidebar=true")).json();
+    expect(en.headerHtml).toContain('aria-label="Top navigation"');
+    expect(en.headerHtml).toContain('aria-label="Hide or show side menu"');
+    expect(en.headerHtml).toContain('aria-label="Choose application"');
+    expect(en.headerHtml).toContain(">Log in<");
+    expect(en.footerHtml).toContain(">Information<");
+    expect(en.footerHtml).toContain(">Services<");
+    expect(en.headerHtml).not.toContain("Logg inn");
+    expect(en.footerHtml).not.toContain("Tjenester");
+
+    const nn = await (await app.request("/ssr?locale=nn-NO")).json();
+    expect(nn.headerHtml).toContain('aria-label="Vel applikasjon"');
+    expect(nn.footerHtml).toContain(">Tenester<");
+  });
+
+  test("the signed-in half is translated too", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    const token = await signInternalToken({ sub: "auth0|abc123" });
+    const body = await (await app.request("/ssr?locale=en-GB", { headers: bearer(token) })).json();
+    expect(body.headerHtml).toContain('aria-label="Notifications"');
+    expect(body.headerHtml).toContain('aria-label="User menu"');
+    expect(body.headerHtml).toContain(">My access<");
+    expect(body.headerHtml).toContain(">Log out<");
+  });
+
+  test("a nameless profile gets its placeholder in the locale", async () => {
+    userInfoMock.respond = () => Response.json({});
+    // Own `sub`: userinfo is cached per subject.
+    const token = await signInternalToken({ sub: "auth0|bare-en" });
+    const body = await (await app.request("/ssr?locale=en-GB", { headers: bearer(token) })).json();
+    expect(body.headerHtml).toContain("User without a name");
+  });
+
+  test("product and environment names are not translated", async () => {
+    const body = await (await app.request("/ssr?locale=en-GB&app=partner")).json();
+    expect(body.headerHtml).toContain(">Partner<");
+    expect(body.headerHtml).toContain(">Sørvis<");
+    expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');
+  });
+
+  test("a locale the service does not render is rejected, not fallen back on", async () => {
+    for (const query of [
+      "?locale=de-DE",
+      "?locale=",
+      // One spelling per language: the bare language subtag is not an alias for
+      // the region-qualified tag, and matching is exact, not case-folded.
+      "?locale=nb",
+      "?locale=nb-no",
+      "?locale=en",
+      "?locale=en-US",
+    ]) {
+      expect((await app.request(`/ssr${query}`)).status).toBe(400);
+    }
+  });
+});

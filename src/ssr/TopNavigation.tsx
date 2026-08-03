@@ -1,5 +1,6 @@
 import { AppSwitcher } from "../components/AppSwitcher";
 import type { PortalApplicationId } from "../components/portalApplications";
+import type { Locale } from "../types";
 import { NotificationsButton } from "../components/NotificationsButton";
 import { SidebarToggle } from "../components/SidebarToggle";
 import { LogInIcon } from "../components/icons/LogInIcon";
@@ -7,11 +8,27 @@ import { UserMenu, type UserMenuUser } from "../components/UserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { Logo } from "./Logo";
 
+const texts = {
+  "nb-NO": {
+    loggInn: "Logg inn",
+    toppnavigasjon: "Toppnavigasjon",
+  },
+  "nn-NO": {
+    loggInn: "Logg inn",
+    toppnavigasjon: "Toppnavigasjon",
+  },
+  "en-GB": {
+    loggInn: "Log in",
+    toppnavigasjon: "Top navigation",
+  },
+} as const;
+
 export function TopNavigation({
   user,
   appName,
   activeAppId,
   sidebar,
+  locale,
 }: {
   /** The signed-in user. Absent renders the anonymous bar, with a login link. */
   user?: UserMenuUser;
@@ -24,29 +41,32 @@ export function TopNavigation({
    * element, restored client-side before paint.
    */
   sidebar?: boolean;
+  /** The language every string in the bar is rendered in. */
+  locale: Locale;
 }) {
+  const txt = texts[locale];
   return (
     <header id="top-navigation" class="uniformen-top-nav">
-      <nav class="uniformen-top-nav__nav" aria-label="Toppnavigasjon">
+      <nav class="uniformen-top-nav__nav" aria-label={txt.toppnavigasjon}>
         <div class="uniformen-top-nav__left">
-          {sidebar && <SidebarToggle />}
+          {sidebar && <SidebarToggle locale={locale} />}
           <Logo appName={appName} />
-          <EnvironmentBadge activeAppId={activeAppId} />
+          <EnvironmentBadge activeAppId={activeAppId} locale={locale} />
         </div>
         <div class="uniformen-top-nav__right">
           {user ? (
             <>
-              <NotificationsButton />
-              <UserMenu user={user} />
+              <NotificationsButton locale={locale} />
+              <UserMenu user={user} locale={locale} />
             </>
           ) : (
-            <a class="uniformen-top-nav__login" href="/auth/login" aria-label="Logg inn">
+            <a class="uniformen-top-nav__login" href="/auth/login" aria-label={txt.loggInn}>
               <LogInIcon />
-              <span class="uniformen-top-nav__action-label">Logg inn</span>
+              <span class="uniformen-top-nav__action-label">{txt.loggInn}</span>
             </a>
           )}
           <span class="uniformen-top-nav__divider" aria-hidden="true"></span>
-          <AppSwitcher activeAppId={activeAppId} />
+          <AppSwitcher activeAppId={activeAppId} locale={locale} />
         </div>
       </nav>
     </header>

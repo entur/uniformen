@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { UserMenu } from "./UserMenu";
 import { renderComponentToString } from "../ssr/renderComponentToString";
 import type { Environment } from "../config";
+import type { Locale } from "../types";
 
 // The server resolves its environment once at startup, so the suite as a whole
 // only ever runs as one of them (dev, see test/authTestSetup). The menu takes the
@@ -12,8 +13,11 @@ const ENVIRONMENTS: Environment[] = ["local", "dev", "staging", "production"];
 const hrefs = (html: string): string[] =>
   [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] as string);
 
-const render = (user: { name: string; email?: string }, environment?: Environment) =>
-  renderComponentToString(<UserMenu user={user} environment={environment} />);
+const render = (
+  user: { name: string; email?: string },
+  environment?: Environment,
+  locale: Locale = "nb-NO",
+) => renderComponentToString(<UserMenu user={user} environment={environment} locale={locale} />);
 
 describe("user menu rendering", () => {
   test("names the user on the chip and in the panel", async () => {
@@ -77,5 +81,19 @@ describe("user menu rendering", () => {
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
     expect(html).toContain("a&amp;b@entur.org");
+  });
+
+  test("every string in the menu follows the locale, the panel's own label included", async () => {
+    const en = await render({ name: "Navn Navnesen" }, undefined, "en-GB");
+    expect(en).toContain('aria-label="User menu"');
+    expect(en).toContain(">My access<");
+    expect(en).toContain(">Log out<");
+    expect(en).not.toContain("Mine tilganger");
+
+    const nn = await render({ name: "Navn Navnesen" }, undefined, "nn-NO");
+    expect(nn).toContain('aria-label="Brukarmeny"');
+    expect(nn).toContain(">Mine tilgangar<");
+
+    expect(en).toContain("Navn Navnesen");
   });
 });

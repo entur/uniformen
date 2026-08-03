@@ -9,6 +9,18 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-03 — with 0.6.0
+
+### Added
+
+- A `locale` query param (BCP 47: `nb-NO` (default), `nn-NO`, `en-GB`) sets the
+  language of every string the service renders, `aria-label`s included. Application
+  names and environment labels (`DEV`, `PROD`, …) are untranslated. Tags match
+  exactly — `nb` and `nb-no` are a `400`, like any other unknown value, never a
+  fallback to bokmål.
+- The preview page renders `<html lang>` as the locale it was given. Set the same on
+  your own page.
+
 ## 2026-07-30
 
 ### Added

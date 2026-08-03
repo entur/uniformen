@@ -61,7 +61,7 @@ All options are optional and passed as a single object:
 const layout = await fetchUniformenLayout({
   token, // Auth0 access token; adds the user to the nav
   environment: "dev", // "local" | "dev" | "staging" | "production" (default)
-  params: { app: "partner", sidebar: true }, // query params for the SSR endpoint
+  params: { app: "partner", sidebar: true, locale: "nb-NO" }, // query params for the SSR endpoint
 });
 ```
 
@@ -80,6 +80,10 @@ production.
 `params.sidebar` (`boolean`) renders a collapse control at the far left of the top
 bar. Set it only if your app has a side navigation to collapse. Uniformen renders
 the button; you render the sidebar. See [Sidebar](#sidebar) for the contract.
+
+`params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) is the
+language of the header and footer. App names and environment labels are untranslated.
+Tags match exactly — `"nb"` is a `400`, not an alias. Set `<html lang>` to match.
 
 The same options apply to `fetchUniformenComponents` below.
 

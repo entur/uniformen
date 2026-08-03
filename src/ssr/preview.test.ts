@@ -157,3 +157,17 @@ describe("preview page demo sidebar", () => {
     for (const block of blocks) expect(csp).toContain(await sha256(block));
   });
 });
+
+describe("preview page locale", () => {
+  test("the page is marked with the language the chrome is rendered in", async () => {
+    expect((await preview()).html).toContain('<html lang="nb-NO">');
+    expect((await preview("?locale=en-GB")).html).toContain('<html lang="en-GB">');
+    expect((await preview("?locale=nn-NO")).html).toContain('<html lang="nn-NO">');
+  });
+
+  test("the locale reaches the chrome the page renders, header and footer both", async () => {
+    const { html } = await preview("?locale=en-GB&debugUser=Navn+Navnesen");
+    expect(html).toContain(">Log out<");
+    expect(html).toContain(">Information<");
+  });
+});

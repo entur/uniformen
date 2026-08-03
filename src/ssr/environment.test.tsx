@@ -4,6 +4,7 @@ import { renderComponentToString } from "./renderComponentToString";
 import { buildRootVars, envStripHeight } from "./uniformenStyles";
 import type { Environment } from "../config";
 import { PORTAL_APPLICATIONS, type PortalApplicationId } from "../components/portalApplications";
+import type { Locale } from "../types";
 
 // The server resolves its environment once at startup, so the suite as a whole
 // only ever runs as one of them (dev, see test/authTestSetup). These render the
@@ -21,6 +22,11 @@ const labels = (html: string): string[] =>
   [...html.matchAll(/<a[^>]*data-uniformen-env-switcher-link[^>]*>([^<]+)</g)].map(
     (match) => match[1] as string,
   );
+
+/** Bokmål unless the test is about the language. */
+const render = (
+  props: { environment?: Environment; activeAppId?: PortalApplicationId; locale?: Locale } = {},
+) => renderComponentToString(<EnvironmentBadge locale="nb-NO" {...props} />);
 
 describe("environment strip height", () => {
   test("production has no strip", () => {
@@ -58,7 +64,7 @@ describe("root vars per environment", () => {
 
 describe("environment badge", () => {
   test("production drops the strip pointer", async () => {
-    const html = await renderComponentToString(<EnvironmentBadge environment="production" />);
+    const html = await render({ environment: "production" });
     expect(html).toContain('data-uniformen-environment="production"');
     expect(html).toContain(">PROD<");
     expect(html).not.toContain("uniformen-env-badge__pointer");
@@ -66,26 +72,26 @@ describe("environment badge", () => {
 
   test("the other environments keep it", async () => {
     for (const env of ENVIRONMENTS.filter((e) => e !== "production")) {
-      const html = await renderComponentToString(<EnvironmentBadge environment={env} />);
+      const html = await render({ environment: env });
       expect(html).toContain("uniformen-env-badge__pointer");
     }
   });
 
   test("the environment is named once, in one label at every width", async () => {
     for (const env of ENVIRONMENTS) {
-      const html = await renderComponentToString(<EnvironmentBadge environment={env} />);
+      const html = await render({ environment: env });
       // One label element, and no aria-hidden stand-in beside it that would
       // double up on the announced text.
       expect(html.match(/uniformen-env-badge__label/g)).toHaveLength(1);
       expect(html).not.toMatch(/aria-hidden="true">[^<]/);
     }
-    const staging = await renderComponentToString(<EnvironmentBadge environment="staging" />);
+    const staging = await render({ environment: "staging" });
     expect(staging).toContain('class="uniformen-env-badge__label">STAGING');
   });
 
   test("without an application the chip is static: no host to switch between", async () => {
     for (const env of ENVIRONMENTS) {
-      const html = await renderComponentToString(<EnvironmentBadge environment={env} />);
+      const html = await render({ environment: env });
       expect(html).not.toContain("uniformen-env-switcher");
       expect(html).not.toContain("<button");
       expect(html).not.toContain("href=");
@@ -95,9 +101,7 @@ describe("environment badge", () => {
 
 describe("environment switcher", () => {
   test("the chip becomes a control once the consumer names its application", async () => {
-    const html = await renderComponentToString(
-      <EnvironmentBadge environment="staging" activeAppId="cleos" />,
-    );
+    const html = await render({ environment: "staging", activeAppId: "cleos" });
     expect(html).toContain("data-uniformen-env-switcher-toggle");
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('aria-controls="uniformen-environment-switcher-panel"');
@@ -109,9 +113,7 @@ describe("environment switcher", () => {
   });
 
   test("the same application in each environment", async () => {
-    const html = await renderComponentToString(
-      <EnvironmentBadge environment="staging" activeAppId="cleos" />,
-    );
+    const html = await render({ environment: "staging", activeAppId: "cleos" });
     expect(hrefs(html)).toEqual([
       "https://cleos-client.dev.entur.io",
       "https://cleos-client.staging.entur.io",
@@ -122,9 +124,7 @@ describe("environment switcher", () => {
 
   test("the order does not depend on which environment is served", async () => {
     for (const env of ENVIRONMENTS) {
-      const html = await renderComponentToString(
-        <EnvironmentBadge environment={env} activeAppId="nplan" />,
-      );
+      const html = await render({ environment: env, activeAppId: "nplan" });
       expect(labels(html)).toEqual(["DEV", "STAGING", "PROD"]);
       expect(hrefs(html)).toEqual([
         "https://nplan.dev.entur.org",
@@ -135,18 +135,14 @@ describe("environment switcher", () => {
   });
 
   test("local has no row of its own, so nothing is marked current", async () => {
-    const html = await renderComponentToString(
-      <EnvironmentBadge environment="local" activeAppId="sorvis" />,
-    );
+    const html = await render({ environment: "local", activeAppId: "sorvis" });
     expect(html).not.toContain('aria-current="page"');
     expect(html).not.toContain("uniformen-env-switcher__item--current");
   });
 
   test("the environment served is the marked one, exactly once", async () => {
     for (const env of ENVIRONMENTS.filter((e) => e !== "local")) {
-      const html = await renderComponentToString(
-        <EnvironmentBadge environment={env} activeAppId="ops-center" />,
-      );
+      const html = await render({ environment: env, activeAppId: "ops-center" });
       expect(html.match(/aria-current="page"/g)).toHaveLength(1);
       expect(html.match(/uniformen-env-switcher__item--current/g)).toHaveLength(1);
       // On its own row, not on whichever one renders first.
@@ -157,18 +153,17 @@ describe("environment switcher", () => {
   });
 
   test("every link is retargetable, so the handler can graft the current path on", async () => {
-    const html = await renderComponentToString(
-      <EnvironmentBadge environment="dev" activeAppId="partner" />,
-    );
+    const html = await render({ environment: "dev", activeAppId: "partner" });
     expect(html.match(/data-uniformen-env-switcher-link/g)).toHaveLength(3);
   });
 
   test("an application the portal does not know about keeps the static chip", async () => {
-    const html = await renderComponentToString(
+    const html = await render({
+      environment: "dev",
       // Not a PortalApplicationId: what a consumer sending a stale `app` param
       // resolves to. The badge has no hosts for it, so there is nothing to offer.
-      <EnvironmentBadge environment="dev" activeAppId={"retired-app" as PortalApplicationId} />,
-    );
+      activeAppId: "retired-app" as PortalApplicationId,
+    });
     expect(html).not.toContain("uniformen-env-switcher");
     expect(html).toContain('class="uniformen-env-badge"');
   });

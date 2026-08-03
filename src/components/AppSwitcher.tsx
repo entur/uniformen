@@ -1,6 +1,34 @@
 import { environment as runningEnvironment, type Environment } from "../config";
+import type { Locale } from "../types";
 import { AppGridIcon } from "./icons/AppGridIcon";
 import { PORTAL_APPLICATIONS, type PortalApplicationId } from "./portalApplications";
+
+const texts = {
+  "nb-NO": {
+    velgApplikasjon: "Velg applikasjon",
+    app: "App",
+    velgTjeneste: "Velg tjeneste",
+    favoritter: "Favoritter",
+    leggTil: "Legg til",
+    alleTjenester: "Alle tjenester",
+  },
+  "nn-NO": {
+    velgApplikasjon: "Vel applikasjon",
+    app: "App",
+    velgTjeneste: "Vel teneste",
+    favoritter: "Favorittar",
+    leggTil: "Legg til",
+    alleTjenester: "Alle tenester",
+  },
+  "en-GB": {
+    velgApplikasjon: "Choose application",
+    app: "App",
+    velgTjeneste: "Choose service",
+    favoritter: "Favourites",
+    leggTil: "Add",
+    alleTjenester: "All services",
+  },
+} as const;
 
 /**
  * The switcher links to the environment the header is served from, never across
@@ -15,11 +43,14 @@ import { PORTAL_APPLICATIONS, type PortalApplicationId } from "./portalApplicati
 export function AppSwitcher({
   activeAppId,
   environment = runningEnvironment,
+  locale,
 }: {
   activeAppId?: PortalApplicationId;
   environment?: Environment;
+  locale: Locale;
 }) {
   const applications = PORTAL_APPLICATIONS[environment];
+  const txt = texts[locale];
 
   // TODO focus first item when opening
   // TODO close app switcher when clicking escape, and focus the open button
@@ -30,26 +61,26 @@ export function AppSwitcher({
       <button
         type="button"
         class="uniformen-top-nav__action"
-        aria-label="Velg applikasjon"
+        aria-label={txt.velgApplikasjon}
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-controls="uniformen-app-switcher-panel"
         data-uniformen-app-switcher-toggle
       >
         <AppGridIcon />
-        <span class="uniformen-top-nav__action-label">App</span>
+        <span class="uniformen-top-nav__action-label">{txt.app}</span>
       </button>
       <div
         id="uniformen-app-switcher-panel"
         class="uniformen-app-switcher__panel"
         role="dialog"
-        aria-label="Velg tjeneste"
+        aria-label={txt.velgTjeneste}
       >
         <div class="uniformen-app-switcher__header">
-          <h2 class="uniformen-app-switcher__title">Velg tjeneste</h2>
+          <h2 class="uniformen-app-switcher__title">{txt.velgTjeneste}</h2>
 
           <div class="uniformen-app-switcher__favorites-row">
-            <span class="uniformen-app-switcher__section-label">Favoritter</span>
+            <span class="uniformen-app-switcher__section-label">{txt.favoritter}</span>
             <span class="uniformen-app-switcher__add-favorite" aria-hidden="true">
               <svg
                 aria-hidden="true"
@@ -65,14 +96,14 @@ export function AppSwitcher({
                   clip-rule="evenodd"
                 />
               </svg>
-              Legg til
+              {txt.leggTil}
             </span>
           </div>
         </div>
 
         <div class="uniformen-app-switcher__body">
           <div class="uniformen-app-switcher__section-label uniformen-app-switcher__body-section-label">
-            Alle tjenester
+            {txt.alleTjenester}
           </div>
           <ul class="uniformen-app-switcher__list">
             {applications.map((app) => (

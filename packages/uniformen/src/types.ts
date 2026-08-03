@@ -1,5 +1,8 @@
 export type Environment = "local" | "dev" | "staging" | "production";
 
+/** BCP 47 tags: bokmål, nynorsk, English. */
+export type Locale = "nb-NO" | "nn-NO" | "en-GB";
+
 /**
  * Parameters for fetching Uniformen layouts.
  */
@@ -9,6 +12,10 @@ export type FetchUniformenParams = {
    * Entur logo, and its entry in the app switcher marked as the current page.
    */
   app?: "cleos" | "nplan" | "ops-center" | "partner" | "sorvis";
+
+  /** Language of the header and footer, default `nb-NO`. App names and env labels are untranslated. */
+  locale?: Locale;
+
   /**
    * Render the side navigation collapse control in the top bar. Set it only if the
    * app has a sidebar to collapse.

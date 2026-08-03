@@ -5,12 +5,19 @@ import {
   SWITCHABLE_ENVIRONMENTS,
   type PortalApplicationId,
 } from "../components/portalApplications";
+import type { Locale } from "../types";
+
+const texts = {
+  "nb-NO": { byttMiljo: "Bytt miljø" },
+  "nn-NO": { byttMiljo: "Byt miljø" },
+  "en-GB": { byttMiljo: "Switch environment" },
+} as const;
 
 /**
  * Badge labels per environment. One form at every width: the label is the chip's
  * only text, and — once the chip is a button — its accessible name, so it is
  * rendered rather than hidden even under the mobile breakpoint where the app name
- * gives way. The panel rows read the same values.
+ * gives way. The panel rows read the same values. Untranslated.
  */
 const ENV_LABELS: Record<Environment, string> = {
   local: "LOCAL",
@@ -38,11 +45,14 @@ const ENV_LABELS: Record<Environment, string> = {
 export function EnvironmentBadge({
   environment = runningEnvironment,
   activeAppId,
+  locale,
 }: {
   environment?: Environment;
   activeAppId?: PortalApplicationId;
+  locale: Locale;
 }) {
   const urls = portalApplicationUrls(activeAppId);
+  const txt = texts[locale];
 
   const pointer = environment !== "production" && (
     <span class="uniformen-env-badge__pointer" aria-hidden="true"></span>
@@ -77,7 +87,7 @@ export function EnvironmentBadge({
         id="uniformen-environment-switcher-panel"
         class="uniformen-env-switcher__panel"
         role="dialog"
-        aria-label="Bytt miljø"
+        aria-label={txt.byttMiljo}
       >
         <ul class="uniformen-env-switcher__list">
           {/* Fixed order, dev outwards: the rows sit in the same place whichever

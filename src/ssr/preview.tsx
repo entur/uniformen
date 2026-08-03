@@ -191,7 +191,7 @@ type PreviewQuery = z.infer<typeof previewQuerySchema>;
  * startup: passing it is the only way to cover the production branch from a test.
  */
 export function previewUser(
-  { debugUser, debugEmail }: PreviewQuery,
+  { debugUser, debugEmail }: Pick<PreviewQuery, "debugUser" | "debugEmail">,
   environment: Environment = runningEnvironment,
 ): UserMenuUser | undefined {
   if (environment === "production" || !debugUser) return undefined;
@@ -220,8 +220,9 @@ export function previewRoutes(server: OpenAPIHono): void {
     // `?sidebar=true` also gets the demo sidebar: the control is pointless to look
     // at without something for it to collapse.
     const sidebar = navProps.sidebar ? await renderComponentToString(<PreviewSidebar />) : "";
+    // Locale codes double as BCP 47 tags.
     return ctx.html(`
-        <html lang="nb">
+        <html lang="${navProps.locale}">
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -232,7 +233,7 @@ export function previewRoutes(server: OpenAPIHono): void {
             <body>
                 ${await renderComponentToString(<TopNavigation {...navProps} user={user} />)}
                 <main>${sidebar}</main>
-                ${await renderComponentToString(<Footer />)}
+                ${await renderComponentToString(<Footer locale={navProps.locale} />)}
                 ${renderUniformenScripts()}
                 ${navProps.sidebar ? `<script>${PREVIEW_SCRIPT}</script>` : ""}
             </body>

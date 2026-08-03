@@ -13,6 +13,13 @@ const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
 });
 
+// The label for a profile the identity provider gave no name for.
+const texts = {
+  "nb-NO": { brukerUtenNavn: "Bruker uten navn" },
+  "nn-NO": { brukerUtenNavn: "Brukar utan namn" },
+  "en-GB": { brukerUtenNavn: "User without a name" },
+} as const;
+
 // Per-directive CSP sources the consumer unions into its own page CSP header.
 const cspContributionSchema = z.record(z.string(), z.array(z.string()));
 
@@ -62,17 +69,17 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       payload?.sub && token && tenant
         ? await userInfoService.getUserInfo(tenant, token, payload.sub)
         : undefined;
+    const navProps = topNavigationProps(ctx.req.valid("query"));
     // Only authenticated users get a menu; a nameless profile still shows a
     // placeholder, but anonymous/failed lookups render an empty slot. The email is
     // the menu's second line, and only when there is a name for it to sit under —
     // a profile labelled by its email does not repeat it underneath.
     const user = info
       ? {
-          name: info.name ?? info.email ?? "Bruker uten navn",
+          name: info.name ?? info.email ?? texts[navProps.locale].brukerUtenNavn,
           email: info.name ? info.email : undefined,
         }
       : undefined;
-    const navProps = topNavigationProps(ctx.req.valid("query"));
 
     return ctx.json(
       {
@@ -80,7 +87,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         // `user` last: `navProps` is the query's half of the props, and who is
         // signed in is the token's to say, never a URL's.
         headerHtml: await renderComponentToString(<TopNavigation {...navProps} user={user} />),
-        footerHtml: await renderComponentToString(<Footer />),
+        footerHtml: await renderComponentToString(<Footer locale={navProps.locale} />),
         scripts: renderUniformenScripts(),
         csp: {
           "style-src": [uniformenCssHash],

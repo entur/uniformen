@@ -149,6 +149,15 @@ describe("fetchUniformenLayout", () => {
       );
     });
 
+    it("sends the locale as the service's own param name", async () => {
+      mockFetch(emptyLayout);
+      await fetchUniformenLayout({ params: { app: "partner", locale: "en-GB" } });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "https://uniformen.entur.no/ssr?app=partner&locale=en-GB",
+        expect.anything(),
+      );
+    });
+
     it("combines params with a non-default environment", async () => {
       mockFetch(emptyLayout);
       await fetchUniformenLayout({ environment: "dev", params: { app: "cleos" } });
