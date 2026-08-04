@@ -214,6 +214,9 @@ export function previewRoutes(server: OpenAPIHono): void {
 
   server.openapi(previewRoute, async (ctx) => {
     ctx.header("Content-Security-Policy", previewCsp);
+    // A dev tool, and one whose output depends on the instance's own environment as
+    // much as on the URL: never worth a stale copy.
+    ctx.header("Cache-Control", "no-store");
     const query = ctx.req.valid("query");
     const navProps = topNavigationProps(query);
     const user = previewUser(query);

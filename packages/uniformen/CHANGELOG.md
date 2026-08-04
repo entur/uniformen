@@ -11,12 +11,24 @@ version it has installed. Those are dated rather than versioned, and listed in
 
 The header and footer can be asked for in nynorsk or English.
 
+### Changed
+
+- `fetchUniformenLayout` and `fetchUniformenComponents` give up on a service that
+  does not answer, rather than holding your render open for as long as it stays
+  silent. The layout is fetched on the critical path of a page render, so an
+  unbounded wait made a slow Uniformen a slow application. A timeout returns the
+  same `null` (and the same empty components) every other failure does: the page
+  renders without the shared chrome instead of not at all.
+
 ### Added
 
+- `timeoutMs` option, default 5000. Raise it if your own render budget is larger
+  than the default and you would rather wait for the real header.
 - `params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) sets the
   language of the header and footer. Tags match exactly; an unknown value is rejected
   by the service with `400`, so the call returns `null`.
 - The `Locale` type is exported.
+- Node 22 or newer is now declared as required.
 
 ## 0.5.0 — 2026-07-29
 

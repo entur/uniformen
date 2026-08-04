@@ -515,3 +515,40 @@ describe("/ssr locale", () => {
     }
   });
 });
+/**
+ * The bar names the signed-in user, so what a cache in front of the service is
+ * allowed to keep is part of the endpoint's contract rather than a detail of it: one
+ * stored authenticated response is one user's name handed to another.
+ */
+describe("/ssr caching", () => {
+  test("an anonymous response is cacheable, and varies on the token", async () => {
+    const res = await app.request("/ssr");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(res.headers.get("Vary")).toBe("Authorization");
+  });
+
+  test("an authenticated response is nobody's to store", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    const token = await signInternalToken({ sub: "auth0|abc123" });
+    const res = await app.request("/ssr", { headers: bearer(token) });
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(res.headers.get("Vary")).toBe("Authorization");
+  });
+
+  test("a request carrying a token it could not verify is not cached either", async () => {
+    // It renders the anonymous bar, so the body is shareable — but the caller sent
+    // credentials, and a response to those is not something to leave lying around
+    // on the strength of what we made of them.
+    const token = await signInternalToken({ aud: "https://wrong.audience" });
+    const res = await app.request("/ssr", { headers: bearer(token) });
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  test("the same query with and without a token gets different caching", async () => {
+    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    const token = await signInternalToken({ sub: "auth0|abc123" });
+    const authed = await app.request("/ssr?app=partner", { headers: bearer(token) });
+    const anonymous = await app.request("/ssr?app=partner");
+    expect(authed.headers.get("Cache-Control")).not.toBe(anonymous.headers.get("Cache-Control"));
+  });
+});

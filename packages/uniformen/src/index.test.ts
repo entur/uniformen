@@ -12,6 +12,19 @@ function suppressConsoleError() {
   jest.spyOn(console, "error").mockImplementation(() => {});
 }
 
+/**
+ * A service that accepts the connection and then says nothing — the shape a plain
+ * `fetch` waits out forever. It answers only the abort, so the request ends when
+ * something ends it.
+ */
+function mockSilentFetch() {
+  const silent = (_url: unknown, init?: { signal?: AbortSignal }) =>
+    new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+    });
+  jest.spyOn(globalThis, "fetch").mockImplementation(silent as unknown as typeof fetch);
+}
+
 afterEach(() => {
   jest.restoreAllMocks();
 });
@@ -93,6 +106,7 @@ describe("fetchUniformenLayout", () => {
     await fetchUniformenLayout({ token: "abc.def.ghi" });
     expect(globalThis.fetch).toHaveBeenCalledWith(expect.any(String), {
       headers: { Authorization: "Bearer abc.def.ghi" },
+      signal: expect.any(AbortSignal),
     });
   });
 
@@ -101,6 +115,7 @@ describe("fetchUniformenLayout", () => {
     await fetchUniformenLayout();
     expect(globalThis.fetch).toHaveBeenCalledWith(expect.any(String), {
       headers: undefined,
+      signal: expect.any(AbortSignal),
     });
   });
 
@@ -172,6 +187,7 @@ describe("fetchUniformenLayout", () => {
       await fetchUniformenLayout({ token: "abc.def.ghi", params: { app: "sorvis" } });
       expect(globalThis.fetch).toHaveBeenCalledWith("https://uniformen.entur.no/ssr?app=sorvis", {
         headers: { Authorization: "Bearer abc.def.ghi" },
+        signal: expect.any(AbortSignal),
       });
     });
 
@@ -274,6 +290,41 @@ describe("fetchUniformenLayout", () => {
         "https://uniformen.entur.no/ssr",
         expect.anything(),
       );
+    });
+  });
+
+  /**
+   * The layout is fetched on the critical path of a page render, so a service that
+   * never answers must not become an app that never answers. Giving up returns the
+   * same `null` every other failure does: the page renders without the shared
+   * chrome rather than not at all.
+   */
+  describe("timeout", () => {
+    it("gives up and returns null rather than hanging the render", async () => {
+      suppressConsoleError();
+      mockSilentFetch();
+
+      expect(await fetchUniformenLayout({ timeoutMs: 20 })).toBeNull();
+    });
+
+    it("names the timeout in the log, rather than reporting a network error", async () => {
+      const error = jest.spyOn(console, "error").mockImplementation(() => {});
+      mockSilentFetch();
+
+      await fetchUniformenLayout({ timeoutMs: 20 });
+      expect(error).toHaveBeenCalledWith("Uniformen layout request timed out after 20ms");
+    });
+
+    it("passes a signal that is not yet aborted for a service that answers", async () => {
+      const fetchSpy = jest.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" }),
+      } as Response);
+
+      expect(await fetchUniformenLayout()).not.toBeNull();
+      const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+      expect(init.signal?.aborted).toBe(false);
     });
   });
 });

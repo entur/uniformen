@@ -156,6 +156,12 @@ describe("preview page demo sidebar", () => {
     expect(blocks).toHaveLength(3);
     for (const block of blocks) expect(csp).toContain(await sha256(block));
   });
+
+  test("the page is never stored", async () => {
+    // It renders whoever the URL names, and the environment the instance serves.
+    const { res } = await preview("?debugUser=Navn+Navnesen");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
 });
 
 describe("preview page locale", () => {

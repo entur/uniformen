@@ -98,6 +98,7 @@ describe("fetchUniformenComponents", () => {
       "https://uniformen.dev.entur.no/ssr?app=partner",
       {
         headers: { Authorization: "Bearer abc.def.ghi" },
+        signal: expect.any(AbortSignal),
       },
     );
   });

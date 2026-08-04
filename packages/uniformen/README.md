@@ -62,8 +62,14 @@ const layout = await fetchUniformenLayout({
   token, // Auth0 access token; adds the user to the nav
   environment: "dev", // "local" | "dev" | "staging" | "production" (default)
   params: { app: "partner", sidebar: true, locale: "nb-NO" }, // query params for the SSR endpoint
+  timeoutMs: 5000, // how long to wait for the service (default)
 });
 ```
+
+`timeoutMs` bounds the wait. The layout is fetched on the critical path of a page
+render, so a service that goes quiet must not become an app that goes quiet: when the
+timeout is reached the call returns `null` — the same answer every other failure
+gives — and your page renders without the shared chrome rather than not at all.
 
 `params.app` (`"cleos" | "nplan" | "ops-center" | "partner" | "sorvis"`) names the
 portal application asking for the layout: it renders the app

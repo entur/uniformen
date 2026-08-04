@@ -2,9 +2,6 @@ common:
   env: prd
   ingress:
     host: uniformen.entur.no
-  container:
-    cpu: 0.1
-    memory: 100
   configmap:
     enabled: true
     data:

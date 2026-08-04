@@ -11,6 +11,15 @@ versioned. Changes to the package's own API are in
 
 ## 2026-08-03 — with 0.6.0
 
+### Changed
+
+- `/ssr` says how its response may be cached. A request carrying an `Authorization`
+  header gets `Cache-Control: private, no-store` — the bar names the signed-in user,
+  so that response belongs to the one caller who asked for it. Everything else gets
+  `public, max-age=60`, and both carry `Vary: Authorization`. If anything caches the
+  layout between the service and your pages, a minute is now the longest a change
+  here takes to reach them.
+
 ### Added
 
 - A `locale` query param (BCP 47: `nb-NO` (default), `nn-NO`, `en-GB`) sets the

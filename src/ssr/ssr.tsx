@@ -54,6 +54,14 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     responses: {
       200: {
         content: { "application/json": { schema: uniformenBodySchema } },
+        headers: z.object({
+          "Cache-Control": z.string().openapi({
+            description:
+              "private, no-store for a request carrying an Authorization header; " +
+              "public, max-age=60 otherwise.",
+          }),
+          Vary: z.string().openapi({ description: "Authorization" }),
+        }),
         description: "HTML for rendering header and footer server-side.",
       },
     },
@@ -80,6 +88,20 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
           email: info.name ? info.email : undefined,
         }
       : undefined;
+
+    // Who is signed in is in the body, so an authenticated render is nobody's to
+    // store: the bar names the user. Anything carrying an `Authorization` header
+    // counts as authenticated, whether or not the token verified — a response a
+    // caller could read as personal never becomes a shared one. Everything else is
+    // the same answer for every caller asking the same question, so it is
+    // cacheable, briefly: the layout changes without a consumer release, and this
+    // is the ceiling on how long a change takes to reach their pages. `Vary` keeps
+    // the two apart in whatever caches in between.
+    ctx.header("Vary", "Authorization");
+    ctx.header(
+      "Cache-Control",
+      ctx.req.header("Authorization") ? "private, no-store" : "public, max-age=60",
+    );
 
     return ctx.json(
       {
