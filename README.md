@@ -31,6 +31,7 @@ for a dev tool — those carry a `debug` prefix.
 | --- | --- | --- |
 | `app` | `cleos`, `nplan`, `ops-center`, `partner`, `sorvis` | Names the app beside the logo, marks its entry in the app switcher, and turns the environment badge into a switcher. Sent by the consuming app. |
 | `sidebar` | `true`, `false` | Whether the app has a side navigation to collapse. The preview page also gets a demo sidebar for the control to act on. |
+| `simple` | `true`, `false` | Hides the app switcher, notifications, the sidebar toggle and "Mine tilganger". Overrides `sidebar`. Footer unchanged. |
 | `locale` | `nb-NO` (default), `nn-NO`, `en-GB` | The language the header and footer are written in. The preview page also renders `<html lang>` as it. |
 | `debugUser` | any text, 1–120 chars | Renders the bar as signed in, under that name. Absent renders the anonymous bar with its login link. Preview only. |
 | `debugEmail` | any text, 1–120 chars | The line under the name in the user menu. Preview only. |

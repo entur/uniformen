@@ -384,6 +384,87 @@ describe("/ssr sidebar query param", () => {
   });
 });
 
+describe("/ssr simple query param", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+  const authed = async (query = "") => {
+    userInfoMock.respond = () =>
+      Response.json({ name: "Hallstein Bronskimlet", email: "hallstein@entur.org" });
+    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime,
+    // so a sub another test has already fetched would serve that test's profile.
+    const token = await signInternalToken({ sub: "auth0|simple" });
+    return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
+  };
+
+  test("the anonymous bar keeps the logo and the login link, and loses the rest", async () => {
+    const body = await (await ssr("?simple=true&app=partner")).json();
+    expect(body.headerHtml).toContain('href="/auth/login"');
+    expect(body.headerHtml).toContain("uniformen-logo");
+    expect(body.headerHtml).not.toContain('aria-label="Velg applikasjon"');
+    expect(body.headerHtml).not.toContain("data-uniformen-app-switcher-toggle");
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__divider");
+    expect(body.headerHtml).not.toContain('aria-label="Varsler"');
+  });
+
+  test("the app name and the environment stay: they say where you are, not where to go", async () => {
+    const body = await (await ssr("?simple=true&app=partner")).json();
+    expect(body.headerHtml).toContain('class="uniformen-logo__app">Partner<');
+    expect(body.headerHtml).toContain('data-uniformen-environment="dev"');
+    expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');
+    // The env switcher is the badge's own control, not the app switcher's, so
+    // naming an app still hands it its hosts.
+    expect(body.headerHtml).toContain("data-uniformen-env-switcher-toggle");
+    expect(body.headerHtml).toContain('id="uniformen-environment-switcher-panel"');
+  });
+
+  test("the signed-in bar names the user, with a menu that only logs out", async () => {
+    const body = await authed("?simple=true");
+    expect(body.headerHtml).toContain("Hallstein Bronskimlet");
+    expect(body.headerHtml).toContain('href="/auth/logout"');
+    expect(body.headerHtml).toContain("data-uniformen-user-menu-toggle");
+    expect(body.headerHtml).toContain("uniformen-user-menu__email");
+    expect(body.headerHtml).not.toContain("Mine tilganger");
+    expect(body.headerHtml).not.toContain("my-profile");
+    expect(body.headerHtml).not.toContain('aria-label="Varsler"');
+  });
+
+  test("simple=false and no param render the full bar", async () => {
+    for (const query of ["", "?simple=false"]) {
+      const body = await (await ssr(query)).json();
+      expect(body.headerHtml).toContain('aria-label="Velg applikasjon"');
+      expect(body.headerHtml).toContain("uniformen-top-nav__divider");
+    }
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?simple=yes", "?simple=1", "?simple="]) {
+      expect((await ssr(query)).status).toBe(400);
+    }
+  });
+
+  test("simple wins over sidebar: a barebones bar carries no controls", async () => {
+    const body = await (await ssr("?simple=true&sidebar=true")).json();
+    expect(body.headerHtml).not.toContain("data-uniformen-sidebar-toggle");
+    // The head script is unconditional, so an app styling off the root attribute
+    // keeps its own sidebar working — it just loses our button.
+    expect(body.headAssets).toContain("data-uniformen-sidebar");
+  });
+
+  test("the footer is untouched, and so are the hashes", async () => {
+    const simple = await (await ssr("?simple=true")).json();
+    const full = await (await ssr()).json();
+    expect(simple.footerHtml).toBe(full.footerHtml);
+    expect(simple.headAssets).toBe(full.headAssets);
+    expect(simple.scripts).toBe(full.scripts);
+    expect(simple.csp).toEqual(full.csp);
+  });
+
+  test("the localised strings that survive are still localised", async () => {
+    const body = await (await ssr("?simple=true&locale=en-GB")).json();
+    expect(body.headerHtml).toContain('aria-label="Log in"');
+    expect(body.headerHtml).toContain('aria-label="Top navigation"');
+  });
+});
+
 describe("/ssr top bar chrome", () => {
   test("renders the environment badge for the running environment", async () => {
     const body = await (await app.request("/ssr")).json();

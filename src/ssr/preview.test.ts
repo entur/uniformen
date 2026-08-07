@@ -164,6 +164,37 @@ describe("preview page demo sidebar", () => {
   });
 });
 
+describe("preview page simple", () => {
+  test("the page previews the barebones bar, signed in and out", async () => {
+    const anonymous = await preview("?simple=true&app=partner");
+    expect(anonymous.res.status).toBe(200);
+    expect(anonymous.html).toContain('href="/auth/login"');
+    expect(anonymous.html).not.toContain('aria-label="Velg applikasjon"');
+
+    const signedIn = await preview("?simple=true&debugUser=Navn+Navnesen");
+    expect(signedIn.html).toContain("Navn Navnesen");
+    expect(signedIn.html).toContain('href="/auth/logout"');
+    expect(signedIn.html).not.toContain("Mine tilganger");
+  });
+
+  test("simple wins over sidebar, so the demo sidebar goes with the control", async () => {
+    // The control is what the demo sidebar exists for: without a button to collapse
+    // it there is nothing to look at.
+    const { html } = await preview("?simple=true&sidebar=true");
+    // The rendered attribute, not the bare name: the head script names the same
+    // selector, and it ships whatever the bar looks like.
+    expect(html).not.toContain('data-uniformen-sidebar-toggle="');
+    expect(html).not.toContain('class="preview-sidebar"');
+    expect(html).not.toContain("data-preview-sidebar-close");
+  });
+
+  test("the footer is the full one", async () => {
+    const { html } = await preview("?simple=true");
+    expect(html).toContain("Tjenester");
+    expect(html).toContain("Informasjon");
+  });
+});
+
 describe("preview page locale", () => {
   test("the page is marked with the language the chrome is rendered in", async () => {
     expect((await preview()).html).toContain('<html lang="nb-NO">');

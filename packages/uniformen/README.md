@@ -87,6 +87,10 @@ production.
 bar. Set it only if your app has a side navigation to collapse. Uniformen renders
 the button; you render the sidebar. See [Sidebar](#sidebar) for the contract.
 
+`params.simple` (`boolean`) hides the app switcher, notifications, the sidebar toggle
+and "Mine tilganger", leaving logo, app name, environment badge and a login link — or
+the user's name over a logout-only menu. Overrides `params.sidebar`. Footer unchanged.
+
 `params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) is the
 language of the header and footer. App names and environment labels are untranslated.
 Tags match exactly — `"nb"` is a `400`, not an alias. Set `<html lang>` to match.

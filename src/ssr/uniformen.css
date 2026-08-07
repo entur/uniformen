@@ -633,6 +633,12 @@
   );
 }
 
+/* Nothing above it carries an icon in the simple menu, so the indent has nothing
+   to line up with. */
+.uniformen-user-menu__panel--simple .uniformen-user-menu__logout {
+  padding-left: var(--uniformen-space-medium);
+}
+
 /* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
 @media (max-width: 50rem) {
   /* The chip is down to its icon here, and the panel is several times wider than

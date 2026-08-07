@@ -36,6 +36,14 @@ export type FetchUniformenParams = {
    * has a stored preference, or when nothing has set it at all.
    */
   sidebar?: boolean;
+
+  /**
+   * Barebones top bar: hides the app switcher, notifications, the sidebar toggle
+   * (whatever `sidebar` says) and "Mine tilganger". Left: logo, app name,
+   * environment badge, and a login link — or the user's name over a logout-only
+   * menu. For login, error and terms pages. Per page, not per app.
+   */
+  simple?: boolean;
 };
 
 export type UniformenLayout = {

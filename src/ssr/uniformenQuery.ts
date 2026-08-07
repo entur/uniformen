@@ -16,6 +16,9 @@ export const uniformenQuerySchema = z.object({
   // state. The state is restored on the client from storage, so the same markup
   // serves every user of the app.
   sidebar: z.enum(["true", "false"]).optional(),
+  // Hides the app switcher, notifications, the sidebar toggle and "Mine tilganger".
+  // For pages that are not the app: login, error, terms.
+  simple: z.enum(["true", "false"]).optional(),
   // Defaulted, not optional: components take it required, no per-component fallback.
   locale: z.enum(LOCALES).default("nb-NO"),
 });
@@ -23,11 +26,15 @@ export const uniformenQuerySchema = z.object({
 export type UniformenQuery = z.infer<typeof uniformenQuerySchema>;
 
 /** Query params as the props `TopNavigation` takes. */
-export function topNavigationProps({ app, sidebar, locale }: UniformenQuery) {
+export function topNavigationProps({ app, sidebar, simple, locale }: UniformenQuery) {
+  const simpleMode = simple === "true";
   return {
     appName: portalApplicationName(app),
     activeAppId: app,
-    sidebar: sidebar === "true",
+    // `simple` wins over `sidebar`. The app sets `sidebar`, the page sets `simple`,
+    // so both arriving together is ordinary rather than a 400.
+    sidebar: !simpleMode && sidebar === "true",
+    simple: simpleMode,
     locale,
   };
 }

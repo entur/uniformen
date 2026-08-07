@@ -9,6 +9,15 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-06 — with 0.7.0
+
+### Added
+
+- A `simple` query param (`true`, `false`) hides the app switcher, the notifications
+  bell, the sidebar toggle and "Mine tilganger". Left: logo, app name, environment
+  badge, and a login link — or the user's name over a logout-only menu. For login,
+  error and terms pages. Overrides `sidebar=true`. Footer unchanged.
+
 ## 2026-08-03 — with 0.6.0
 
 ### Changed

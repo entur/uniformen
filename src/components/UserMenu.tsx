@@ -43,10 +43,17 @@ const MY_PROFILE_PATH = "/permission-admin/my-profile";
 export function UserMenu({
   user,
   environment = runningEnvironment,
+  simple,
   locale,
 }: {
   user: UserMenuUser;
   environment?: Environment;
+  /**
+   * Barebones menu: who you are and the way out, no links. Keeps the identity
+   * block — under the mobile breakpoint the chip is an icon alone, so the panel is
+   * the only place the user can read who they are signed in as.
+   */
+  simple?: boolean;
   locale: Locale;
 }) {
   const txt = texts[locale];
@@ -67,7 +74,11 @@ export function UserMenu({
       </button>
       <div
         id="uniformen-user-menu-panel"
-        class="uniformen-user-menu__panel"
+        class={
+          simple
+            ? "uniformen-user-menu__panel uniformen-user-menu__panel--simple"
+            : "uniformen-user-menu__panel"
+        }
         role="dialog"
         aria-label={txt.brukermeny}
       >
@@ -78,17 +89,19 @@ export function UserMenu({
           <span class="uniformen-user-menu__name">{user.name}</span>
           {user.email && <span class="uniformen-user-menu__email">{user.email}</span>}
         </div>
-        <ul class="uniformen-user-menu__list">
-          <li>
-            <a
-              class="uniformen-user-menu__item"
-              href={`${portalApplicationUrl("partner", environment)}${MY_PROFILE_PATH}`}
-            >
-              <EyeIcon />
-              {txt.mineTilganger}
-            </a>
-          </li>
-        </ul>
+        {!simple && (
+          <ul class="uniformen-user-menu__list">
+            <li>
+              <a
+                class="uniformen-user-menu__item"
+                href={`${portalApplicationUrl("partner", environment)}${MY_PROFILE_PATH}`}
+              >
+                <EyeIcon />
+                {txt.mineTilganger}
+              </a>
+            </li>
+          </ul>
+        )}
         {/* Its own group, below a divider: leaving is not one more place to go. */}
         <a class="uniformen-user-menu__item uniformen-user-menu__logout" href="/auth/logout">
           {txt.loggUt}

@@ -7,6 +7,15 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.7.0 — 2026-08-06
+
+### Added
+
+- `params.simple` (`boolean`) hides the app switcher, notifications, the sidebar
+  toggle and "Mine tilganger". Left: logo, app name, environment badge, and a login
+  link — or the user's name over a logout-only menu. For login, error and terms
+  pages. Overrides `params.sidebar`. Footer unchanged.
+
 ## 0.6.0 — 2026-08-03
 
 The header and footer can be asked for in nynorsk or English.

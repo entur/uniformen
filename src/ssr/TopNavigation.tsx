@@ -28,6 +28,7 @@ export function TopNavigation({
   appName,
   activeAppId,
   sidebar,
+  simple,
   locale,
 }: {
   /** The signed-in user. Absent renders the anonymous bar, with a login link. */
@@ -41,6 +42,11 @@ export function TopNavigation({
    * element, restored client-side before paint.
    */
   sidebar?: boolean;
+  /**
+   * Barebones bar: hides the app switcher, notifications and the sidebar toggle, and
+   * thins the user menu to logout. Left side untouched, env switcher included.
+   */
+  simple?: boolean;
   /** The language every string in the bar is rendered in. */
   locale: Locale;
 }) {
@@ -56,8 +62,8 @@ export function TopNavigation({
         <div class="uniformen-top-nav__right">
           {user ? (
             <>
-              <NotificationsButton locale={locale} />
-              <UserMenu user={user} locale={locale} />
+              {!simple && <NotificationsButton locale={locale} />}
+              <UserMenu user={user} simple={simple} locale={locale} />
             </>
           ) : (
             <a class="uniformen-top-nav__login" href="/auth/login" aria-label={txt.loggInn}>
@@ -65,8 +71,14 @@ export function TopNavigation({
               <span class="uniformen-top-nav__action-label">{txt.loggInn}</span>
             </a>
           )}
-          <span class="uniformen-top-nav__divider" aria-hidden="true"></span>
-          <AppSwitcher activeAppId={activeAppId} locale={locale} />
+          {/* The divider separates the user's controls from the app switcher, so it
+              goes with the switcher rather than standing at the end of the bar. */}
+          {!simple && (
+            <>
+              <span class="uniformen-top-nav__divider" aria-hidden="true"></span>
+              <AppSwitcher activeAppId={activeAppId} locale={locale} />
+            </>
+          )}
         </div>
       </nav>
     </header>

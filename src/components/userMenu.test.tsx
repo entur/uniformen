@@ -97,3 +97,38 @@ describe("user menu rendering", () => {
     expect(en).toContain("Navn Navnesen");
   });
 });
+
+describe("simple user menu", () => {
+  const renderSimple = (user: { name: string; email?: string }) =>
+    renderComponentToString(<UserMenu user={user} simple locale="nb-NO" />);
+
+  test("the way out is the only row", async () => {
+    const html = await renderSimple({ name: "Navn Navnesen" });
+    expect(hrefs(html)).toEqual(["/auth/logout"]);
+    expect(html).not.toContain("Mine tilganger");
+    expect(html).not.toContain("uniformen-user-menu__list");
+  });
+
+  test("the identity block stays: at mobile widths the chip is an icon alone", async () => {
+    const html = await renderSimple({ name: "Navn Navnesen", email: "navn@entur.org" });
+    expect(html).toContain('class="uniformen-user-menu__name">Navn Navnesen<');
+    expect(html).toContain('class="uniformen-user-menu__email">navn@entur.org<');
+  });
+
+  test("the panel is marked simple, so the iconless indent can be dropped", async () => {
+    // Nothing above the logout row carries an icon here, so the indent that lines
+    // it up with icon'd labels has nothing to line up with.
+    const html = await renderSimple({ name: "Navn Navnesen" });
+    expect(html).toContain("uniformen-user-menu__panel--simple");
+    expect(
+      await renderComponentToString(<UserMenu user={{ name: "N" }} locale="nb-NO" />),
+    ).not.toContain("uniformen-user-menu__panel--simple");
+  });
+
+  test("the toggle and panel are wired the same way, so one handler serves both forms", async () => {
+    const html = await renderSimple({ name: "Navn Navnesen" });
+    expect(html).toContain("data-uniformen-user-menu-toggle");
+    expect(html).toContain('aria-controls="uniformen-user-menu-panel"');
+    expect(html).toContain('id="uniformen-user-menu-panel"');
+  });
+});
