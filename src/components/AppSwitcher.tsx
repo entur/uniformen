@@ -6,7 +6,6 @@ import { PORTAL_APPLICATIONS, type PortalApplicationId } from "./portalApplicati
 const texts = {
   "nb-NO": {
     velgApplikasjon: "Velg applikasjon",
-    app: "App",
     velgTjeneste: "Velg tjeneste",
     favoritter: "Favoritter",
     leggTil: "Legg til",
@@ -14,7 +13,6 @@ const texts = {
   },
   "nn-NO": {
     velgApplikasjon: "Vel applikasjon",
-    app: "App",
     velgTjeneste: "Vel teneste",
     favoritter: "Favorittar",
     leggTil: "Legg til",
@@ -22,7 +20,6 @@ const texts = {
   },
   "en-GB": {
     velgApplikasjon: "Choose application",
-    app: "App",
     velgTjeneste: "Choose service",
     favoritter: "Favourites",
     leggTil: "Add",
@@ -68,7 +65,6 @@ export function AppSwitcher({
         data-uniformen-app-switcher-toggle
       >
         <AppGridIcon />
-        <span class="uniformen-top-nav__action-label">{txt.app}</span>
       </button>
       <div
         id="uniformen-app-switcher-panel"

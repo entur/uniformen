@@ -502,10 +502,9 @@
   background: var(--uniformen-color-blue-80);
 }
 
-/* Wraps the chip so the panel can be positioned against it horizontally: the panel
-   is narrow, and the chip is what it belongs to. */
+/* Wraps the chip and its panel. The panel is positioned against the viewport, so
+   this only has to keep the chip on the bar's centre line. */
 .uniformen-user-menu {
-  position: relative;
   display: flex;
   align-items: center;
 }
@@ -519,22 +518,16 @@
      with the others. One number, because that is what makes the labels agree. The
      icons carry it as their own attributes too, as the size before any stylesheet. */
   --menu-icon-size: 1.25rem;
-  position: absolute;
-  /* The same 4px gap below the bar the app switcher panel sits at, so two panels
-     opened from the same bar line up along their top edge.
-
-     Measured from the chip's centre out to the bar's edge, rather than from the
-     chip's own bottom: the chip is 2rem in a 4rem bar, so `100%` is a full 1rem
-     short of the bar's underside. Everything in the bar is centred on one line, so
-     the chip's centre is the bar's centre, and half the bar's height from there is
-     its underside — at both bar heights, without repeating either of them.
-
-     The app switcher panel does the same sum the other way round: it is positioned
-     against the viewport, so it adds the bar's full height to the top of the page. */
-  top: calc(50% + var(--top-nav-height) / 2 + var(--uniformen-space-xs2));
-  /* Left-aligned with the chip, growing rightwards, which is where the room is
-     for everything but the narrowest viewports — see the breakpoint below. */
-  left: 0;
+  /* Positioned against the viewport, exactly as the app switcher panel is: both
+     hang from the bar's underside and end at the page's right gutter, so whichever
+     one is open occupies the same corner. Anchoring to the chip instead would
+     either run the panel off the right edge or leave it short of the gutter,
+     depending on how much sits between the chip and the bar's end. */
+  position: fixed;
+  /* Sits a 4px gap below the bar: nav height, plus the env strip (zero-height in
+     production), plus the gap. */
+  top: calc(var(--top-nav-height) + var(--uniformen-env-strip-height) + var(--uniformen-space-xs2));
+  right: var(--uniformen-space-medium);
   box-sizing: border-box;
   /* A floor of 15rem, but never past the viewport's gutters: `min-width` outranks
      `max-width`, so the floor has to yield on its own. */
@@ -637,17 +630,6 @@
    to line up with. */
 .uniformen-user-menu__panel--simple .uniformen-user-menu__logout {
   padding-left: var(--uniformen-space-medium);
-}
-
-/* breakpoints.rem.large from @entur/tokens (50rem / 800px). CSS vars don't work in @media conditions, so this value is duplicated. */
-@media (max-width: 50rem) {
-  /* The chip is down to its icon here, and the panel is several times wider than
-     it, so left-aligning it would push it off the right edge. Pinned to the
-     chip's right instead: everything to the left of it is bar, with room. */
-  .uniformen-user-menu__panel {
-    left: auto;
-    right: 0;
-  }
 }
 
 .uniformen-footer__inner {
