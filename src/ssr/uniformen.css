@@ -502,32 +502,50 @@
   background: var(--uniformen-color-blue-80);
 }
 
-/* Wraps the chip and its panel. The panel is positioned against the viewport, so
-   this only has to keep the chip on the bar's centre line. */
-.uniformen-user-menu {
+/* Wraps the chip so the panel can be positioned against it horizontally: the panel
+   is narrow, and the chip is what it belongs to. The language switcher's chip and
+   panel are the same arrangement, and share it. */
+.uniformen-user-menu,
+.uniformen-locale-switcher {
+  position: relative;
   display: flex;
   align-items: center;
 }
 
-[data-uniformen-user-menu-toggle][aria-expanded="false"] + .uniformen-user-menu__panel {
+[data-uniformen-user-menu-toggle][aria-expanded="false"] + .uniformen-user-menu__panel,
+[data-uniformen-locale-switcher-toggle][aria-expanded="false"] + .uniformen-locale-switcher__panel {
   display: none;
 }
 
-.uniformen-user-menu__panel {
+.uniformen-user-menu__panel,
+.uniformen-locale-switcher__panel {
   /* The row icons' size, and the indent the iconless row uses to line its label up
      with the others. One number, because that is what makes the labels agree. The
      icons carry it as their own attributes too, as the size before any stylesheet. */
   --menu-icon-size: 1.25rem;
-  /* Positioned against the viewport, exactly as the app switcher panel is: both
-     hang from the bar's underside and end at the page's right gutter, so whichever
-     one is open occupies the same corner. Anchoring to the chip instead would
-     either run the panel off the right edge or leave it short of the gutter,
-     depending on how much sits between the chip and the bar's end. */
-  position: fixed;
-  /* Sits a 4px gap below the bar: nav height, plus the env strip (zero-height in
-     production), plus the gap. */
-  top: calc(var(--top-nav-height) + var(--uniformen-env-strip-height) + var(--uniformen-space-xs2));
-  right: var(--uniformen-space-medium);
+  /* Against the chip, not the viewport: a panel belongs to the control that opened
+     it, and it has to travel with the bar rather than stay glued to the viewport if
+     the app scrolls the header away. The overflow that anchoring used to cause is
+     handled by which edge it hangs from — see `right` below. */
+  position: absolute;
+  /* The same 4px gap below the bar the app switcher panel sits at, so two panels
+     opened from the same bar line up along their top edge.
+
+     Measured from the chip's centre out to the bar's edge, rather than from the
+     chip's own bottom: the chip is 2rem in a 4rem bar, so `100%` is a full 1rem
+     short of the bar's underside. Everything in the bar is centred on one line, so
+     the chip's centre is the bar's centre, and half the bar's height from there is
+     its underside — at both bar heights, without repeating either of them.
+
+     The app switcher panel does the same sum the other way round: it is positioned
+     against the viewport, so it adds the bar's full height to the top of the page. */
+  top: calc(50% + var(--top-nav-height) / 2 + var(--uniformen-space-xs2));
+  /* Pinned to the chip's right edge, growing leftwards, at every width. The panel
+     is several times wider than its chip and the chips sit at the right end of the
+     bar, so growing rightwards runs it off the page — off the viewport entirely on
+     a `simple` bar, where the user chip is the last thing in the row. Everything to
+     the left of a chip is bar, with room. */
+  right: 0;
   box-sizing: border-box;
   /* A floor of 15rem, but never past the viewport's gutters: `min-width` outranks
      `max-width`, so the floor has to yield on its own. */
@@ -618,6 +636,77 @@
   }
 }
 
+/* The language group's own heading, separated from the links above it. Same
+   treatment as the app switcher's section labels: a label on a group, not a
+   heading on a page. */
+.uniformen-locale-menu__heading {
+  display: block;
+  padding: var(--uniformen-space-small) var(--uniformen-space-medium) var(--uniformen-space-xs2);
+  border-top: 1px solid var(--uniformen-color-blue-70);
+  font-size: var(--uniformen-font-xs);
+  font-weight: var(--uniformen-weight-body);
+  line-height: var(--uniformen-line-xs);
+  letter-spacing: 0.08em;
+  color: var(--uniformen-color-blue-40);
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* A button in a list of links: everything the UA gives it that the rows above do
+   not have is taken back off, its own separator included — the options are one
+   group under one heading, not one row per language. */
+.uniformen-locale-menu__item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Sits in the slot the row icons occupy, so labels line up down the whole panel. */
+.uniformen-locale-menu__marker {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--menu-icon-size);
+  height: var(--menu-icon-size);
+  border: 1px solid var(--uniformen-color-blue-40);
+  border-radius: 50%;
+  transform: translateY(-0.08em);
+}
+
+.uniformen-locale-menu__marker::after {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--uniformen-color-blue-10);
+}
+
+/* Checked is one attribute: what the marker draws and what a screen reader
+   announces can't disagree. */
+[aria-checked="false"] > .uniformen-locale-menu__marker::after {
+  display: none;
+}
+
+[aria-checked="true"] > .uniformen-locale-menu__marker {
+  border-color: var(--uniformen-color-blue-10);
+}
+
+/* Open reads as held down, the way the user chip does. */
+.uniformen-locale-switcher__toggle[aria-expanded="true"] {
+  background: var(--uniformen-color-brand-lavender);
+}
+
+/* The chevron follows the panel, the way the environment chip's does. The globe
+   leads and the chevron trails, so the last icon is the one that turns. */
+.uniformen-locale-switcher__toggle[aria-expanded="true"] > svg:last-of-type {
+  transform: translateY(-0.08em) rotate(180deg);
+}
+
 /* Iconless, so its label lines up with the labels above rather than with their
    icons: the indent is what an icon and its gap would have taken. */
 .uniformen-user-menu__logout {
@@ -627,8 +716,9 @@
 }
 
 /* Nothing above it carries an icon in the simple menu, so the indent has nothing
-   to line up with. */
-.uniformen-user-menu__panel--simple .uniformen-user-menu__logout {
+   to line up with — unless the language options are there, whose radio markers sit
+   in that same slot. */
+.uniformen-user-menu__panel--simple:not(:has(.uniformen-locale-menu)) .uniformen-user-menu__logout {
   padding-left: var(--uniformen-space-medium);
 }
 

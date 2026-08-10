@@ -9,6 +9,32 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-10 — with 0.8.0
+
+### Added
+
+- An `availableLocales` query param (a repeated key:
+  `?availableLocales=nb-NO&availableLocales=en-GB`) renders a language switcher — a
+  group of radio items under "Språk / Language", each named in its own language,
+  with `locale` checked as rendered. Exactly the tags given, in their order: an app
+  that translates two of the three offers two. No param renders no switcher. A
+  repeat, an unknown tag, or a list not containing `locale` is a `400`, like any
+  other unknown value.
+- Picking a language dispatches `uniformen:locale` on `window` and does nothing else:
+  no cookie, no storage, no reload, no re-labelling. The consuming app persists the
+  choice and reloads — the header is rendered in one language and the app's texts in
+  another until it does. Picking the current language dispatches nothing.
+- Where the switcher sits follows the bar, and it is never in both places: a section
+  of the user menu on a signed-in bar, and its own control — globe plus the current
+  language, left of the login link — on the anonymous bar, which has no menu to hold
+  it. `simple=true` keeps the language in the menu, unlike the rows it drops. Under
+  the mobile breakpoint the chip is the globe alone, with the language in its
+  `aria-label`.
+- The control names itself in both languages — "Språk / Language" — wherever the
+  locale is followed for every other string in the bar. It is the signpost for a user
+  who cannot read the language the page came back in, and a Norwegian label is no use
+  to them.
+
 ## 2026-08-06 — with 0.7.0
 
 ### Added

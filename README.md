@@ -33,6 +33,7 @@ for a dev tool — those carry a `debug` prefix.
 | `sidebar` | `true`, `false` | Whether the app has a side navigation to collapse. The preview page also gets a demo sidebar for the control to act on. |
 | `simple` | `true`, `false` | Hides the app switcher, notifications, the sidebar toggle and "Mine tilganger". Overrides `sidebar`. Footer unchanged. |
 | `locale` | `nb-NO` (default), `nn-NO`, `en-GB` | The language the header and footer are written in. The preview page also renders `<html lang>` as it. |
+| `availableLocales` | any of `nb-NO`, `nn-NO`, `en-GB`, repeated: `?availableLocales=nb-NO&availableLocales=en-GB` | The languages the app offers, in this order, as a switcher: a section of the user menu where the bar has one (`simple` included), its own chip beside the login link where it does not. Must include `locale`, which is the option rendered as current. Absent renders no switcher. |
 | `debugUser` | any text, 1–120 chars | Renders the bar as signed in, under that name. Absent renders the anonymous bar with its login link. Preview only. |
 | `debugEmail` | any text, 1–120 chars | The line under the name in the user menu. Preview only. |
 

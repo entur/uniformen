@@ -17,6 +17,34 @@ export type FetchUniformenParams = {
   locale?: Locale;
 
   /**
+   * Languages to offer in the top bar's language switcher, in this order. Omitted
+   * or empty renders no switcher — set it only to the tags your own app translates,
+   * not to everything the service supports.
+   *
+   * A group of radio items, never in two places at once: a section of the signed-in
+   * user's menu wherever there is one, `simple` included, and a control of its own —
+   * globe plus the current language, left of the login link — on the anonymous bar,
+   * which has none. `locale` is the option rendered as current, and must be one of
+   * `availableLocales`: a repeat, an unknown tag, or a list without `locale` is
+   * rejected by the service with `400`, so the call returns `null`.
+   *
+   * A pick dispatches `uniformen:locale` on `window` and does nothing else — no
+   * cookie, no storage, no reload, no re-labelling of the bar. Persisting the choice
+   * and reloading are yours, because only a new document can change the language of
+   * a server-rendered header and of your own texts:
+   *
+   *   window.addEventListener("uniformen:locale", (event) => {
+   *     const { locale } = event.detail;
+   *     // persist however your app persists it, then:
+   *     window.location.reload();
+   *   });
+   *
+   * Send the stored choice back as `locale` on the next render, and set `<html lang>`
+   * to match.
+   */
+  availableLocales?: Locale[];
+
+  /**
    * Render the side navigation collapse control in the top bar. Set it only if the
    * app has a sidebar to collapse.
    *

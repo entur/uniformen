@@ -95,6 +95,11 @@ the user's name over a logout-only menu. Overrides `params.sidebar`. Footer unch
 language of the header and footer. App names and environment labels are untranslated.
 Tags match exactly — `"nb"` is a `400`, not an alias. Set `<html lang>` to match.
 
+`params.availableLocales` (`Locale[]`) renders a language switcher offering exactly
+these tags in this order — in the user menu, or as a control of its own where there
+is no menu. Omitted or empty renders none. See [Language](#language) for the
+contract.
+
 The same options apply to `fetchUniformenComponents` below.
 
 ### React adapter
@@ -196,6 +201,62 @@ window.addEventListener("uniformen:sidebar", (event) => {
 Uniformen derives the rest from the attribute: the button's chevron direction (in
 CSS, so it differs open and closed with no work from you), its `aria-expanded`, and
 persisting the preference to `localStorage` under `uniformen:sidebar`.
+
+## Language
+
+`params.locale` is the language everything the service renders is rendered in.
+`params.availableLocales` adds the control the user changes it with:
+
+```ts
+const layout = await fetchUniformenLayout({
+  token,
+  params: { app: "partner", locale, availableLocales: ["nb-NO", "en-GB"] },
+});
+```
+
+The languages are a group of radio items, with `locale` checked as rendered by the
+server — no client state and no flash of the wrong label. Each language is named in
+itself ("Norsk bokmål", "English"), and the control itself is labelled in both
+("Språk / Language") whatever `locale` says — a label you can't read is one you can't
+pick your way out of.
+
+**Where the control sits follows the bar**, and it is never in two places at once:
+
+- a signed-in bar has it as a "Språk / Language" section of the user menu, above
+  the way out. `params.simple` keeps it there, unlike the links it drops;
+- the anonymous bar, which has no menu to hold it, has it as a control of its own,
+  left of the login link, naming the current language beside a globe. Under the
+  mobile breakpoint the label goes and the globe keeps an `aria-label` naming the
+  language, like the bar's other controls.
+
+List only the tags your own app translates: Uniformen renders three, and offering a
+language your pages don't have is worse than not offering it. Order is yours. A
+repeat, an unknown tag, or a list that doesn't contain `locale` is a `400`, so the
+call returns `null`.
+
+**Uniformen owns the control; you own the choice.** A pick dispatches one event and
+does nothing else — no cookie, no `localStorage`, no reload, no re-labelling of the
+bar:
+
+```ts
+window.addEventListener("uniformen:locale", (event) => {
+  const { locale } = event.detail;
+  // persist however your app persists it, then:
+  window.location.reload();
+});
+```
+
+The reload is what completes the change, and it is why nothing is applied
+optimistically: the header is rendered in one language on the server and your own
+texts are resolved when your modules load, so a switched bar over an unswitched page
+is the only thing in-place re-labelling could produce.
+
+On the next render, send the stored choice back as `params.locale` and set
+`<html lang>` to match. That is the whole loop — a cookie your server reads, `locale`
+out of it, one event listener back in.
+
+Picking the language already rendered dispatches nothing, so the page does not reload
+for nothing.
 
 ## Project structure
 

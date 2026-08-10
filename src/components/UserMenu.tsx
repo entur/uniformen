@@ -1,5 +1,6 @@
 import { environment as runningEnvironment, type Environment } from "../config";
 import type { Locale } from "../types";
+import { LocaleMenu } from "./LocaleMenu";
 import { UserIcon } from "./icons/UserIcon";
 import { EyeIcon } from "./icons/EyeIcon";
 import { portalApplicationUrl } from "./portalApplications";
@@ -45,6 +46,7 @@ export function UserMenu({
   environment = runningEnvironment,
   simple,
   locale,
+  availableLocales,
 }: {
   user: UserMenuUser;
   environment?: Environment;
@@ -55,6 +57,11 @@ export function UserMenu({
    */
   simple?: boolean;
   locale: Locale;
+  /**
+   * The languages to offer, in this order. Empty or absent renders no switcher: an
+   * app that translates nothing must not offer to switch.
+   */
+  availableLocales?: Locale[];
 }) {
   const txt = texts[locale];
   return (
@@ -101,6 +108,13 @@ export function UserMenu({
               </a>
             </li>
           </ul>
+        )}
+        {/* Not gated by `simple`, unlike the links above it: the barebones menu is
+            still a menu, and a language chip beside the chip that opens it would be
+            two controls where the bar has room for one. The standalone control is
+            for the bars with no menu at all — see `LocaleSwitcher`. */}
+        {availableLocales && availableLocales.length > 0 && (
+          <LocaleMenu availableLocales={availableLocales} locale={locale} />
         )}
         {/* Its own group, below a divider: leaving is not one more place to go. */}
         <a class="uniformen-user-menu__item uniformen-user-menu__logout" href="/auth/logout">

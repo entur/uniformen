@@ -173,6 +173,27 @@ describe("fetchUniformenLayout", () => {
       );
     });
 
+    it("repeats the key for the languages to offer, in the order given", async () => {
+      mockFetch(emptyLayout);
+      await fetchUniformenLayout({
+        params: { locale: "en-GB", availableLocales: ["nb-NO", "en-GB"] },
+      });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "https://uniformen.entur.no/ssr?locale=en-GB&availableLocales=nb-NO&availableLocales=en-GB",
+        expect.anything(),
+      );
+    });
+
+    it("sends no key at all for an empty list of languages", async () => {
+      // Which is what renders no switcher, rather than a switcher with nothing in it.
+      mockFetch(emptyLayout);
+      await fetchUniformenLayout({ params: { app: "partner", availableLocales: [] } });
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "https://uniformen.entur.no/ssr?app=partner",
+        expect.anything(),
+      );
+    });
+
     it("sends booleans as the strings the service's schema accepts", async () => {
       mockFetch(emptyLayout);
       await fetchUniformenLayout({ params: { simple: true, sidebar: false } });

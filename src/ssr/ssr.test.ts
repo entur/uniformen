@@ -206,7 +206,7 @@ describe("/ssr", () => {
   test("the panels share one copy of their behaviour, called once each", async () => {
     const body = await (await app.request("/ssr")).json();
     expect(body.scripts.match(/function panelToggle/g)).toHaveLength(1);
-    expect(body.scripts.match(/panelToggle\("/g)).toHaveLength(3);
+    expect(body.scripts.match(/panelToggle\("/g)).toHaveLength(4);
   });
 
   test("the inline bundle is valid JavaScript", async () => {
@@ -492,6 +492,24 @@ describe("/ssr top bar chrome", () => {
     expect(anonymous.headerHtml).not.toContain('aria-label="Varsler"');
   });
 
+  test("the chip panels hang leftwards, so none of them can run off the page", async () => {
+    // They are wider than the chips they belong to, and the chips sit at the right
+    // end of the bar: growing rightwards puts a panel past the viewport and the page
+    // into horizontal scroll. On a simple bar the user chip is the last thing in the
+    // row, which is where that used to happen.
+    const body = await (await app.request("/ssr")).json();
+    const rule = body.headAssets.match(
+      /\.uniformen-user-menu__panel,\s*\.uniformen-locale-switcher__panel \{([^}]*)\}/,
+    )?.[1];
+    // Against the chip rather than the viewport, and hanging from its right edge:
+    // a panel belongs to the control that opened it, and travels with the bar.
+    expect(rule).toContain("position: absolute");
+    expect(rule).toContain("right: 0");
+    expect(rule).not.toContain("left: 0");
+    // And no breakpoint puts either of them back: one alignment at every width.
+    expect(body.headAssets).not.toMatch(/@media[^{]*\{[^}]*__panel[^}]*left: auto/);
+  });
+
   test("the app switcher panel is still wired to its toggle", async () => {
     const body = await (await app.request("/ssr")).json();
     expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
@@ -594,6 +612,109 @@ describe("/ssr locale", () => {
     ]) {
       expect((await app.request(`/ssr${query}`)).status).toBe(400);
     }
+  });
+});
+
+describe("/ssr availableLocales query param", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+  const authed = async (query = "") => {
+    userInfoMock.respond = () => Response.json({ name: "Sigmunn Sagbladet" });
+    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime.
+    const token = await signInternalToken({ sub: "auth0|availableLocales" });
+    return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
+  };
+
+  test("the switcher offers what was asked for, checked at the locale rendered", async () => {
+    const body = await authed("?locale=en-GB&availableLocales=nb-NO&availableLocales=en-GB");
+    expect(body.headerHtml).toContain("uniformen-locale-menu");
+    expect(body.headerHtml).toContain(
+      '<button type="button" role="menuitemradio" aria-checked="false" lang="nb-NO"',
+    );
+    expect(body.headerHtml).toContain(
+      '<button type="button" role="menuitemradio" aria-checked="true" lang="en-GB"',
+    );
+    // Not the service's supported set — Partner translates two of the three.
+    expect(body.headerHtml).not.toContain("Norsk nynorsk");
+  });
+
+  test("one language is a list, and no param renders no switcher", async () => {
+    expect((await authed("?availableLocales=nb-NO")).headerHtml).toContain("uniformen-locale-menu");
+    expect((await authed()).headerHtml).not.toContain("uniformen-locale-menu");
+  });
+
+  test("an anonymous bar gets the switcher as a control of its own, before the login link", async () => {
+    const res = await ssr("?availableLocales=nb-NO&availableLocales=en-GB");
+    expect(res.status).toBe(200);
+    const { headerHtml } = await res.json();
+    expect(headerHtml).toContain("data-uniformen-locale-switcher-toggle");
+    expect(headerHtml).toContain('id="uniformen-locale-switcher-panel"');
+    // The bar's own control, not the menu's section: there is no menu to hold it.
+    expect(headerHtml).not.toContain("uniformen-locale-menu__heading");
+    expect(headerHtml.indexOf("uniformen-locale-switcher")).toBeLessThan(
+      headerHtml.indexOf('href="/auth/login"'),
+    );
+  });
+
+  test("a simple bar keeps it: anonymous as a chip, signed in as a menu section", async () => {
+    const anonymous = await (
+      await ssr("?simple=true&availableLocales=nb-NO&availableLocales=en-GB")
+    ).json();
+    expect(anonymous.headerHtml).toContain("data-uniformen-locale-switcher-toggle");
+
+    // The barebones menu keeps the language, unlike the links it drops: a chip
+    // beside the chip that opens it would be two controls in one bar.
+    const signedIn = await authed("?simple=true&availableLocales=nb-NO&availableLocales=en-GB");
+    expect(signedIn.headerHtml).toContain("uniformen-locale-menu__heading");
+    expect(signedIn.headerHtml).not.toContain("data-uniformen-locale-switcher-toggle");
+    expect(signedIn.headerHtml).not.toContain("Mine tilganger");
+  });
+
+  test("only one control at a time: a signed-in bar has the section, not the chip", async () => {
+    const body = await authed("?availableLocales=nb-NO&availableLocales=en-GB");
+    expect(body.headerHtml).toContain("uniformen-locale-menu__heading");
+    expect(body.headerHtml).not.toContain("data-uniformen-locale-switcher-toggle");
+  });
+
+  test("the chip names the current language, and announces it where the label is hidden", async () => {
+    const body = await (
+      await ssr("?locale=en-GB&availableLocales=nb-NO&availableLocales=en-GB")
+    ).json();
+    expect(body.headerHtml).toContain('aria-label="Språk / Language: English"');
+    expect(body.headerHtml).toContain(
+      'class="uniformen-top-nav__action-label" lang="en-GB">English<',
+    );
+  });
+
+  test("a language the service does not render is rejected, not dropped", async () => {
+    for (const query of [
+      "?availableLocales=de-DE",
+      "?availableLocales=",
+      "?availableLocales=nb",
+      "?availableLocales=nb-no",
+      "?availableLocales=nb-NO&availableLocales=en",
+    ]) {
+      expect((await ssr(query)).status).toBe(400);
+    }
+  });
+
+  test("a list that contradicts itself is rejected, not read past", async () => {
+    // A repeat would render the language twice, and a list without the locale being
+    // rendered would leave every option unchecked.
+    expect((await ssr("?availableLocales=nb-NO&availableLocales=nb-NO")).status).toBe(400);
+    expect((await ssr("?locale=nn-NO&availableLocales=nb-NO&availableLocales=en-GB")).status).toBe(
+      400,
+    );
+    expect((await ssr("?availableLocales=en-GB")).status).toBe(400);
+  });
+
+  test("the client half ships with every layout, switcher rendered or not", async () => {
+    // One bundle serves every combination of controls, and the handler bails out
+    // when the markup is absent.
+    const without = await (await ssr()).json();
+    const with_ = await authed("?availableLocales=nb-NO&availableLocales=en-GB");
+    expect(without.scripts).toContain("uniformen:locale");
+    expect(with_.scripts).toBe(without.scripts);
+    expect(with_.csp).toEqual(without.csp);
   });
 });
 /**

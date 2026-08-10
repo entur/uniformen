@@ -134,15 +134,31 @@ const PREVIEW_BASE_CSS = `
 `.trim();
 
 /**
- * The demo sidebar's own close button, standing in for whatever an app collapses
- * from: a shortcut, a route change, a button of its own. It writes the state
- * attribute — the same thing the top bar button does — and that is all an app ever
- * has to do.
+ * The consuming app's half of the two contracts the page demonstrates, written the
+ * way an app writes it.
+ *
+ * The demo sidebar's close button stands in for whatever an app collapses from: a
+ * shortcut, a route change, a button of its own. It writes the state attribute — the
+ * same thing the top bar button does — and that is all an app ever has to do.
+ *
+ * The language event is the app's to finish: persist the choice, then load a new
+ * document in it. The preview page's URL is its persistence, so it puts the picked
+ * language in `locale` and navigates — where an app would write its cookie and
+ * reload. Nothing here re-labels the bar, because nothing can.
+ *
+ * Both are bound unconditionally: neither has anything to do on a page that renders
+ * no sidebar and no switcher.
  */
-const PREVIEW_SCRIPT = `(${function previewSidebarClose() {
+const PREVIEW_SCRIPT = `(${function previewHandlers() {
   const close = document.querySelector("[data-preview-sidebar-close]");
   close?.addEventListener("click", () => {
     document.documentElement.setAttribute("data-uniformen-sidebar", "collapsed");
+  });
+
+  window.addEventListener("uniformen:locale", (event) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("locale", (event as CustomEvent<{ locale: string }>).detail.locale);
+    window.location.assign(url.toString());
   });
 }
   .toString()
@@ -238,7 +254,7 @@ export function previewRoutes(server: OpenAPIHono): void {
                 <main>${sidebar}</main>
                 ${await renderComponentToString(<Footer locale={navProps.locale} />)}
                 ${renderUniformenScripts()}
-                ${navProps.sidebar ? `<script>${PREVIEW_SCRIPT}</script>` : ""}
+                <script>${PREVIEW_SCRIPT}</script>
             </body>
         </html>
     `);

@@ -120,7 +120,9 @@ describe("preview page demo sidebar", () => {
   test("no param leaves the page without one", async () => {
     const { html } = await preview();
     expect(html).not.toContain('class="preview-sidebar"');
-    expect(html).not.toContain("data-preview-sidebar-close");
+    // The rendered attribute, not the bare name: the page's own script names the
+    // same selector, and it ships whatever the page renders.
+    expect(html).not.toContain('data-preview-sidebar-close="');
   });
 
   test("the collapsed width is CSS off the root attribute, not script", async () => {
@@ -185,7 +187,7 @@ describe("preview page simple", () => {
     // selector, and it ships whatever the bar looks like.
     expect(html).not.toContain('data-uniformen-sidebar-toggle="');
     expect(html).not.toContain('class="preview-sidebar"');
-    expect(html).not.toContain("data-preview-sidebar-close");
+    expect(html).not.toContain('data-preview-sidebar-close="');
   });
 
   test("the footer is the full one", async () => {
@@ -200,6 +202,42 @@ describe("preview page locale", () => {
     expect((await preview()).html).toContain('<html lang="nb-NO">');
     expect((await preview("?locale=en-GB")).html).toContain('<html lang="en-GB">');
     expect((await preview("?locale=nn-NO")).html).toContain('<html lang="nn-NO">');
+  });
+
+  test("availableLocales renders the switcher, checked at the language the page is in", async () => {
+    const { html } = await preview(
+      "?locale=en-GB&availableLocales=nb-NO&availableLocales=en-GB&debugUser=Navn",
+    );
+    expect(html).toContain("uniformen-locale-menu");
+    expect(html).toContain('aria-checked="true" lang="en-GB"');
+    expect(html).toContain('aria-checked="false" lang="nb-NO"');
+  });
+
+  test("an anonymous preview gets the standalone chip, so a login page can be looked at", async () => {
+    const { html } = await preview("?simple=true&availableLocales=nb-NO&availableLocales=en-GB");
+    expect(html).toContain("data-uniformen-locale-switcher-toggle");
+    expect(html).toContain('aria-label="Språk / Language: Norsk bokmål"');
+  });
+
+  test("the page finishes a pick the way an app does: persist, then load a new document", async () => {
+    // Its URL is its persistence — an app writes a cookie its server reads — and the
+    // navigation is what actually changes the language. Nothing re-labels the bar.
+    const { html } = await preview("?availableLocales=nb-NO&availableLocales=en-GB&debugUser=Navn");
+    const handler = (await scriptBlocks(html)).find((block) =>
+      block.includes('addEventListener("uniformen:locale"'),
+    );
+    expect(handler).toContain('searchParams.set("locale"');
+    expect(handler).toContain("location.assign");
+  });
+
+  test("every inline script is still hashed on a page with no sidebar", async () => {
+    const { res, html } = await preview(
+      "?availableLocales=nb-NO&availableLocales=en-GB&debugUser=Navn",
+    );
+    const csp = res.headers.get("content-security-policy") ?? "";
+    const blocks = await scriptBlocks(html);
+    expect(blocks).toHaveLength(3);
+    for (const block of blocks) expect(csp).toContain(await sha256(block));
   });
 
   test("the locale reaches the chrome the page renders, header and footer both", async () => {

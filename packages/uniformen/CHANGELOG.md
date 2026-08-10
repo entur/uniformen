@@ -7,6 +7,27 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.8.0 — 2026-08-10
+
+The top bar can render the language switcher, so your app no longer has to put one
+somewhere it does not belong.
+
+### Added
+
+- `params.availableLocales` (`Locale[]`) renders a language switcher offering exactly
+  these tags in this order — list only what your own app translates. Omitted or empty
+  renders none, as before. `params.locale` is the option rendered as current, and must
+  be one of them; a repeat, an unknown tag or a list without it is rejected by the
+  service with `400`, so the call returns `null`.
+- The switcher is a section of the user menu on a signed-in bar, `params.simple`
+  included, and a control of its own — globe plus the current language, left of the
+  login link — on the anonymous bar, which has no menu to hold it.
+- Picking a language dispatches `uniformen:locale` on `window`, carrying
+  `detail.locale`, and does nothing else. Persisting the choice and reloading are
+  yours — only a new document can change the language of a server-rendered header
+  and of your own texts. Send the stored choice back as `params.locale`, and set
+  `<html lang>` to match. See [Language](README.md#language).
+
 ## 0.7.0 — 2026-08-06
 
 ### Added
