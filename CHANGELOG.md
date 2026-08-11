@@ -9,6 +9,18 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-11
+
+### Changed
+
+- Every panel in the top bar — app switcher, environment switcher, user menu,
+  language switcher — answers the keyboard the same way. Opening one moves focus
+  into it, Up and Down step through its rows and wrap, Home and End jump to the
+  ends, Escape closes it and hands focus back to the chip, and tabbing out of it
+  closes it rather than leaving it open behind the focus. The language options are
+  one tab stop between them instead of one each, which is what their
+  `menuitemradio` roles said all along.
+
 ## 2026-08-10 — with 0.8.0
 
 ### Added

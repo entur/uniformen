@@ -49,8 +49,6 @@ export function AppSwitcher({
   const applications = PORTAL_APPLICATIONS[environment];
   const txt = texts[locale];
 
-  // TODO focus first item when opening
-  // TODO close app switcher when clicking escape, and focus the open button
   // TODO on click handler for removing an app from favorites
 
   return (
