@@ -194,9 +194,13 @@ for every change, whoever made it, and carries the new state:
 
 ```ts
 window.addEventListener("uniformen:sidebar", (event) => {
-  setCollapsed((event as CustomEvent<{ collapsed: boolean }>).detail.collapsed);
+  setCollapsed(event.detail.collapsed);
 });
 ```
+
+`event.detail` is typed — both this event and `uniformen:locale` are declared on
+`WindowEventMap`, so any file in a project that imports from the package gets them
+checked without an import or a cast of its own.
 
 Uniformen derives the rest from the attribute: the button's chevron direction (in
 CSS, so it differs open and closed with no work from you), its `aria-expanded`, and

@@ -82,3 +82,24 @@ export type UniformenLayout = {
   // Per-directive CSP sources to union into the consumer's page CSP header.
   csp: Record<string, string[]>;
 };
+
+/**
+ * The two events the top bar dispatches on `window`, typed. Loaded with any import
+ * from the package, so `event.detail` is checked in a plain `addEventListener` —
+ * no import, no wrapper, no cast:
+ *
+ *   window.addEventListener("uniformen:sidebar", (event) => {
+ *     setCollapsed(event.detail.collapsed);
+ *   });
+ *
+ * Declarations only: dispatching stays the service's, subscribing stays the DOM's.
+ */
+declare global {
+  interface WindowEventMap {
+    /** A language was picked in the switcher. See `FetchUniformenParams.availableLocales`. */
+    "uniformen:locale": CustomEvent<{ locale: Locale }>;
+
+    /** `data-uniformen-sidebar` changed, by our button or the app. See `FetchUniformenParams.sidebar`. */
+    "uniformen:sidebar": CustomEvent<{ collapsed: boolean }>;
+  }
+}

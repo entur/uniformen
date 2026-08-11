@@ -1,6 +1,29 @@
 import { describe, it, expect, jest, afterEach } from "bun:test";
 import { fetchUniformenLayout, type FetchUniformenParams } from "./index";
 
+/**
+ * Type-level, checked by `bun run tsc` rather than at runtime: an untyped event map
+ * makes `detail` `any`, which is exactly what would let the `@ts-expect-error` lines
+ * below compile and fail the build.
+ */
+describe("window event types", () => {
+  it("types the detail of each event the top bar dispatches", () => {
+    const locale: WindowEventMap["uniformen:locale"]["detail"] = { locale: "nn-NO" };
+    const sidebar: WindowEventMap["uniformen:sidebar"]["detail"] = { collapsed: true };
+
+    expect([locale.locale, sidebar.collapsed]).toEqual(["nn-NO", true]);
+  });
+
+  it("rejects a detail the top bar would never dispatch", () => {
+    // @ts-expect-error — not one of the tags the service renders
+    const locale: WindowEventMap["uniformen:locale"]["detail"] = { locale: "sv-SE" };
+    // @ts-expect-error — the sidebar reports a state, not an action
+    const sidebar: WindowEventMap["uniformen:sidebar"]["detail"] = { collapse: true };
+
+    expect([locale, sidebar]).toBeDefined();
+  });
+});
+
 function mockFetch(data: object, ok = true) {
   jest.spyOn(globalThis, "fetch").mockResolvedValue({
     ok,

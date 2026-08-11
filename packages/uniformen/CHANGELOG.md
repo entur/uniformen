@@ -7,6 +7,15 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.8.1 — 2026-08-11
+
+### Added
+
+- `uniformen:locale` and `uniformen:sidebar` are declared on `WindowEventMap`, so
+  `event.detail` is typed in a plain `window.addEventListener` — no import, no cast to
+  `CustomEvent<…>`. Declarations only: nothing new to call, and nothing new in the
+  bundle.
+
 ## 0.8.0 — 2026-08-10
 
 The top bar can render the language switcher, so your app no longer has to put one
