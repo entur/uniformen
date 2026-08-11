@@ -20,6 +20,14 @@ versioned. Changes to the package's own API are in
   closes it rather than leaving it open behind the focus. The language options are
   one tab stop between them instead of one each, which is what their
   `menuitemradio` roles said all along.
+- The app switcher renders for signed-in users only: every application it lists is
+  behind a login. The anonymous bar loses it, and the divider in front of it. The
+  rest of that bar is unchanged.
+
+### Removed
+
+- The app switcher's favourites row, and the "Alle tjenester" heading it stood
+  against. Five applications are one list under the panel's title.
 
 ## 2026-08-10 — with 0.8.0
 

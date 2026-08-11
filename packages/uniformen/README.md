@@ -79,9 +79,9 @@ and array-valued params serialise as a repeated key (`?key=a&key=b`).
 An unknown `app` value is rejected by the service with `400`, so the call
 returns `null`.
 
-The app switcher links to the environment you fetched the layout from — a `dev`
-layout hands your users the dev instances of the other portal applications, never
-production.
+The app switcher renders for signed-in users only. It links to the environment you
+fetched the layout from — a `dev` layout hands your users the dev instances of the
+other portal applications, never production.
 
 `params.sidebar` (`boolean`) renders a collapse control at the far left of the top
 bar. Set it only if your app has a side navigation to collapse. Uniformen renders

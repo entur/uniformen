@@ -7,23 +7,14 @@ const texts = {
   "nb-NO": {
     velgApplikasjon: "Velg applikasjon",
     velgTjeneste: "Velg tjeneste",
-    favoritter: "Favoritter",
-    leggTil: "Legg til",
-    alleTjenester: "Alle tjenester",
   },
   "nn-NO": {
     velgApplikasjon: "Vel applikasjon",
     velgTjeneste: "Vel teneste",
-    favoritter: "Favorittar",
-    leggTil: "Legg til",
-    alleTjenester: "Alle tenester",
   },
   "en-GB": {
     velgApplikasjon: "Choose application",
     velgTjeneste: "Choose service",
-    favoritter: "Favourites",
-    leggTil: "Add",
-    alleTjenester: "All services",
   },
 } as const;
 
@@ -49,8 +40,6 @@ export function AppSwitcher({
   const applications = PORTAL_APPLICATIONS[environment];
   const txt = texts[locale];
 
-  // TODO on click handler for removing an app from favorites
-
   return (
     <div class="uniformen-app-switcher">
       <button
@@ -70,35 +59,9 @@ export function AppSwitcher({
         role="dialog"
         aria-label={txt.velgTjeneste}
       >
-        <div class="uniformen-app-switcher__header">
-          <h2 class="uniformen-app-switcher__title">{txt.velgTjeneste}</h2>
-
-          <div class="uniformen-app-switcher__favorites-row">
-            <span class="uniformen-app-switcher__section-label">{txt.favoritter}</span>
-            <span class="uniformen-app-switcher__add-favorite" aria-hidden="true">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 16 16"
-                width="1em"
-                height="1em"
-                color="currentColor"
-              >
-                <path
-                  fill="currentColor"
-                  fill-rule="evenodd"
-                  d="m8.7 1-.001 6.3H15v1.4H8.699L8.7 15H7.3V8.7H1V7.3h6.3V1z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              {txt.leggTil}
-            </span>
-          </div>
-        </div>
+        <h2 class="uniformen-app-switcher__title">{txt.velgTjeneste}</h2>
 
         <div class="uniformen-app-switcher__body">
-          <div class="uniformen-app-switcher__section-label uniformen-app-switcher__body-section-label">
-            {txt.alleTjenester}
-          </div>
           <ul class="uniformen-app-switcher__list">
             {applications.map((app) => (
               <li key={app.id}>

@@ -13,6 +13,16 @@ function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
 }
 
+/**
+ * The signed-in bar. Every call site brings its own `sub`: userinfo is cached per
+ * `tenant|sub` for the process' lifetime, so a sub another test has fetched would
+ * serve that test's profile.
+ */
+async function signedIn(sub: string, query = ""): Promise<{ headerHtml: string }> {
+  const token = await signInternalToken({ sub });
+  return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
+}
+
 beforeEach(() => userInfoMock.reset());
 
 describe("/ssr auth (optional)", () => {
@@ -428,8 +438,8 @@ describe("/ssr simple query param", () => {
   });
 
   test("simple=false and no param render the full bar", async () => {
-    for (const query of ["", "?simple=false"]) {
-      const body = await (await ssr(query)).json();
+    for (const [index, query] of ["", "?simple=false"].entries()) {
+      const body = await signedIn(`auth0|full-bar-${index}`, query);
       expect(body.headerHtml).toContain('aria-label="Velg applikasjon"');
       expect(body.headerHtml).toContain("uniformen-top-nav__divider");
     }
@@ -477,9 +487,19 @@ describe("/ssr top bar chrome", () => {
   });
 
   test("renders the right-hand action cluster", async () => {
-    const body = await (await app.request("/ssr")).json();
+    const body = await signedIn("auth0|cluster");
     expect(body.headerHtml).toContain('aria-label="Velg applikasjon"');
     expect(body.headerHtml).toContain("uniformen-top-nav__divider");
+  });
+
+  test("the app switcher rides along with the user, not the anonymous bar", async () => {
+    const body = await (await app.request("/ssr?app=partner")).json();
+    expect(body.headerHtml).not.toContain('aria-label="Velg applikasjon"');
+    expect(body.headerHtml).not.toContain("data-uniformen-app-switcher-toggle");
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__divider");
+    // The rest of the anonymous bar is untouched.
+    expect(body.headerHtml).toContain('href="/auth/login"');
+    expect(body.headerHtml).toContain("data-uniformen-env-switcher-toggle");
   });
 
   test("notifications ride along with the user, not the anonymous bar", async () => {
@@ -511,13 +531,13 @@ describe("/ssr top bar chrome", () => {
   });
 
   test("the app switcher panel is still wired to its toggle", async () => {
-    const body = await (await app.request("/ssr")).json();
+    const body = await signedIn("auth0|switcher-wiring");
     expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
     expect(body.headerHtml).toContain('id="uniformen-app-switcher-panel"');
   });
 
   test("the switcher links to the environment this instance serves", async () => {
-    const body = await (await app.request("/ssr")).json();
+    const body = await signedIn("auth0|switcher-env");
     // Tests run with ENVIRONMENT=dev (see test/authTestSetup): a dev header must
     // not hand its user production apps.
     expect(body.headerHtml).toContain('href="https://sorvis.dev.entur.io"');
@@ -527,13 +547,13 @@ describe("/ssr top bar chrome", () => {
   test("the requesting app is marked as the current one", async () => {
     // The `app` value and the switcher entry it marks are the same string, so
     // `?app=partner` marks the Partner entry, whose host is `entur-partner`.
-    const withApp = await (await app.request("/ssr?app=partner")).json();
+    const withApp = await signedIn("auth0|current-app", "?app=partner");
     expect(withApp.headerHtml).toContain('aria-current="page"');
     expect(withApp.headerHtml).toMatch(
       /entur-partner\.dev\.entur\.org[\s\S]{0,200}aria-current="page"/,
     );
 
-    const withoutApp = await (await app.request("/ssr")).json();
+    const withoutApp = await signedIn("auth0|current-none");
     expect(withoutApp.headerHtml).not.toContain('aria-current="page"');
   });
 
@@ -562,7 +582,6 @@ describe("/ssr locale", () => {
     const en = await (await app.request("/ssr?locale=en-GB&sidebar=true")).json();
     expect(en.headerHtml).toContain('aria-label="Top navigation"');
     expect(en.headerHtml).toContain('aria-label="Hide or show side menu"');
-    expect(en.headerHtml).toContain('aria-label="Choose application"');
     expect(en.headerHtml).toContain(">Log in<");
     expect(en.footerHtml).toContain(">Information<");
     expect(en.footerHtml).toContain(">Services<");
@@ -570,7 +589,6 @@ describe("/ssr locale", () => {
     expect(en.footerHtml).not.toContain("Tjenester");
 
     const nn = await (await app.request("/ssr?locale=nn-NO")).json();
-    expect(nn.headerHtml).toContain('aria-label="Vel applikasjon"');
     expect(nn.footerHtml).toContain(">Tenester<");
   });
 
@@ -578,6 +596,10 @@ describe("/ssr locale", () => {
     userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const body = await (await app.request("/ssr?locale=en-GB", { headers: bearer(token) })).json();
+    expect(body.headerHtml).toContain('aria-label="Choose application"');
+    expect((await signedIn("auth0|nynorsk", "?locale=nn-NO")).headerHtml).toContain(
+      'aria-label="Vel applikasjon"',
+    );
     expect(body.headerHtml).toContain('aria-label="Notifications"');
     expect(body.headerHtml).toContain('aria-label="User menu"');
     expect(body.headerHtml).toContain(">My access<");
@@ -593,7 +615,7 @@ describe("/ssr locale", () => {
   });
 
   test("product and environment names are not translated", async () => {
-    const body = await (await app.request("/ssr?locale=en-GB&app=partner")).json();
+    const body = await signedIn("auth0|product-names", "?locale=en-GB&app=partner");
     expect(body.headerHtml).toContain(">Partner<");
     expect(body.headerHtml).toContain(">Sørvis<");
     expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');

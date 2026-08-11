@@ -406,12 +406,9 @@
   flex-direction: column;
 }
 
-.uniformen-app-switcher__header {
+.uniformen-app-switcher__title {
   background: var(--uniformen-color-brand-white);
   flex-shrink: 0;
-}
-
-.uniformen-app-switcher__title {
   font-size: 1.25rem;
   font-weight: var(--uniformen-weight-heading);
   color: var(--uniformen-color-blue-10);
@@ -420,48 +417,11 @@
   user-select: none;
 }
 
-.uniformen-app-switcher__favorites-row {
-  display: flex;
-  align-items: center;
-  border-top: 1px solid var(--uniformen-color-blue-70);
-  justify-content: space-between;
-  min-height: 3rem;
-  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
-}
-
-.uniformen-app-switcher__section-label {
-  font-size: var(--uniformen-font-xs);
-  font-weight: var(--uniformen-weight-body);
-  line-height: var(--uniformen-line-xs);
-  letter-spacing: 0.08em;
-  color: var(--uniformen-color-blue-40);
-  text-transform: uppercase;
-  user-select: none;
-}
-
-.uniformen-app-switcher__add-favorite {
-  display: flex;
-  align-items: center;
-  gap: var(--uniformen-space-xs2);
-  color: var(--uniformen-color-blue-10);
-  font-size: var(--uniformen-font-md);
-  border-radius: var(--uniformen-radius-md);
-  padding: 6px var(--uniformen-space-small);
-  height: 2rem;
-}
-
 .uniformen-app-switcher__body {
   background: var(--uniformen-color-blue-90);
   padding: 0;
   overflow-y: auto;
   max-height: 18rem;
-}
-
-.uniformen-app-switcher__body-section-label {
-  display: flex;
-  align-items: center;
-  min-height: 3rem;
-  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
   border-top: 1px solid var(--uniformen-color-blue-70);
 }
 

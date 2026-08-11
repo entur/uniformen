@@ -93,9 +93,9 @@ export function TopNavigation({
               <span class="uniformen-top-nav__action-label">{txt.loggInn}</span>
             </a>
           )}
-          {/* The divider separates the user's controls from the app switcher, so it
-              goes with the switcher rather than standing at the end of the bar. */}
-          {!simple && (
+          {/* Signed in only: every app it lists is behind a login. The divider is
+              the switcher's, not the bar's, so it comes and goes with it. */}
+          {user && !simple && (
             <>
               <span class="uniformen-top-nav__divider" aria-hidden="true"></span>
               <AppSwitcher activeAppId={activeAppId} locale={locale} />

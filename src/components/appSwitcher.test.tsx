@@ -35,6 +35,15 @@ describe("app switcher rendering", () => {
     }
   });
 
+  test("the panel is a title and the list, in every language", async () => {
+    for (const locale of ["nb-NO", "nn-NO", "en-GB"] as Locale[]) {
+      const html = await render({ locale });
+      for (const gone of ["Favoritt", "Favourites", "Legg til", "Alle tjenester", "All services"]) {
+        expect(html).not.toContain(gone);
+      }
+    }
+  });
+
   test("the app the header is rendered for is the current page", async () => {
     const html = await render({ environment: "dev", activeAppId: "cleos" });
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
