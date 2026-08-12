@@ -67,9 +67,10 @@ export type FetchUniformenParams = {
 
   /**
    * Barebones top bar: hides the app switcher, notifications, the sidebar toggle
-   * (whatever `sidebar` says) and "Mine tilganger". Left: logo, app name,
-   * environment badge, and a login link — or the user's name over a logout-only
-   * menu. For login, error and terms pages. Per page, not per app.
+   * (whatever `sidebar` says) and "Mine tilganger". Left: logo and app name, plus the
+   * environment badge for the users who get one at all; right: a login link, or the
+   * user's name over a logout-only menu. For login, error and terms pages. Per page,
+   * not per app.
    */
   simple?: boolean;
 };

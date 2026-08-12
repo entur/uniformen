@@ -190,6 +190,9 @@ const previewQuerySchema = uniformenQuerySchema.extend({
   // name or an address that is not one is the point of having the knob.
   debugUser: z.string().min(1).max(120).optional(),
   debugEmail: z.string().min(1).max(120).optional(),
+  // Whether to render the bar as an Entur user's. The organisation is a claim on a
+  // token, and the page has none, so on the dev tool it is a knob like the rest.
+  debugEnturUser: z.enum(["true", "false"]).optional(),
 });
 
 type PreviewQuery = z.infer<typeof previewQuerySchema>;
@@ -212,6 +215,21 @@ export function previewUser(
 ): UserMenuUser | undefined {
   if (environment === "production" || !debugUser) return undefined;
   return { name: debugUser, email: debugEmail };
+}
+
+/**
+ * Whether the preview page renders the environment chip and switcher, i.e. whether
+ * the bar is an Entur user's.
+ *
+ * Held to the same production rule as `previewUser`, and for the same reason: the
+ * knob would otherwise hand out a prod URL showing chrome the viewer's own
+ * organisation does not entitle them to.
+ */
+export function previewIsEnturUser(
+  { debugEnturUser }: Pick<PreviewQuery, "debugEnturUser">,
+  environment: Environment = runningEnvironment,
+): boolean {
+  return environment !== "production" && debugEnturUser === "true";
 }
 
 export function previewRoutes(server: OpenAPIHono): void {
@@ -250,7 +268,13 @@ export function previewRoutes(server: OpenAPIHono): void {
                 ${renderUniformenHeadScript()}
             </head>
             <body>
-                ${await renderComponentToString(<TopNavigation {...navProps} user={user} />)}
+                ${await renderComponentToString(
+                  <TopNavigation
+                    {...navProps}
+                    user={user}
+                    isEnturUser={previewIsEnturUser(query)}
+                  />,
+                )}
                 <main>${sidebar}</main>
                 ${await renderComponentToString(<Footer locale={navProps.locale} />)}
                 ${renderUniformenScripts()}

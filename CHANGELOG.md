@@ -9,6 +9,18 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-12
+
+### Changed
+
+- The environment badge, and the switcher `app` turns it into, render only for users
+  in the Entur organisation. Every other bar — another organisation's, and the
+  anonymous one — loses the chip beside the logo and the pointer above it. Nothing to
+  send: the service reads the organisation off the token it is given, and a userinfo
+  lookup that fails renders the bar without the badge. The coloured strip along the
+  top is untouched, in local, dev and staging as before: it warns whoever is looking
+  at the page, and production has none.
+
 ## 2026-08-11
 
 ### Changed

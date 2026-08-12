@@ -1,4 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
+import { isEnturOrganisation } from "../auth/enturOrganisation";
 import { optionalAuth } from "../auth/optionalAuth";
 import { userInfoService } from "../auth/userInfo";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
@@ -106,9 +107,12 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     return ctx.json(
       {
         headAssets: `${renderUniformenStyleTag()}${renderUniformenHeadScript()}`,
-        // `user` last: `navProps` is the query's half of the props, and who is
-        // signed in is the token's to say, never a URL's.
-        headerHtml: await renderComponentToString(<TopNavigation {...navProps} user={user} />),
+        // Token-derived props last: `navProps` is the query's half, and who is
+        // signed in — and what organisation they are in — is the token's to say,
+        // never a URL's.
+        headerHtml: await renderComponentToString(
+          <TopNavigation {...navProps} user={user} isEnturUser={isEnturOrganisation(info)} />,
+        ),
         footerHtml: await renderComponentToString(<Footer locale={navProps.locale} />),
         scripts: renderUniformenScripts(),
         csp: {

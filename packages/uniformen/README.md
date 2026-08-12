@@ -83,13 +83,18 @@ The app switcher renders for signed-in users only. It links to the environment y
 fetched the layout from — a `dev` layout hands your users the dev instances of the
 other portal applications, never production.
 
+The environment badge beside the logo, and the switcher `app` turns it into, render
+only for users in the Entur organisation. Nothing to send: the service reads it off
+the token you pass. Your other users get the bar without it, and keep the coloured
+strip along the top that says the page is not production.
+
 `params.sidebar` (`boolean`) renders a collapse control at the far left of the top
 bar. Set it only if your app has a side navigation to collapse. Uniformen renders
 the button; you render the sidebar. See [Sidebar](#sidebar) for the contract.
 
 `params.simple` (`boolean`) hides the app switcher, notifications, the sidebar toggle
-and "Mine tilganger", leaving logo, app name, environment badge and a login link — or
-the user's name over a logout-only menu. Overrides `params.sidebar`. Footer unchanged.
+and "Mine tilganger", leaving logo, app name and a login link — or the user's name
+over a logout-only menu. Overrides `params.sidebar`. Footer unchanged.
 
 `params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) is the
 language of the header and footer. App names and environment labels are untranslated.

@@ -26,6 +26,7 @@ const texts = {
 
 export function TopNavigation({
   user,
+  isEnturUser,
   appName,
   activeAppId,
   sidebar,
@@ -35,6 +36,13 @@ export function TopNavigation({
 }: {
   /** The signed-in user. Absent renders the anonymous bar, with a login link. */
   user?: UserMenuUser;
+  /**
+   * Whether that user is in the Entur organisation. The environment chip, and the
+   * switcher it becomes, is theirs alone: which environment a page is served from
+   * is ours to know and nobody else's to move between. Off for anonymous bars —
+   * there is no organisation behind a bar with no user.
+   */
+  isEnturUser?: boolean;
   appName?: string;
   /** The portal application this header is rendered for. */
   activeAppId?: PortalApplicationId;
@@ -46,7 +54,8 @@ export function TopNavigation({
   sidebar?: boolean;
   /**
    * Barebones bar: hides the app switcher, notifications and the sidebar toggle, and
-   * thins the user menu to logout. Left side untouched, env switcher included.
+   * thins the user menu to logout. Left side untouched — the env chip comes and goes
+   * with `isEnturUser`, not with this.
    */
   simple?: boolean;
   /** The language every string in the bar is rendered in. */
@@ -68,7 +77,7 @@ export function TopNavigation({
         <div class="uniformen-top-nav__left">
           {sidebar && <SidebarToggle locale={locale} />}
           <Logo appName={appName} />
-          <EnvironmentBadge activeAppId={activeAppId} locale={locale} />
+          {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
           {/* Ahead of the identity controls: the language the page is in is chrome,

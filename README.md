@@ -30,6 +30,7 @@ for a dev tool — those carry a `debug` prefix.
 | Parameter | Values | What it does |
 | --- | --- | --- |
 | `app` | `cleos`, `nplan`, `ops-center`, `partner`, `sorvis` | Names the app beside the logo, marks its entry in the app switcher, and turns the environment badge into a switcher. Sent by the consuming app. |
+| `debugEnturUser` | `true`, `false` | Renders the bar as an Entur user's, which is the one that carries the environment badge. Preview only. |
 | `sidebar` | `true`, `false` | Whether the app has a side navigation to collapse. The preview page also gets a demo sidebar for the control to act on. |
 | `simple` | `true`, `false` | Hides the app switcher, notifications, the sidebar toggle and "Mine tilganger". Overrides `sidebar`. Footer unchanged. |
 | `locale` | `nb-NO` (default), `nn-NO`, `en-GB` | The language the header and footer are written in. The preview page also renders `<html lang>` as it. |
@@ -38,10 +39,24 @@ for a dev tool — those carry a `debug` prefix.
 | `debugEmail` | any text, 1–120 chars | The line under the name in the user menu. Preview only. |
 
 ```
-http://localhost:4123/?app=partner&sidebar=true&debugUser=Navne+Navnesen&debugEmail=navne.navnesen@entur.org
+http://localhost:4123/?app=partner&sidebar=true&debugUser=Navne+Navnesen&debugEmail=navne.navnesen@entur.org&debugEnturUser=true
 ```
 
-`debugUser` and `debugEmail` are the preview page's own: `/ssr` ignores them, since
-being signed in is something a consumer's token establishes and not something its
-URL gets to claim. They are ignored in production too — a page that names a user
-with no session behind it is a misleading thing to be able to link to.
+The `debug` parameters are the preview page's own: `/ssr` ignores them, since who is
+signed in and what organisation they are in are things a consumer's token
+establishes and not something its URL gets to claim. They are ignored in production
+too — a page that names a user with no session behind it, or offers chrome the
+viewer is not entitled to, is a misleading thing to be able to link to.
+
+## The environment badge
+
+The badge next to the logo, and the switcher it becomes when the consumer sends
+`app`, are rendered only for users in the Entur organisation — the ones whose
+userinfo carries `https://entur.io/organisationID` as `ENTUR_ORGANISATION_ID`
+(`src/auth/enturOrganisation.ts`, the same id entur-partner reads the claim
+against). Everyone else, signed in or not, gets the bar without it. The coloured
+strip along the top of the header is not gated: it warns whoever is looking at the
+page that it is not production, and production has never had one.
+
+The gate reads the token's profile, so a failed userinfo lookup renders the bar
+without the badge rather than with it.

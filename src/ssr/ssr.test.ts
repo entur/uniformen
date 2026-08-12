@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { userInfoMock } from "../test/authTestSetup";
+import { ENTUR_ORGANISATION_ID, ORGANISATION_ID_CLAIM } from "../auth/enturOrganisation";
 import {
   INTERNAL_AUDIENCE,
   INTERNAL_ISSUER,
@@ -19,6 +20,23 @@ function bearer(token: string): { Authorization: string } {
  * serve that test's profile.
  */
 async function signedIn(sub: string, query = ""): Promise<{ headerHtml: string }> {
+  const token = await signInternalToken({ sub });
+  return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
+}
+
+/** Userinfo for a profile in the Entur organisation, which the env chip is for. */
+const enturProfile = (extra: Record<string, unknown> = {}) => ({
+  name: "Hallstein Bronskimlet",
+  [ORGANISATION_ID_CLAIM]: ENTUR_ORGANISATION_ID,
+  ...extra,
+});
+
+/** `signedIn`, for a user the organisation claim places inside Entur. */
+async function enturSignedIn(
+  sub: string,
+  query = "",
+): Promise<{ headerHtml: string; headAssets: string; scripts: string; csp: unknown }> {
+  userInfoMock.respond = () => Response.json(enturProfile());
   const token = await signInternalToken({ sub });
   return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
 }
@@ -416,7 +434,7 @@ describe("/ssr simple query param", () => {
   });
 
   test("the app name and the environment stay: they say where you are, not where to go", async () => {
-    const body = await (await ssr("?simple=true&app=partner")).json();
+    const body = await enturSignedIn("auth0|simple-entur", "?simple=true&app=partner");
     expect(body.headerHtml).toContain('class="uniformen-logo__app">Partner<');
     expect(body.headerHtml).toContain('data-uniformen-environment="dev"');
     expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');
@@ -477,7 +495,7 @@ describe("/ssr simple query param", () => {
 
 describe("/ssr top bar chrome", () => {
   test("renders the environment badge for the running environment", async () => {
-    const body = await (await app.request("/ssr")).json();
+    const body = await enturSignedIn("auth0|chrome-env");
     // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
     expect(body.headerHtml).toContain('data-uniformen-environment="dev"');
     expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');
@@ -499,7 +517,7 @@ describe("/ssr top bar chrome", () => {
     expect(body.headerHtml).not.toContain("uniformen-top-nav__divider");
     // The rest of the anonymous bar is untouched.
     expect(body.headerHtml).toContain('href="/auth/login"');
-    expect(body.headerHtml).toContain("data-uniformen-env-switcher-toggle");
+    expect(body.headerHtml).toContain('class="uniformen-logo__app">Partner<');
   });
 
   test("notifications ride along with the user, not the anonymous bar", async () => {
@@ -570,6 +588,112 @@ describe("/ssr top bar chrome", () => {
   });
 });
 
+/**
+ * Which environment a page is served from, and being able to land on the same page in
+ * another one, is Entur's own chrome. The gate is the organisation claim on the
+ * profile behind the token: not a query param, and not the anonymous bar.
+ */
+describe("/ssr environment selector", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+  /** The header of a bar rendered for one profile. Own `sub`: userinfo is cached. */
+  const forProfile = async (sub: string, profile: unknown, query = "") => {
+    userInfoMock.respond = () => Response.json(profile);
+    const token = await signPartnerToken({ sub });
+    const body = await (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
+    return body.headerHtml as string;
+  };
+
+  test("an Entur user gets the chip, and the switcher once an app is named", async () => {
+    const chip = await enturSignedIn("auth0|env-entur");
+    expect(chip.headerHtml).toContain('class="uniformen-env-badge"');
+    expect(chip.headerHtml).not.toContain("data-uniformen-env-switcher-toggle");
+
+    const switcher = await enturSignedIn("auth0|env-entur-app", "?app=nplan");
+    expect(switcher.headerHtml).toContain("data-uniformen-env-switcher-toggle");
+    expect(switcher.headerHtml).toContain('href="https://nplan.staging.entur.org"');
+  });
+
+  test("another organisation gets neither, app named or not", async () => {
+    const other = { name: "Ollvar O. Kleppvold", [ORGANISATION_ID_CLAIM]: 9999 };
+    const header = await forProfile("auth0|env-other-org", other, "?app=nplan");
+    // Signed in, with everything else the bar gives them.
+    expect(header).toContain("Ollvar O. Kleppvold");
+    expect(header).toContain("data-uniformen-app-switcher-toggle");
+    expect(header).not.toContain("uniformen-env-badge");
+    expect(header).not.toContain("data-uniformen-env-switcher-toggle");
+  });
+
+  test("a profile carrying no organisation is not placed in one", async () => {
+    const header = await forProfile("auth0|env-no-claim", { name: "Sigmunn Sagbladet" });
+    expect(header).toContain("Sigmunn Sagbladet");
+    expect(header).not.toContain("uniformen-env-badge");
+  });
+
+  test("the claim is the number, not a string that looks like it", async () => {
+    // Reading a spelling of the id as the id is the one direction with a cost, so an
+    // upstream that changes the claim's shape loses the chip rather than leaks it.
+    for (const [index, value] of [
+      String(ENTUR_ORGANISATION_ID),
+      [ENTUR_ORGANISATION_ID],
+      null,
+    ].entries()) {
+      const header = await forProfile(`auth0|env-shape-${index}`, {
+        name: "Sigmunn Sagbladet",
+        [ORGANISATION_ID_CLAIM]: value,
+      });
+      expect(header).not.toContain("uniformen-env-badge");
+    }
+  });
+
+  test("anonymous requests get no chip: no token, no organisation", async () => {
+    const body = await (await ssr("?app=nplan")).json();
+    expect(body.headerHtml).not.toContain("uniformen-env-badge");
+    expect(body.headerHtml).not.toContain("data-uniformen-env-switcher-toggle");
+  });
+
+  test("a userinfo failure fails closed", async () => {
+    // The organisation is the userinfo's to say, so an outage costs an Entur user the
+    // chip rather than handing everyone one.
+    userInfoMock.respond = () => new Response("server error", { status: 500 });
+    const token = await signInternalToken({ sub: "auth0|env-userinfo-500" });
+    const body = await (await app.request("/ssr?app=nplan", { headers: bearer(token) })).json();
+    expect(body.headerHtml).not.toContain("uniformen-env-badge");
+  });
+
+  test("the strip stays whoever is looking: it warns, it does not navigate", async () => {
+    const entur = await enturSignedIn("auth0|env-strip");
+    const anonymous = await (await ssr()).json();
+    expect(anonymous.headerHtml).not.toContain("uniformen-env-badge");
+    for (const body of [entur, anonymous]) {
+      expect(body.headAssets).toContain("--uniformen-env-strip-height: 0.25rem");
+      expect(body.headAssets).toContain("border-top: var(--uniformen-env-strip-height)");
+    }
+  });
+
+  test("one stylesheet and one bundle serve both, so the hashes never fork", async () => {
+    const entur = await enturSignedIn("auth0|env-hashes");
+    const anonymous = await (await ssr()).json();
+    expect(entur.headAssets).toBe(anonymous.headAssets);
+    expect(entur.scripts).toBe(anonymous.scripts);
+    expect(entur.csp).toEqual(anonymous.csp);
+    // The handler ships to a page with no switcher, and bails out there.
+    expect(anonymous.scripts).toContain("data-uniformen-env-switcher-toggle");
+  });
+
+  test("no query param unlocks it", async () => {
+    // Being in an organisation is something a token establishes. `/ssr` ignores
+    // unknown params, so these render the plain anonymous bar.
+    for (const query of [
+      "?isEnturUser=true",
+      "?debugEnturUser=true",
+      "?app=nplan&isEnturUser=true",
+    ]) {
+      const body = await (await ssr(query)).json();
+      expect(body.headerHtml).not.toContain("uniformen-env-badge");
+    }
+  });
+});
+
 describe("/ssr locale", () => {
   test("no locale is bokmål, so a consumer that sends none keeps its markup", async () => {
     const body = await (await app.request("/ssr")).json();
@@ -615,7 +739,7 @@ describe("/ssr locale", () => {
   });
 
   test("product and environment names are not translated", async () => {
-    const body = await signedIn("auth0|product-names", "?locale=en-GB&app=partner");
+    const body = await enturSignedIn("auth0|product-names", "?locale=en-GB&app=partner");
     expect(body.headerHtml).toContain(">Partner<");
     expect(body.headerHtml).toContain(">Sørvis<");
     expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');

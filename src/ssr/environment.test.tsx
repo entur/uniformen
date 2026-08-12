@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EnvironmentBadge } from "./EnvironmentBadge";
+import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
 import { buildRootVars, envStripHeight } from "./uniformenStyles";
 import type { Environment } from "../config";
@@ -27,6 +28,33 @@ const labels = (html: string): string[] =>
 const render = (
   props: { environment?: Environment; activeAppId?: PortalApplicationId; locale?: Locale } = {},
 ) => renderComponentToString(<EnvironmentBadge locale="nb-NO" {...props} />);
+
+describe("who the chip is rendered for", () => {
+  const bar = (props: { isEnturUser?: boolean; activeAppId?: PortalApplicationId }) =>
+    renderComponentToString(<TopNavigation locale="nb-NO" {...props} />);
+
+  test("an Entur user, and nobody else", async () => {
+    expect(await bar({ isEnturUser: true })).toContain('class="uniformen-env-badge"');
+    for (const props of [{}, { isEnturUser: false }]) {
+      const html = await bar(props);
+      expect(html).not.toContain("uniformen-env-badge");
+      expect(html).not.toContain("uniformen-env-switcher");
+    }
+  });
+
+  test("naming an app is not what admits you to it", async () => {
+    // The `app` param hands the chip its hosts; it never decides who sees the chip.
+    const html = await bar({ activeAppId: "nplan" });
+    expect(html).not.toContain("data-uniformen-env-switcher-toggle");
+    expect(html).not.toContain("nplan");
+  });
+
+  test("the logo keeps its place either way", async () => {
+    for (const props of [{ isEnturUser: true }, {}]) {
+      expect(await bar(props)).toContain('class="uniformen-logo"');
+    }
+  });
+});
 
 describe("environment strip height", () => {
   test("production has no strip", () => {

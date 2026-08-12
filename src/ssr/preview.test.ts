@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
-import { previewUser } from "./preview";
+import { previewIsEnturUser, previewUser } from "./preview";
 import type { Environment } from "../config";
 
 /**
@@ -104,6 +104,56 @@ describe("preview page debug user", () => {
     ]) {
       const { res } = await preview(query);
       expect(res.status).toBe(400);
+    }
+  });
+});
+
+describe("preview page debug Entur user", () => {
+  test("debugEnturUser renders the environment chip, and the switcher with an app", async () => {
+    const { res, html } = await preview("?debugEnturUser=true&app=nplan&debugUser=Navn");
+    expect(res.status).toBe(200);
+    expect(html).toContain('class="uniformen-env-badge__label">DEV');
+    expect(html).toContain("data-uniformen-env-switcher-toggle");
+    expect(html).toContain('id="uniformen-environment-switcher-panel"');
+  });
+
+  test("no param, or false, leaves the bar without one", async () => {
+    for (const query of ["?app=nplan&debugUser=Navn", "?debugEnturUser=false&app=nplan"]) {
+      const { html } = await preview(query);
+      // The page inlines the stylesheet, so the class names are in it as selectors
+      // regardless. Absence is asserted on the markup form.
+      expect(html).not.toContain('class="uniformen-env-badge');
+      expect(html).not.toContain('data-uniformen-env-switcher-toggle="');
+    }
+  });
+
+  test("the chip does not ride along with the debug user", async () => {
+    // Two knobs, two questions: who is signed in, and what organisation they are in.
+    const { html } = await preview("?debugUser=Navn+Navnesen&app=nplan");
+    expect(html).toContain("Navn Navnesen");
+    expect(html).not.toContain('class="uniformen-env-badge');
+  });
+
+  test("the knob is the preview page's alone, never /ssr's", async () => {
+    const res = await app.request("/ssr?debugEnturUser=true&app=nplan");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).not.toContain("uniformen-env-badge");
+  });
+
+  test("production renders no chip, whatever the URL says", async () => {
+    // Same rule as the debug user, and for the same reason: a prod URL handing out
+    // chrome the viewer's own organisation does not entitle them to.
+    expect(previewIsEnturUser({ debugEnturUser: "true" }, "production")).toBe(false);
+    for (const env of ["local", "dev", "staging"] satisfies Environment[]) {
+      expect(previewIsEnturUser({ debugEnturUser: "true" }, env)).toBe(true);
+      expect(previewIsEnturUser({ debugEnturUser: undefined }, env)).toBe(false);
+    }
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?debugEnturUser=yes", "?debugEnturUser=1", "?debugEnturUser="]) {
+      expect((await preview(query)).res.status).toBe(400);
     }
   });
 });
