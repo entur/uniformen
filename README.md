@@ -27,6 +27,13 @@ The root path renders the header and footer in a page, so they can be looked at 
 hand. It takes the same query parameters as `/ssr`, plus a few that only make sense
 for a dev tool — those carry a `debug` prefix.
 
+The page content is a form of every parameter below, so none of them has to be
+remembered. The controls are laid out like the bar itself — the ones that move its
+left end on the left, its right end on the right, the rest below both — and a change
+applies itself: a box or a menu on the pick, a text field once you leave it. It prints the URL behind what
+is on screen, as the server validated it and with unknown parameters and defaults
+dropped, for copying somewhere else.
+
 | Parameter | Values | What it does |
 | --- | --- | --- |
 | `app` | `cleos`, `nplan`, `ops-center`, `partner`, `sorvis` | Names the app beside the logo, marks its entry in the app switcher, and turns the environment badge into a switcher. Sent by the consuming app. |

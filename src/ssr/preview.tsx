@@ -2,6 +2,7 @@ import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { environment as runningEnvironment, type Environment } from "../config";
 import type { UserMenuUser } from "../components/UserMenu";
 import { Footer } from "./Footer";
+import { PreviewControls } from "./PreviewControls";
 import { PreviewSidebar } from "./PreviewSidebar";
 import { renderComponentToString } from "./renderComponentToString";
 import { sha256Source } from "./sha256";
@@ -131,6 +132,194 @@ const PREVIEW_BASE_CSS = `
                     }
 
                     .preview-sidebar__link:hover { background: #e9eaf3; }
+
+                    /* The knobs, in the content area: the parameters are the page's
+                       subject, so they are what the page shows when you open it. */
+                    .preview-controls {
+                        flex: 1 1 auto;
+                        /* A flex item stops at its content's width without this, so the
+                           box would push the page sideways instead of letting the two
+                           ends fall into one column. */
+                        min-width: 0;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 0.75rem;
+                        padding: 2rem 1rem;
+                        color: #181c56;
+                    }
+
+                    .preview-controls__form {
+                        width: 100%;
+                        max-width: 52rem;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1.25rem;
+                        padding: 1.5rem;
+                        border: 1px solid #e5e5e9;
+                        border-radius: 0.5rem;
+                        background: #fff;
+                    }
+
+                    .preview-controls__title {
+                        margin: 0;
+                        font-size: 1.25rem;
+                        font-weight: 600;
+                    }
+
+                    .preview-controls__intro {
+                        margin: -0.75rem 0 0;
+                        font-size: 0.875rem;
+                        color: #4c4f70;
+                    }
+
+                    /* The two ends of the bar, at the two ends of the box: a knob sits
+                       on the side of the page the thing it moves is on. They fall into
+                       one column when there is no room to keep them apart, where the
+                       titles are what is left of the mapping. */
+                    .preview-controls__sides {
+                        display: flex;
+                        flex-wrap: wrap;
+                        justify-content: space-between;
+                        gap: 1.25rem 2rem;
+                    }
+
+                    .preview-controls__group {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1.25rem;
+                        margin: 0;
+                        padding: 0;
+                        border: 0;
+                        min-width: 0;
+                    }
+
+                    .preview-controls__group--left,
+                    .preview-controls__group--right { flex: 0 1 21rem; }
+
+                    /* Under both ends, and told apart from them by the rule rather than
+                       by a title alone: what is in it belongs to no one end. */
+                    .preview-controls__group--whole {
+                        padding-top: 1.25rem;
+                        border-top: 1px solid #e5e5e9;
+                    }
+
+                    .preview-controls__group-title {
+                        padding: 0 0 0.5rem;
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                        letter-spacing: 0.03em;
+                        text-transform: uppercase;
+                        color: #6b708f;
+                    }
+
+                    .preview-controls__group--right .preview-controls__group-title {
+                        margin-left: auto;
+                    }
+
+                    .preview-controls__field {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.375rem;
+                    }
+
+                    /* The one group short enough to read across instead of down. */
+                    .preview-controls__row {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 0.25rem 1.5rem;
+                    }
+
+                    .preview-controls__label {
+                        font-family: ui-monospace, monospace;
+                        font-size: 0.8125rem;
+                        font-weight: 600;
+                        letter-spacing: 0.02em;
+                    }
+
+                    .preview-controls__hint {
+                        font-size: 0.8125rem;
+                        color: #6b708f;
+                    }
+
+                    .preview-controls__check {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        font-size: 0.875rem;
+                    }
+
+                    .preview-controls__select,
+                    .preview-controls__text {
+                        font: inherit;
+                        font-size: 0.875rem;
+                        padding: 0.375rem 0.5rem;
+                        border: 1px solid #b8bad0;
+                        border-radius: 0.25rem;
+                        background: #fff;
+                        color: inherit;
+                    }
+
+                    .preview-controls__text { flex: 1 1 auto; min-width: 0; }
+
+                    /* The two text knobs sit on their labels' right, so the labels
+                       hold a column between them. */
+                    .preview-controls__name { flex: 0 0 5.5rem; }
+
+                    .preview-controls__actions {
+                        display: flex;
+                        align-items: center;
+                        gap: 1rem;
+                    }
+
+                    .preview-controls__submit {
+                        font: inherit;
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        padding: 0.5rem 1.25rem;
+                        border: 0;
+                        border-radius: 0.25rem;
+                        background: #181c56;
+                        color: #fff;
+                        cursor: pointer;
+                    }
+
+                    .preview-controls__reset {
+                        font-size: 0.875rem;
+                        color: #181c56;
+                    }
+
+                    .preview-controls__url {
+                        width: 100%;
+                        max-width: 52rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                    }
+
+                    .preview-controls__url-text {
+                        flex: 1 1 auto;
+                        min-width: 0;
+                        overflow-x: auto;
+                        white-space: nowrap;
+                        font-size: 0.8125rem;
+                        padding: 0.5rem;
+                        border-radius: 0.25rem;
+                        background: #e9eaf3;
+                    }
+
+                    .preview-controls__copy {
+                        font: inherit;
+                        flex: 0 0 auto;
+                        white-space: nowrap;
+                        font-size: 0.8125rem;
+                        padding: 0.4375rem 0.75rem;
+                        border: 1px solid #b8bad0;
+                        border-radius: 0.25rem;
+                        background: #fff;
+                        color: inherit;
+                        cursor: pointer;
+                    }
 `.trim();
 
 /**
@@ -148,6 +337,12 @@ const PREVIEW_BASE_CSS = `
  *
  * Both are bound unconditionally: neither has anything to do on a page that renders
  * no sidebar and no switcher.
+ *
+ * The last two belong to the knobs, and neither is the form working: it submits on its
+ * own. Emptying a control means the parameter is absent, but a form posts it as `app=`
+ * — a rejected value on every one of them — so empty controls are disabled on the way
+ * out, which is how a form omits a field. The URL that produces is also the one worth
+ * copying.
  */
 const PREVIEW_SCRIPT = `(${function previewHandlers() {
   const close = document.querySelector("[data-preview-sidebar-close]");
@@ -159,6 +354,73 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
     const url = new URL(window.location.href);
     url.searchParams.set("locale", (event as CustomEvent<{ locale: string }>).detail.locale);
     window.location.assign(url.toString());
+  });
+
+  const controls = document.querySelector<HTMLFormElement>("[data-preview-controls]");
+  controls?.addEventListener("submit", () => {
+    const fields = controls.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input[type=text], select",
+    );
+    for (const field of fields) if (!field.value) field.disabled = true;
+
+    // The locked entry in `availableLocales` is the language the page was rendered in —
+    // the one a locale pick is leaving — so a list ticks the language being picked on the
+    // way out, rather than submitting the one combination the schema rejects. Nothing else
+    // ticked is no list at all, and then the locked entry is dropped like an empty field.
+    const boxes = [
+      ...controls.querySelectorAll<HTMLInputElement>("input[type=checkbox][name=availableLocales]"),
+    ];
+    const locale = controls.querySelector<HTMLInputElement>("input[name=locale]:checked");
+    const locked = controls.querySelector<HTMLInputElement>("[data-preview-locale]");
+    if (boxes.some((box) => box.checked)) {
+      for (const box of boxes) if (box.value === locale?.value) box.checked = true;
+    } else if (locked) {
+      locked.disabled = true;
+    }
+  });
+
+  // A change applies itself. `change` is what makes that bearable on both kinds of
+  // control: a box or a menu fires it on the pick, a text field only once it is left.
+  const FOCUS_KEY = "uniformen-preview-focus";
+  controls?.addEventListener("change", (event) => {
+    const field = event.target as HTMLInputElement | HTMLSelectElement;
+    // Applying means navigating, which drops focus on the floor. Named rather than
+    // indexed, so the control is found again in a form that renders differently.
+    sessionStorage.setItem(FOCUS_KEY, `${field.name}\n${field.value}`);
+    controls.requestSubmit();
+  });
+
+  const [name = "", value = ""] = (sessionStorage.getItem(FOCUS_KEY) ?? "").split("\n");
+  sessionStorage.removeItem(FOCUS_KEY);
+  if (controls && name) {
+    // One name covers a group, so the value picks the member out of it. A text field's
+    // value is its own, and an emptied one has none — both fall back to the name.
+    const field =
+      (value &&
+        controls.querySelector<HTMLElement>(
+          `[name=${CSS.escape(name)}][value=${CSS.escape(value)}]`,
+        )) ||
+      controls.querySelector<HTMLElement>(`[name=${CSS.escape(name)}]`);
+    field?.focus();
+  }
+
+  const copy = document.querySelector("[data-preview-copy]");
+  copy?.addEventListener("click", async () => {
+    // The printed URL, not the address bar: the page prints the canonical spelling of
+    // the query it validated, which is the one worth pasting somewhere.
+    const printed = document.querySelector("[data-preview-url]");
+    const label = copy.textContent;
+    try {
+      await navigator.clipboard.writeText(
+        new URL(printed?.textContent ?? "", window.location.href).href,
+      );
+      copy.textContent = "Kopiert";
+    } catch {
+      // Clipboard denied. Select it instead of claiming a copy that did not happen.
+      if (printed) window.getSelection()?.selectAllChildren(printed);
+      copy.textContent = "Merket";
+    }
+    window.setTimeout(() => (copy.textContent = label), 1500);
   });
 }
   .toString()
@@ -195,7 +457,7 @@ const previewQuerySchema = uniformenQuerySchema.extend({
   debugEnturUser: z.enum(["true", "false"]).optional(),
 });
 
-type PreviewQuery = z.infer<typeof previewQuerySchema>;
+export type PreviewQuery = z.infer<typeof previewQuerySchema>;
 
 /**
  * The user the preview page renders the bar for. No `debugUser` is `undefined`,
@@ -275,7 +537,10 @@ export function previewRoutes(server: OpenAPIHono): void {
                     isEnturUser={previewIsEnturUser(query)}
                   />,
                 )}
-                <main>${sidebar}</main>
+                <main>
+                    ${sidebar}
+                    ${await renderComponentToString(<PreviewControls query={query} />)}
+                </main>
                 ${await renderComponentToString(<Footer locale={navProps.locale} />)}
                 ${renderUniformenScripts()}
                 <script>${PREVIEW_SCRIPT}</script>

@@ -9,6 +9,19 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-13
+
+### Added
+
+- The preview page renders its parameters as a form, so they can be found by opening
+  the page instead of by knowing them already. Laid out like the bar — what moves its
+  left end on the left, its right end on the right, what belongs to neither below
+  both. A plain GET form back to the page, and a change applies itself: a box or a
+  menu on the pick, a text field once you leave it. The URL it navigates to is the whole result, and the page prints that URL —
+  validated, so unknown parameters and defaults drop out — with a button to copy it.
+  Production gets no `debug` controls, which it ignores anyway. Nothing about the
+  header or footer changes.
+
 ## 2026-08-12
 
 ### Changed

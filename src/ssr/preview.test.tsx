@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
 import { previewIsEnturUser, previewUser } from "./preview";
+import { PreviewControls } from "./PreviewControls";
+import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
 
 /**
@@ -11,7 +13,10 @@ import type { Environment } from "../config";
  */
 async function preview(query = "") {
   const res = await app.request(`/${query}`);
-  return { res, html: await res.text() };
+  const html = await res.text();
+  // The knobs echo the query they were set from, so anything counted rather than
+  // merely found has to be counted in the chrome alone.
+  return { res, html, chrome: html.slice(0, html.indexOf("<main")) };
 }
 
 /**
@@ -42,13 +47,13 @@ async function sha256(source: string): Promise<string> {
 
 describe("preview page debug user", () => {
   test("debugUser renders the signed-in bar, with its menu", async () => {
-    const { res, html } = await preview(
+    const { res, html, chrome } = await preview(
       "?debugUser=Navn+Navnesen&debugEmail=navn.navnesen@entur.org",
     );
     expect(res.status).toBe(200);
     expect(html).toContain('id="uniformen-user-menu-panel"');
     // The chip and the panel both name them.
-    expect(html.match(/Navn Navnesen/g)).toHaveLength(2);
+    expect(chrome.match(/Navn Navnesen/g)).toHaveLength(2);
     expect(html).toContain("navn.navnesen@entur.org");
     expect(html).toContain('href="/auth/logout"');
     // The handler that opens the panel has to be on the page, or the knob shows
@@ -244,6 +249,147 @@ describe("preview page simple", () => {
     const { html } = await preview("?simple=true");
     expect(html).toContain("Tjenester");
     expect(html).toContain("Informasjon");
+  });
+});
+
+describe("preview page controls", () => {
+  test("the parameters are on the page, as a form that sets them", async () => {
+    // The point of the box: the parameters are findable by opening the page, not
+    // only by knowing them already.
+    const { html } = await preview();
+    expect(html).toContain('<form class="preview-controls__form" method="get" action="/"');
+    for (const param of ["app", "sidebar", "simple", "locale", "availableLocales", "debugUser"]) {
+      expect(html).toContain(`name="${param}"`);
+    }
+    // Named by the same ids the param takes, so the form is the list of valid values.
+    expect(html).toContain('value="ops-center"');
+    expect(html).toContain('value="nn-NO"');
+  });
+
+  test("the controls come back set from the query the server validated", async () => {
+    const { html } = await preview(
+      "?app=nplan&sidebar=true&locale=en-GB&availableLocales=nb-NO&availableLocales=en-GB&debugUser=Navn",
+    );
+    expect(html).toContain('<option value="nplan" selected="">');
+    expect(html).toContain('name="sidebar" value="true" checked=""');
+    expect(html).toContain('name="locale" value="en-GB" checked=""');
+    expect(html).toContain('name="availableLocales" value="nb-NO" checked=""');
+    expect(html).toContain('name="availableLocales" value="nn-NO"/>');
+    expect(html).toContain('name="debugUser" value="Navn"');
+  });
+
+  test("an empty control is dropped rather than submitted as a rejected value", async () => {
+    // `?app=` and `?debugUser=` are 400s, and the form's own empty state would send
+    // both, so it disables them on the way out — which is how a form omits a field.
+    const { html } = await preview();
+    const handler = (await scriptBlocks(html)).find((block) =>
+      block.includes("data-preview-controls"),
+    );
+    expect(handler).toContain("field.disabled");
+    for (const query of ["?app=", "?debugUser="]) {
+      expect((await preview(query)).res.status).toBe(400);
+    }
+  });
+
+  test("the language being rendered is locked into availableLocales", async () => {
+    // The schema rejects a list that leaves it out, so the box that would produce one
+    // can't be unticked — and a hidden twin carries the value a disabled box won't.
+    const { html } = await preview("?locale=nn-NO&availableLocales=nn-NO&availableLocales=en-GB");
+    expect(html).toContain('<input type="checkbox" checked="" disabled=""/>');
+    expect(html).toContain('<input type="hidden" name="availableLocales" value="nn-NO"');
+    expect(html).not.toContain('name="availableLocales" value="nn-NO" checked=""');
+    // The rest are still ordinary boxes.
+    expect(html).toContain('name="availableLocales" value="en-GB" checked=""');
+    expect(html).toContain('name="availableLocales" value="nb-NO"/>');
+  });
+
+  test("picking a language adds it to the list rather than sending a 400", async () => {
+    // The locked entry is the language being left, so a list that has one has to gain the
+    // language being picked: the combination it would otherwise submit is a 400.
+    expect((await preview("?locale=nn-NO&availableLocales=nb-NO")).res.status).toBe(400);
+    const handler = (await scriptBlocks((await preview()).html)).find((block) =>
+      block.includes("data-preview-controls"),
+    );
+    expect(handler).toContain("input[name=locale]:checked");
+    expect(handler).toContain("box.checked =");
+  });
+
+  test("the locked language alone is no list, and is dropped on the way out", async () => {
+    // Locked on whatever the query says, so it can't tell a list from none: the box
+    // reads as the rule, and the script omits the field when nothing else is ticked.
+    const { html } = await preview();
+    expect(html).toContain('<input type="checkbox" checked="" disabled=""/>');
+    expect(html).not.toContain('aria-checked="true" lang="nb-NO"');
+    expect(html).toContain(">/?locale=nb-NO<");
+    const handler = (await scriptBlocks(html)).find((block) =>
+      block.includes("data-preview-controls"),
+    );
+    expect(handler).toContain("data-preview-locale");
+    expect(handler).toContain("locked.disabled");
+  });
+
+  test("a knob sits where in the bar it has its effect", async () => {
+    // The arrangement is the whole point of the box being a box: the sidebar button is
+    // at the far left of the bar, the user is at the right, and what is in neither end
+    // is below both.
+    const { html } = await preview();
+    const groups = html.split(/class="preview-controls__group preview-controls__group--/);
+    const where = (param: string) =>
+      groups.find((group) => group.includes(`name="${param}"`))?.match(/^[a-z]+/)?.[0];
+    expect(where("sidebar")).toBe("left");
+    expect(where("app")).toBe("left");
+    expect(where("debugEnturUser")).toBe("left");
+    expect(where("debugUser")).toBe("right");
+    expect(where("debugEmail")).toBe("right");
+    expect(where("availableLocales")).toBe("right");
+    expect(where("simple")).toBe("whole");
+    expect(where("locale")).toBe("whole");
+  });
+
+  test("a change applies itself, and the reload it costs keeps the focus", async () => {
+    // `change` is the event that gives both kinds of control the right moment: a box
+    // or a menu on the pick, a text field only once it is left.
+    const handler = (await scriptBlocks((await preview()).html)).find((block) =>
+      block.includes("data-preview-controls"),
+    );
+    expect(handler).toContain('addEventListener("change"');
+    expect(handler).toContain("requestSubmit()");
+    // Applying navigates, so the control that did it is named across the reload.
+    expect(handler).toContain("sessionStorage.setItem");
+    expect(handler).toContain("sessionStorage.removeItem");
+    expect(handler).toContain(".focus()");
+  });
+
+  test("the page prints the query it validated, not the URL it was asked for", async () => {
+    // Unknown params, a default said out loud and a repeated key all drop out, so
+    // what is printed is the spelling worth copying.
+    const { html } = await preview("?sidebar=false&app=nplan&nonsense=1&locale=nb-NO");
+    expect(html).toContain(">/?app=nplan&amp;locale=nb-NO<");
+    expect(html).not.toContain("nonsense");
+  });
+
+  test("the copy button copies the printed URL, address bar or not", async () => {
+    const handler = (await scriptBlocks((await preview()).html)).find((block) =>
+      block.includes("data-preview-copy"),
+    );
+    expect(handler).toContain("data-preview-url");
+    expect(handler).toContain("clipboard.writeText");
+  });
+
+  test("production is given no knob it ignores", async () => {
+    // It renders nobody whatever the URL says, so a control claiming otherwise
+    // would only be a way to produce a misleading link.
+    const query = { locale: "nb-NO", debugUser: "Navn", debugEnturUser: "true" } as const;
+    const prod = await renderComponentToString(
+      <PreviewControls query={query} environment="production" />,
+    );
+    expect(prod).not.toContain("debugUser");
+    expect(prod).not.toContain("debugEnturUser");
+    expect(prod).toContain(">/?locale=nb-NO<");
+
+    const dev = await renderComponentToString(<PreviewControls query={query} environment="dev" />);
+    expect(dev).toContain('name="debugUser" value="Navn"');
+    expect(dev).toContain(">/?locale=nb-NO&amp;debugUser=Navn&amp;debugEnturUser=true<");
   });
 });
 
