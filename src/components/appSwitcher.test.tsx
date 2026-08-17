@@ -60,6 +60,16 @@ describe("app switcher rendering", () => {
     expect(html).not.toContain("uniformen-app-switcher__item--active");
   });
 
+  test("an unlisted application is not in the panel, and marks nothing in it", async () => {
+    for (const env of ENVIRONMENTS) {
+      const html = await render({ environment: env, activeAppId: "skoleskyss" });
+      expect(html).not.toContain("Skoleskyss");
+      expect(html).not.toContain("skoleskyss.entur.no");
+      expect(html).not.toContain('aria-current="page"');
+      expect(hrefs(html)).toEqual(expectedUrls(env));
+    }
+  });
+
   test("each application marks its own entry", async () => {
     for (const { id, url } of PORTAL_APPLICATIONS.production) {
       const html = await render({ environment: "production", activeAppId: id });

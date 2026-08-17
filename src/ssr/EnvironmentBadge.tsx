@@ -4,6 +4,7 @@ import {
   portalApplicationUrls,
   SWITCHABLE_ENVIRONMENTS,
   type PortalApplicationId,
+  type SwitchableEnvironment,
 } from "../components/portalApplications";
 import type { Locale } from "../types";
 
@@ -37,10 +38,10 @@ const ENV_LABELS: Record<Environment, string> = {
  * The environment defaults to the one this instance serves; the prop exists so
  * every environment's rendering can be exercised from a test.
  *
- * `activeAppId` is the application the header is being rendered for. Without it
- * there is no host to switch between, so the badge renders as the static chip it
- * was before — the app switcher's `app` query param is what turns it into a
- * control.
+ * `activeAppId` is the application the header is being rendered for. Without hosts
+ * for it there is nothing to switch between, so the badge renders as the static
+ * chip it was before — the app switcher's `app` query param is what turns it into
+ * a control.
  */
 export function EnvironmentBadge({
   environment = runningEnvironment,
@@ -51,8 +52,19 @@ export function EnvironmentBadge({
   activeAppId?: PortalApplicationId;
   locale: Locale;
 }) {
-  const urls = portalApplicationUrls(activeAppId);
+  const urls = portalApplicationUrls(activeAppId, environment);
   const txt = texts[locale];
+
+  /* Fixed order, dev outwards: the rows sit in the same place whichever
+     environment the header is served from, so the list is a map rather than
+     something that reshuffles per instance. The one being served is marked, not
+     moved. A local instance has no row — nobody can be sent to localhost — so it
+     marks none of them. */
+  const rows: { env: SwitchableEnvironment; url: string }[] = [];
+  for (const env of SWITCHABLE_ENVIRONMENTS) {
+    const url = urls?.[env];
+    if (url !== undefined) rows.push({ env, url });
+  }
 
   const pointer = environment !== "production" && (
     <span class="uniformen-env-badge__pointer" aria-hidden="true"></span>
@@ -90,19 +102,14 @@ export function EnvironmentBadge({
         aria-label={txt.byttMiljo}
       >
         <ul class="uniformen-env-switcher__list">
-          {/* Fixed order, dev outwards: the rows sit in the same place whichever
-              environment the header is served from, so the list is a map rather
-              than something that reshuffles per instance. The one being served is
-              marked, not moved. A local instance has no row — nobody can be sent
-              to localhost — so it marks none of them. */}
-          {SWITCHABLE_ENVIRONMENTS.map((env) => (
+          {rows.map(({ env, url }) => (
             <li key={env}>
               {/* The href is the target environment's bare host: it is the
                   no-script fallback, and the only landing page that is correct
                   without knowing where the user currently is. With scripts, the
                   handler rewrites it to the page they are on. */}
               <a
-                href={urls[env]}
+                href={url}
                 class={
                   env === environment
                     ? "uniformen-env-switcher__item uniformen-env-switcher__item--current"

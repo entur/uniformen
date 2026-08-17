@@ -7,6 +7,12 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.9.0 — 2026-08-17
+
+### Added
+
+- `params.app` accepts `"skoleskyss"`.
+
 ## 0.8.1 — 2026-08-11
 
 ### Added

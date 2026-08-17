@@ -71,13 +71,13 @@ render, so a service that goes quiet must not become an app that goes quiet: whe
 timeout is reached the call returns `null` — the same answer every other failure
 gives — and your page renders without the shared chrome rather than not at all.
 
-`params.app` (`"cleos" | "nplan" | "ops-center" | "partner" | "sorvis"`) names the
-portal application asking for the layout: it renders the app
-name next to the Entur logo, and marks that application as the current page in the
-app switcher. Params with an `undefined` value are omitted from the query string,
-and array-valued params serialise as a repeated key (`?key=a&key=b`).
-An unknown `app` value is rejected by the service with `400`, so the call
-returns `null`.
+`params.app` (`"cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis"`)
+names the portal application asking for the layout: it renders the app name next to
+the Entur logo, and marks that application as the current page in the app switcher if not marked as unlisted.
+
+Params with an `undefined` value are omitted from the query string, and array-valued
+params serialise as a repeated key (`?key=a&key=b`). An unknown `app` value is
+rejected by the service with `400`, so the call returns `null`.
 
 The app switcher renders for signed-in users only. It links to the environment you
 fetched the layout from — a `dev` layout hands your users the dev instances of the
@@ -86,7 +86,9 @@ other portal applications, never production.
 The environment badge beside the logo, and the switcher `app` turns it into, render
 only for users in the Entur organisation. Nothing to send: the service reads it off
 the token you pass. Your other users get the bar without it, and keep the coloured
-strip along the top that says the page is not production.
+strip along the top that says the page is not production. The switcher offers the
+environments your application is deployed to, and none of them is the badge staying
+static.
 
 `params.sidebar` (`boolean`) renders a collapse control at the far left of the top
 bar. Set it only if your app has a side navigation to collapse. Uniformen renders

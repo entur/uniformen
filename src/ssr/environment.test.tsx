@@ -185,6 +185,27 @@ describe("environment switcher", () => {
     expect(html.match(/data-uniformen-env-switcher-link/g)).toHaveLength(3);
   });
 
+  test("an application offers only the environments it is deployed to", async () => {
+    for (const env of ["staging", "production"] as const) {
+      const html = await render({ environment: env, activeAppId: "skoleskyss" });
+      expect(labels(html)).toEqual(["STAGING", "PROD"]);
+      expect(hrefs(html)).toEqual([
+        "https://skoleskyss.staging.entur.no",
+        "https://skoleskyss.entur.no",
+      ]);
+      expect(html.match(/aria-current="page"/g)).toHaveLength(1);
+    }
+  });
+
+  test("an environment the application is not deployed to keeps the static chip", async () => {
+    for (const env of ["local", "dev"] as const) {
+      const html = await render({ environment: env, activeAppId: "skoleskyss" });
+      expect(html).not.toContain("uniformen-env-switcher");
+      expect(html).not.toContain("href=");
+      expect(html).toContain('class="uniformen-env-badge"');
+    }
+  });
+
   test("an application the portal does not know about keeps the static chip", async () => {
     const html = await render({
       environment: "dev",

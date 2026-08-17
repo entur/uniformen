@@ -287,6 +287,7 @@ describe("/ssr app query param", () => {
     ["cleos", "CLEOS"],
     ["nplan", "Nplan"],
     ["ops-center", "Ops Center"],
+    ["skoleskyss", "Skoleskyss"],
   ];
 
   const ssr = (query = "") => app.request(`/ssr${query}`);
@@ -299,6 +300,17 @@ describe("/ssr app query param", () => {
       expect(body.headerHtml).toContain(`<span class="uniformen-logo__app">${rendered}</span>`);
     });
   }
+
+  test("an unlisted app names itself without joining the switcher", async () => {
+    // Tests run as dev (see test/authTestSetup), which Skoleskyss has no deploy in,
+    // so the chip is static here too.
+    const body = await enturSignedIn("auth0|app-unlisted", "?app=skoleskyss");
+    expect(body.headerHtml).toContain('<span class="uniformen-logo__app">Skoleskyss</span>');
+    expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
+    expect(body.headerHtml).not.toContain("skoleskyss.entur.no");
+    expect(body.headerHtml).not.toContain("data-uniformen-env-switcher-toggle");
+    expect(body.headerHtml).toContain('class="uniformen-env-badge"');
+  });
 
   test("no app param renders the logo without an app name slot", async () => {
     const res = await app.request("/ssr");

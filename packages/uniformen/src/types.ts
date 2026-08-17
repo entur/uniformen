@@ -9,9 +9,9 @@ export type Locale = "nb-NO" | "nn-NO" | "en-GB";
 export type FetchUniformenParams = {
   /**
    * The portal application asking for the layout. It gets its name beside the
-   * Entur logo, and its entry in the app switcher marked as the current page.
+   * Entur logo.
    */
-  app?: "cleos" | "nplan" | "ops-center" | "partner" | "sorvis";
+  app?: "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis";
 
   /** Language of the header and footer, default `nb-NO`. App names and env labels are untranslated. */
   locale?: Locale;

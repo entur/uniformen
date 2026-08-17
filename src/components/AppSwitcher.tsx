@@ -26,7 +26,7 @@ const texts = {
  *
  * `activeAppId` is the application the header is being rendered for, marked as
  * the current page. Absent when the consumer sends no `app` query param, and
- * matching nothing in environments the named application is not deployed to.
+ * matching nothing when the named application is one the list leaves out here.
  */
 export function AppSwitcher({
   activeAppId,

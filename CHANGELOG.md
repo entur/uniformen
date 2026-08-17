@@ -9,6 +9,13 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-17
+
+### Added
+
+- `app=skoleskyss` renders Skoleskyss beside the logo. It is not an entry in the app switcher.
+- The environment switcher offers the environments the named application is deployed to, not always all three environments.
+
 ## 2026-08-13
 
 ### Added
