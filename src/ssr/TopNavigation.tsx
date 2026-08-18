@@ -9,6 +9,8 @@ import { UserMenu, type UserMenuUser } from "../components/UserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { Logo } from "./Logo";
 
+const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
+
 const texts = {
   "nb-NO": {
     loggInn: "Logg inn",
@@ -88,7 +90,7 @@ export function TopNavigation({
           )}
           {user ? (
             <>
-              {!simple && <NotificationsButton locale={locale} />}
+              {!simple && NOTIFICATIONS_ENABLED && <NotificationsButton locale={locale} />}
               <UserMenu
                 user={user}
                 simple={simple}

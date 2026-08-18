@@ -16,8 +16,6 @@ const texts = {
 // TODO wire up to a notifications source (unread count + panel).
 export function NotificationsButton({ locale }: { locale: Locale }) {
   const txt = texts[locale];
-  // aria-label, not just the span: the label is hidden under the mobile
-  // breakpoint, and the button still needs an accessible name there.
   return (
     <button type="button" class="uniformen-top-nav__action" aria-label={txt.varsler}>
       <BellIcon />

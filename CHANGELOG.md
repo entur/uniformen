@@ -9,6 +9,12 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-08-18
+
+### Changed
+
+The "Varlser" / "Notifications" button is now hidden, as it is not yet ready for production.
+
 ## 2026-08-17
 
 ### Added
