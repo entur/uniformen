@@ -334,6 +334,16 @@
   align-items: flex-end;
   gap: var(--uniformen-space-small);
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.uniformen-logo:active,
+.uniformen-logo:visited {
+  color: inherit;
+}
+.uniformen-logo:focus-visible {
+  box-shadow: var(--uniformen-shadow-focus);
+  outline: none;
 }
 
 .uniformen__fill-coral {

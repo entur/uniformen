@@ -7,7 +7,7 @@ import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { LogInIcon } from "../components/icons/LogInIcon";
 import { UserMenu, type UserMenuUser } from "../components/UserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
-import { Logo } from "./Logo";
+import { NavigationLogo } from "./NavigationLogo";
 
 const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
 
@@ -81,7 +81,7 @@ export function TopNavigation({
       <nav class="uniformen-top-nav__nav" aria-label={txt.toppnavigasjon}>
         <div class="uniformen-top-nav__left">
           {sidebar && <SidebarToggle locale={locale} />}
-          <Logo appName={appName} />
+          <NavigationLogo appName={appName} />
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">

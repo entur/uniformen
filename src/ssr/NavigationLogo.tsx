@@ -5,7 +5,8 @@ const EnturBaseLogo = () => (
     viewBox="0 0 80 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
+    role="img"
+    aria-label="Entur"
   >
     <path
       fillRule="evenodd"
@@ -40,9 +41,9 @@ const EnturBaseLogo = () => (
   </svg>
 );
 
-export const Logo = (props: { appName?: string }) => (
-  <div class="uniformen-logo">
+export const NavigationLogo = (props: { appName?: string }) => (
+  <a class="uniformen-logo" href="/">
     <EnturBaseLogo />
     {props.appName && <span class="uniformen-logo__app">{props.appName}</span>}
-  </div>
+  </a>
 );
