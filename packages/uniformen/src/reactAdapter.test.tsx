@@ -103,13 +103,22 @@ describe("fetchUniformenComponents", () => {
     );
   });
 
+  it("returns the CSP sources alongside the components, so a page needs one fetch", async () => {
+    const csp = { "style-src": ["'self'", "https://cdn.entur.io"], "script-src": ["'sha256-abc'"] };
+    mockFetch({ ...baseLayout, csp });
+
+    expect((await fetchUniformenComponents()).csp).toEqual(csp);
+  });
+
   it("renders nothing for every component when the layout fetch fails", async () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
     mockFetch({}, false);
-    const { HeadAssets, Header, Footer, Scripts } = await fetchUniformenComponents();
+    const { HeadAssets, Header, Footer, Scripts, csp } = await fetchUniformenComponents();
 
     for (const Component of [HeadAssets, Header, Footer, Scripts]) {
       expect(renderToStaticMarkup(createElement(Component))).toBe("");
     }
+    // No chrome rendered, so there is nothing to admit into the page's CSP.
+    expect(csp).toEqual({});
   });
 });

@@ -7,6 +7,12 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.10.0 — 2026-08-31
+
+### Added
+
+- `fetchUniformenComponents` returns CSP alongside 4 react components.
+
 ## 0.9.0 — 2026-08-17
 
 ### Added

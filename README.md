@@ -5,6 +5,21 @@ Header og footer for Entur
 What the service renders is changelogged in [CHANGELOG.md](./CHANGELOG.md); the
 client library's own API in [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## Skill for AI coding agents
+
+[`skills/entur-uniformen`](./skills/entur-uniformen/SKILL.md) teaches an agent to add Uniformen
+to an Entur application. It is published through the Entur plugin marketplace, which
+sources it straight from this repo — there is no vendored copy to drift:
+
+```sh
+claude plugin marketplace add entur/ai
+claude   # then /plugin, and install "entur-uniformen"
+```
+
+Codex CLI: `codex plugin marketplace add entur/ai`. Editing `SKILL.md` on `main` is
+what ships a change; the marketplace entry pins nothing but the branch. See
+[skills/README.md](./skills/README.md).
+
 ## Install
 
 To install dependencies:

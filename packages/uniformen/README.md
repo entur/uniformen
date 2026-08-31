@@ -35,11 +35,20 @@ React 18 or later is required as a peer dependency.
 ```ts
 import { fetchUniformenLayout } from "@entur/uniformen";
 
-const layout = await fetchUniformenLayout();
+const layout = await fetchUniformenLayout({
+  token, // the signed-in user's Auth0 access token
+  environment: "dev", // the Uniformen of the environment this app runs in
+  params: {
+    app: "partner",
+    sidebar: true,
+    locale: "nb-NO",
+    availableLocales: ["nb-NO", "en-GB"],
+  },
+});
 
 export default function app() {
   return html`
-    <html>
+    <html lang="nb-NO">
       <head>
         ${layout.headAssets}
       </head>
@@ -53,9 +62,7 @@ export default function app() {
 `;
 ```
 
-Returns `UniformenLayout | null`. Returns `null` if the request fails.
-
-All options are optional and passed as a single object:
+The options are passed as a single object:
 
 ```ts
 const layout = await fetchUniformenLayout({
@@ -114,7 +121,11 @@ The same options apply to `fetchUniformenComponents` below.
 ```tsx
 import { fetchUniformenComponents } from "@entur/uniformen/react";
 
-const { HeadAssets, Header, Footer, Scripts } = await fetchUniformenComponents();
+const { HeadAssets, Header, Footer, Scripts, csp } = await fetchUniformenComponents({
+  token,
+  environment: "dev",
+  params: { app: "partner", sidebar: true, locale: "nb-NO" },
+});
 
 export default function App() {
   return (
@@ -133,9 +144,13 @@ export default function App() {
 }
 ```
 
-If the layout fetch fails, all components render nothing.
+If the layout fetch fails, all components render nothing and `csp` is `{}`.
 
 The adapter parses the layout HTML into real React elements.
+
+`csp` is the same `Record<string, string[]>` `fetchUniformenLayout` returns, handed back
+here too so an app that sets a `Content-Security-Policy` header has it from the one
+fetch. Union those sources into your own directives.
 
 - Place `<HeadAssets />` inside `<head>`.
 - Place `<Header />` inside `<body>` before `<main>`.
