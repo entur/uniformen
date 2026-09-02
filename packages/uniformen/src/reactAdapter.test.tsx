@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, jest } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createElement } from "react";
+import { createElement, type ReactNode, type ScriptHTMLAttributes } from "react";
 import { fetchUniformenComponents } from "./reactAdapter";
 
 function mockFetch(data: object, ok = true) {
@@ -120,5 +120,153 @@ describe("fetchUniformenComponents", () => {
     }
     // No chrome rendered, so there is nothing to admit into the page's CSP.
     expect(csp).toEqual({});
+  });
+});
+
+/**
+ * The shape `next/script` presents: every `<script>` attribute, plus its own
+ * strategy and lifecycle props. Copied rather than imported so the package keeps
+ * no dependency on Next — assigning `nextScript` to `loader` below is the check
+ * that the real `Script` still fits the prop.
+ */
+interface NextScriptProps extends ScriptHTMLAttributes<HTMLScriptElement> {
+  strategy?: "afterInteractive" | "lazyOnload" | "beforeInteractive" | "worker";
+  id?: string;
+  onLoad?: (e: any) => void;
+  onReady?: () => void | null;
+  onError?: (e: any) => void;
+  children?: ReactNode;
+  stylesheets?: string[];
+}
+
+/** What `next/script` writes into the element it creates, for these props. */
+function nextScriptElement(props: NextScriptProps) {
+  const { children, dangerouslySetInnerHTML, src } = props;
+  if (dangerouslySetInnerHTML) return { textContent: dangerouslySetInnerHTML.__html };
+  if (children) {
+    return {
+      textContent:
+        typeof children === "string" ? children : Array.isArray(children) ? children.join("") : "",
+    };
+  }
+  return { src };
+}
+
+/** Records what a loader is handed, and renders nothing — as `next/script` does. */
+function recordingLoader() {
+  const calls: NextScriptProps[] = [];
+  const nextScript = (props: NextScriptProps) => {
+    calls.push(props);
+    return null;
+  };
+  return { calls, nextScript };
+}
+
+describe("script loader", () => {
+  it("hands every script in a slot to the loader, and renders nothing itself", async () => {
+    const { calls, nextScript } = recordingLoader();
+    mockFetch({
+      ...baseLayout,
+      scripts: '<script src="/cdn.js"></script><script>init()</script>',
+    });
+    const { Scripts } = await fetchUniformenComponents();
+
+    expect(renderToStaticMarkup(createElement(Scripts, { loader: nextScript }))).toBe("");
+    expect(calls).toHaveLength(2);
+  });
+
+  it("hands the inline source over verbatim, so the CSP hash still matches", async () => {
+    // A hash is over exact bytes, and React escapes text children: a loader that
+    // gets `&amp;&amp;` instead of `&&` gets the block dropped rather than run.
+    const source = 'if (a && b < "c") d();';
+    const { calls, nextScript } = recordingLoader();
+    mockFetch({ ...baseLayout, scripts: `<script>${source}</script>` });
+    const { Scripts } = await fetchUniformenComponents();
+    renderToStaticMarkup(createElement(Scripts, { loader: nextScript }));
+
+    expect(nextScriptElement(calls[0]!)).toEqual({ textContent: source });
+  });
+
+  it("passes script attributes as React props", async () => {
+    const { calls, nextScript } = recordingLoader();
+    mockFetch({
+      ...baseLayout,
+      scripts:
+        '<script src="/cdn.js" async type="module" nonce="n1" crossorigin="anonymous" data-app="partner"></script>',
+    });
+    const { Scripts } = await fetchUniformenComponents();
+    renderToStaticMarkup(createElement(Scripts, { loader: nextScript }));
+
+    expect(calls[0]).toMatchObject({
+      src: "/cdn.js",
+      async: true,
+      type: "module",
+      nonce: "n1",
+      crossOrigin: "anonymous",
+      "data-app": "partner",
+    });
+  });
+
+  it("hands an external script no children, so its src is what gets loaded", async () => {
+    // `next/script` reads `children` before `src`, so an empty-but-present body
+    // would install nothing in place of the URL.
+    const { calls, nextScript } = recordingLoader();
+    mockFetch({ ...baseLayout, scripts: '<script src="/cdn.js"></script>' });
+    const { Scripts } = await fetchUniformenComponents();
+    renderToStaticMarkup(createElement(Scripts, { loader: nextScript }));
+
+    expect(calls[0]!.children).toBeUndefined();
+    expect(nextScriptElement(calls[0]!)).toEqual({ src: "/cdn.js" });
+  });
+
+  it("leaves everything that is not a script alone", async () => {
+    const { calls, nextScript } = recordingLoader();
+    mockFetch({
+      ...baseLayout,
+      headAssets:
+        '<link rel="stylesheet" href="/app.css"><style>body{margin:0}</style><script>boot()</script>',
+    });
+    const { HeadAssets } = await fetchUniformenComponents();
+    const html = renderToStaticMarkup(createElement(HeadAssets, { loader: nextScript }));
+
+    expect(html).toBe('<link rel="stylesheet" href="/app.css"/><style>body{margin:0}</style>');
+    expect(calls).toHaveLength(1);
+    expect(nextScriptElement(calls[0]!)).toEqual({ textContent: "boot()" });
+  });
+
+  it("renders plain script elements when no loader is passed", async () => {
+    mockFetch({
+      ...baseLayout,
+      headAssets: "<script>boot()</script>",
+      scripts: "<script>init()</script>",
+    });
+    const { HeadAssets, Scripts } = await fetchUniformenComponents();
+
+    expect(renderToStaticMarkup(createElement(HeadAssets))).toBe("<script>boot()</script>");
+    expect(renderToStaticMarkup(createElement(Scripts))).toBe("<script>init()</script>");
+  });
+
+  it("keys the replaced scripts, so a slot of several renders without a React warning", async () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    const { nextScript } = recordingLoader();
+    mockFetch({
+      ...baseLayout,
+      scripts: '<script src="/a.js"></script><script src="/b.js"></script>',
+    });
+    const { Scripts } = await fetchUniformenComponents();
+    renderToStaticMarkup(createElement(Scripts, { loader: nextScript }));
+
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("renders nothing, loader or not, when the layout fetch fails", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    const { calls, nextScript } = recordingLoader();
+    mockFetch({}, false);
+    const { HeadAssets, Scripts } = await fetchUniformenComponents();
+
+    expect(renderToStaticMarkup(createElement(HeadAssets, { loader: nextScript }))).toBe("");
+    expect(renderToStaticMarkup(createElement(Scripts, { loader: nextScript }))).toBe("");
+    expect(calls).toEqual([]);
   });
 });

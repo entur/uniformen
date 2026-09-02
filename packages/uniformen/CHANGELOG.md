@@ -7,6 +7,15 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.11.0 — 2026-09-02
+
+### Added
+
+- `<HeadAssets>` and `<Scripts>` take a `loader`: a component rendered per `<script>`
+  in place of the tag, given its attributes as props and the inline body as a string
+  child. `next/script`'s `Script` fits it. Without one the tags render as plain
+  `<script>` elements, as before.
+
 ## 0.10.0 — 2026-08-31
 
 ### Added

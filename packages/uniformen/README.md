@@ -157,6 +157,29 @@ fetch. Union those sources into your own directives.
 - If needed, place `<Footer />` inside `<body>` after `<main>`.
 - Place `<Scripts />` inside `<body>` as the last element.
 
+### Using with Next.js
+
+When loading Uniformen with Next.js, pass `Script` as a `loader` prop to `<HeadAssets>` and `<Scripts>`.
+Otherwise Next.js can change the execution order, causing scripts and components to get loaded in the wrong order.
+
+```tsx
+import Script from "next/script";
+
+// The head script restores the sidebar before the first paint, so it has to be in
+// the initial HTML. Next's default strategy injects after hydration, which is a
+// visible jump.
+const BeforeInteractiveScript: typeof Script = (props) => <Script {...props} strategy="beforeInteractive" />;
+
+<head>
+  <HeadAssets loader={BeforeInteractiveScript} />
+</head>
+<body>
+  <Header />
+  <main>{/* your app */}</main>
+  <Scripts loader={Script} />
+</body>;
+```
+
 ## Sidebar
 
 Pass `params.sidebar: true` and the top bar renders a collapse control at its far
