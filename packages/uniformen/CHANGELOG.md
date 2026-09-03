@@ -7,6 +7,12 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.11.1 — 2026-09-03
+
+### Fixed
+
+- Republish the package with correct build.
+
 ## 0.11.0 — 2026-09-02
 
 ### Added
