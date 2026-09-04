@@ -70,7 +70,7 @@ describe("preview page debug user", () => {
   });
 
   test("no debugUser renders the anonymous bar", async () => {
-    const { html } = await preview();
+    const { html } = await preview("?loginUrl=/auth/login");
     expect(html).not.toContain('id="uniformen-user-menu-panel"');
     expect(html).not.toContain('class="uniformen-user-menu"');
     expect(html).toContain('href="/auth/login"');
@@ -223,7 +223,7 @@ describe("preview page demo sidebar", () => {
 
 describe("preview page simple", () => {
   test("the page previews the barebones bar, signed in and out", async () => {
-    const anonymous = await preview("?simple=true&app=partner");
+    const anonymous = await preview("?simple=true&app=partner&loginUrl=/auth/login");
     expect(anonymous.res.status).toBe(200);
     expect(anonymous.html).toContain('href="/auth/login"');
     expect(anonymous.html).not.toContain('aria-label="Velg applikasjon"');
@@ -342,6 +342,7 @@ describe("preview page controls", () => {
     expect(where("debugUser")).toBe("right");
     expect(where("debugEmail")).toBe("right");
     expect(where("availableLocales")).toBe("right");
+    expect(where("loginUrl")).toBe("right");
     expect(where("simple")).toBe("whole");
     expect(where("locale")).toBe("whole");
   });
@@ -366,6 +367,12 @@ describe("preview page controls", () => {
     const { html } = await preview("?sidebar=false&app=nplan&nonsense=1&locale=nb-NO");
     expect(html).toContain(">/?app=nplan&amp;locale=nb-NO<");
     expect(html).not.toContain("nonsense");
+  });
+
+  test("loginUrl reaches the bar, and the URL it was set from", async () => {
+    const { html } = await preview("?loginUrl=/oauth/start");
+    expect(html).toContain('href="/oauth/start"');
+    expect(html).toContain(">/?loginUrl=%2Foauth%2Fstart&amp;locale=nb-NO<");
   });
 
   test("the copy button copies the printed URL, address bar or not", async () => {

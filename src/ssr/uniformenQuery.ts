@@ -20,6 +20,14 @@ export const uniformenQuerySchema = z
     // Hides the app switcher, notifications, the sidebar toggle and "Mine tilganger".
     // For pages that are not the app: login, error, terms.
     simple: z.enum(["true", "false"]).optional(),
+    // Where the anonymous bar's login link goes; absent renders no link. A path on
+    // the app's own origin only — an absolute URL, `//host` (`/\host` too, browsers
+    // read it the same) or `javascript:` would aim the link off the app.
+    loginUrl: z
+      .string()
+      .max(512)
+      .regex(/^\/(?![/\\])[^\s"'<>]*$/, "loginUrl must be a path, e.g. /auth/login")
+      .optional(),
     // Defaulted, not optional: components take it required, no per-component fallback.
     locale: z.enum(LOCALES).default("nb-NO"),
     // The languages the consuming app offers, as a repeated key
@@ -66,6 +74,7 @@ export function topNavigationProps({
   simple,
   locale,
   availableLocales,
+  loginUrl,
 }: UniformenQuery) {
   const simpleMode = simple === "true";
   return {
@@ -77,5 +86,6 @@ export function topNavigationProps({
     simple: simpleMode,
     locale,
     availableLocales,
+    loginUrl,
   };
 }

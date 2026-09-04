@@ -66,11 +66,19 @@ export type FetchUniformenParams = {
   sidebar?: boolean;
 
   /**
+   * Where the top bar's "Logg inn" link points, on a render with no `token`. Omitted
+   * renders no login link — logging in is your route, and the service does not guess
+   * it. A path on your own origin: an absolute URL, `//host` or `javascript:` is a
+   * `400`, so the call returns `null`.
+   */
+  loginUrl?: string;
+
+  /**
    * Barebones top bar: hides the app switcher, notifications, the sidebar toggle
    * (whatever `sidebar` says) and "Mine tilganger". Left: logo and app name, plus the
-   * environment badge for the users who get one at all; right: a login link, or the
-   * user's name over a logout-only menu. For login, error and terms pages. Per page,
-   * not per app.
+   * environment badge for the users who get one at all; right: the `loginUrl` login
+   * link, or the user's name over a logout-only menu. For login, error and terms
+   * pages. Per page, not per app.
    */
   simple?: boolean;
 };

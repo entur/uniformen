@@ -180,23 +180,53 @@ describe("/ssr user menu", () => {
 });
 
 describe("/ssr login link", () => {
-  test("anonymous request renders a login link to /auth/login", async () => {
-    const res = await app.request("/ssr");
+  test("loginUrl renders the link, pointing where it says", async () => {
+    const res = await app.request("/ssr?loginUrl=/oauth/start");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.headerHtml).toContain('class="uniformen-top-nav__login"');
-    expect(body.headerHtml).toContain('href="/auth/login"');
+    expect(body.headerHtml).toContain('href="/oauth/start"');
     expect(body.headerHtml).toContain("Logg inn");
   });
 
-  test("authenticated request omits the login link", async () => {
+  test("no loginUrl, no link", async () => {
+    const res = await app.request("/ssr");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).not.toContain("uniformen-top-nav__login");
+    expect(body.headerHtml).not.toContain("Logg inn");
+  });
+
+  test("authenticated request omits the login link, loginUrl or not", async () => {
     userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
-    const res = await app.request("/ssr", { headers: bearer(token) });
+    const res = await app.request("/ssr?loginUrl=/auth/login", { headers: bearer(token) });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.headerHtml).not.toContain("uniformen-top-nav__login");
     expect(body.headerHtml).not.toContain('href="/auth/login"');
+  });
+
+  test("only a path on the consumer's own origin, the near misses included", async () => {
+    for (const value of [
+      "https://phish.example/login",
+      "//phish.example/login",
+      "/\\phish.example/login",
+      "javascript:alert(1)",
+      "auth/login",
+      "",
+      "/auth/login onclick=x",
+    ]) {
+      const res = await app.request(`/ssr?loginUrl=${encodeURIComponent(value)}`);
+      expect(res.status).toBe(400);
+    }
+  });
+
+  test("a path keeps its query and fragment", async () => {
+    const body = await (
+      await app.request(`/ssr?loginUrl=${encodeURIComponent("/auth/login?returnTo=/kort#top")}`)
+    ).json();
+    expect(body.headerHtml).toContain('href="/auth/login?returnTo=/kort#top"');
   });
 });
 
@@ -436,7 +466,7 @@ describe("/ssr simple query param", () => {
   };
 
   test("the anonymous bar keeps the logo and the login link, and loses the rest", async () => {
-    const body = await (await ssr("?simple=true&app=partner")).json();
+    const body = await (await ssr("?simple=true&app=partner&loginUrl=/auth/login")).json();
     expect(body.headerHtml).toContain('href="/auth/login"');
     expect(body.headerHtml).toContain("uniformen-logo");
     expect(body.headerHtml).not.toContain('aria-label="Velg applikasjon"');
@@ -499,7 +529,7 @@ describe("/ssr simple query param", () => {
   });
 
   test("the localised strings that survive are still localised", async () => {
-    const body = await (await ssr("?simple=true&locale=en-GB")).json();
+    const body = await (await ssr("?simple=true&locale=en-GB&loginUrl=/auth/login")).json();
     expect(body.headerHtml).toContain('aria-label="Log in"');
     expect(body.headerHtml).toContain('aria-label="Top navigation"');
   });
@@ -523,7 +553,7 @@ describe("/ssr top bar chrome", () => {
   });
 
   test("the app switcher rides along with the user, not the anonymous bar", async () => {
-    const body = await (await app.request("/ssr?app=partner")).json();
+    const body = await (await app.request("/ssr?app=partner&loginUrl=/auth/login")).json();
     expect(body.headerHtml).not.toContain('aria-label="Velg applikasjon"');
     expect(body.headerHtml).not.toContain("data-uniformen-app-switcher-toggle");
     expect(body.headerHtml).not.toContain("uniformen-top-nav__divider");
@@ -709,14 +739,16 @@ describe("/ssr environment selector", () => {
 
 describe("/ssr locale", () => {
   test("no locale is bokmål, so a consumer that sends none keeps its markup", async () => {
-    const body = await (await app.request("/ssr")).json();
+    const body = await (await app.request("/ssr?loginUrl=/auth/login")).json();
     expect(body.headerHtml).toContain('aria-label="Toppnavigasjon"');
     expect(body.headerHtml).toContain(">Logg inn<");
     expect(body.footerHtml).toContain(">Informasjon<");
   });
 
   test("every string in the bar follows the locale, header and footer alike", async () => {
-    const en = await (await app.request("/ssr?locale=en-GB&sidebar=true")).json();
+    const en = await (
+      await app.request("/ssr?locale=en-GB&sidebar=true&loginUrl=/auth/login")
+    ).json();
     expect(en.headerHtml).toContain('aria-label="Top navigation"');
     expect(en.headerHtml).toContain('aria-label="Hide or show side menu"');
     expect(en.headerHtml).toContain(">Log in<");
@@ -801,7 +833,7 @@ describe("/ssr availableLocales query param", () => {
   });
 
   test("an anonymous bar gets the switcher as a control of its own, before the login link", async () => {
-    const res = await ssr("?availableLocales=nb-NO&availableLocales=en-GB");
+    const res = await ssr("?availableLocales=nb-NO&availableLocales=en-GB&loginUrl=/auth/login");
     expect(res.status).toBe(200);
     const { headerHtml } = await res.json();
     expect(headerHtml).toContain("data-uniformen-locale-switcher-toggle");
@@ -908,7 +940,7 @@ describe("/ssr caching", () => {
     userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const authed = await app.request("/ssr?app=partner", { headers: bearer(token) });
-    const anonymous = await app.request("/ssr?app=partner");
+    const anonymous = await app.request("/ssr?app=partner&loginUrl=/auth/login");
     expect(authed.headers.get("Cache-Control")).not.toBe(anonymous.headers.get("Cache-Control"));
   });
 });

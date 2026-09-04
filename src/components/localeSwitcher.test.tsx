@@ -49,8 +49,12 @@ describe("locale switcher", () => {
 
 describe("which control the bar renders", () => {
   const user = { name: "Navn Navnesen" };
-  const bar = (props: { user?: { name: string }; simple?: boolean; availableLocales?: Locale[] }) =>
-    renderComponentToString(<TopNavigation locale="nb-NO" {...props} />);
+  const bar = (props: {
+    user?: { name: string };
+    simple?: boolean;
+    availableLocales?: Locale[];
+    loginUrl?: string;
+  }) => renderComponentToString(<TopNavigation locale="nb-NO" {...props} />);
 
   const hasChip = (html: string) => html.includes("data-uniformen-locale-switcher-toggle");
   const hasSection = (html: string) => html.includes("uniformen-locale-menu__heading");
@@ -80,7 +84,7 @@ describe("which control the bar renders", () => {
   });
 
   test("the chip leads the login link: language is chrome, not identity", async () => {
-    const anonymous = await bar({ availableLocales: ["nb-NO", "en-GB"] });
+    const anonymous = await bar({ availableLocales: ["nb-NO", "en-GB"], loginUrl: "/auth/login" });
     expect(anonymous.indexOf("uniformen-locale-switcher")).toBeLessThan(
       anonymous.indexOf('href="/auth/login"'),
     );

@@ -19,6 +19,7 @@ export function previewUrl(
   if (query.app) params.set("app", query.app);
   if (query.sidebar === "true") params.set("sidebar", "true");
   if (query.simple === "true") params.set("simple", "true");
+  if (query.loginUrl) params.set("loginUrl", query.loginUrl);
   params.set("locale", query.locale);
   for (const locale of query.availableLocales ?? []) params.append("availableLocales", locale);
   if (environment !== "production") {
@@ -171,6 +172,17 @@ export function PreviewControls({
                 </label>
               </Field>
             )}
+
+            <Field label="loginUrl" hint="Hvor «Logg inn» peker. Tom gir ingen lenke.">
+              <input
+                class="preview-controls__text"
+                type="text"
+                name="loginUrl"
+                value={query.loginUrl}
+                placeholder="/auth/login"
+                maxlength={512}
+              />
+            </Field>
 
             <Field
               label="availableLocales"

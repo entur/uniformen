@@ -35,9 +35,12 @@ export function TopNavigation({
   simple,
   locale,
   availableLocales,
+  loginUrl,
 }: {
-  /** The signed-in user. Absent renders the anonymous bar, with a login link. */
+  /** The signed-in user. Absent renders the anonymous bar. */
   user?: UserMenuUser;
+  /** Where the login link goes, on the anonymous bar. Absent renders no link. */
+  loginUrl?: string;
   /**
    * Whether that user is in the Entur organisation. The environment chip, and the
    * switcher it becomes, is theirs alone: which environment a page is served from
@@ -88,7 +91,7 @@ export function TopNavigation({
           {hasLocales && !user && (
             <LocaleSwitcher availableLocales={availableLocales} locale={locale} />
           )}
-          {user ? (
+          {user && (
             <>
               {!simple && NOTIFICATIONS_ENABLED && <NotificationsButton locale={locale} />}
               <UserMenu
@@ -98,8 +101,9 @@ export function TopNavigation({
                 availableLocales={availableLocales}
               />
             </>
-          ) : (
-            <a class="uniformen-top-nav__login" href="/auth/login" aria-label={txt.loggInn}>
+          )}
+          {!user && loginUrl && (
+            <a class="uniformen-top-nav__login" href={loginUrl} aria-label={txt.loggInn}>
               <LogInIcon />
               <span class="uniformen-top-nav__action-label">{txt.loggInn}</span>
             </a>

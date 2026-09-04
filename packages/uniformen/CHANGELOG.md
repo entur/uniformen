@@ -7,6 +7,13 @@ package, and changes to that markup reach every app on its next request, whateve
 version it has installed. Those are dated rather than versioned, and listed in
 [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
+## 0.12.0 — 2026-09-04
+
+### Added
+
+- `params.loginUrl`: where the top bar's login link points on a render with no
+  `token`. Omitted renders no login link. Must be a path on your own origin.
+
 ## 0.11.1 — 2026-09-03
 
 ### Fixed

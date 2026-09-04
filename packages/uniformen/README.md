@@ -43,6 +43,7 @@ const layout = await fetchUniformenLayout({
     sidebar: true,
     locale: "nb-NO",
     availableLocales: ["nb-NO", "en-GB"],
+    loginUrl: "/auth/login", // where the login link points when there is no token
   },
 });
 
@@ -102,8 +103,14 @@ bar. Set it only if your app has a side navigation to collapse. Uniformen render
 the button; you render the sidebar. See [Sidebar](#sidebar) for the contract.
 
 `params.simple` (`boolean`) hides the app switcher, notifications, the sidebar toggle
-and "Mine tilganger", leaving logo, app name and a login link — or the user's name
-over a logout-only menu. Overrides `params.sidebar`. Footer unchanged.
+and "Mine tilganger", leaving logo, app name and the login link `params.loginUrl` asks
+for — or the user's name over a logout-only menu. Overrides `params.sidebar`. Footer
+unchanged.
+
+`params.loginUrl` (`string`) is where the top bar's "Logg inn" link points on a
+render with no `token`. Omitted renders no login link. A path on your own origin —
+`/auth/login`; an absolute URL, `//host` or `javascript:` is a `400`, so the call
+returns `null`.
 
 `params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) is the
 language of the header and footer. App names and environment labels are untranslated.
@@ -274,9 +281,9 @@ pick your way out of.
 - a signed-in bar has it as a "Språk / Language" section of the user menu, above
   the way out. `params.simple` keeps it there, unlike the links it drops;
 - the anonymous bar, which has no menu to hold it, has it as a control of its own,
-  left of the login link, naming the current language beside a globe. Under the
-  mobile breakpoint the label goes and the globe keeps an `aria-label` naming the
-  language, like the bar's other controls.
+  left of the login link where there is one, naming the current language beside a
+  globe. Under the mobile breakpoint the label goes and the globe keeps an
+  `aria-label` naming the language, like the bar's other controls.
 
 List only the tags your own app translates: Uniformen renders three, and offering a
 language your pages don't have is worse than not offering it. Order is yours. A
