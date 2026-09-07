@@ -62,7 +62,7 @@ jobs:
 
   helm-deploy-dev:
     needs: [docker-push]
-    uses: entur/gha-helm/.github/workflows/deploy.yml@v1
+    uses: entur/gha-helm/.github/workflows/deploy.yml@v2
     with:
       environment: dev
       namespace: uniformen
@@ -70,7 +70,7 @@ jobs:
 
   helm-deploy-tst:
     needs: [docker-push]
-    uses: entur/gha-helm/.github/workflows/deploy.yml@v1
+    uses: entur/gha-helm/.github/workflows/deploy.yml@v2
     with:
       environment: tst
       namespace: uniformen
@@ -88,7 +88,7 @@ jobs:
 
   helm-deploy-prd:
     needs: [approval-step, docker-push]
-    uses: entur/gha-helm/.github/workflows/deploy.yml@v1
+    uses: entur/gha-helm/.github/workflows/deploy.yml@v2
     with:
       environment: prd
       namespace: uniformen
