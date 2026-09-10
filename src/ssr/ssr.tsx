@@ -9,6 +9,7 @@ import { Footer } from "./Footer";
 import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
 import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenHeadScript";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
+import { ssrRequestMetric } from "../metrics";
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
@@ -78,7 +79,9 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       payload?.sub && token && tenant
         ? await userInfoService.getUserInfo(tenant, token, payload.sub)
         : undefined;
-    const navProps = topNavigationProps(ctx.req.valid("query"));
+
+    const query = ctx.req.valid("query");
+    const navProps = topNavigationProps(query);
     // Only authenticated users get a menu; a nameless profile still shows a
     // placeholder, but anonymous/failed lookups render an empty slot. The email is
     // the menu's second line, and only when there is a name for it to sit under —
@@ -89,6 +92,12 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
           email: info.name ? info.email : undefined,
         }
       : undefined;
+
+    ssrRequestMetric.inc({
+      consumer_app: query?.app ?? "none",
+      locale: query?.locale,
+      authenticated: String(!!info),
+    });
 
     // Who is signed in is in the body, so an authenticated render is nobody's to
     // store: the bar names the user. Anything carrying an `Authorization` header

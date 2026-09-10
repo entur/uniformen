@@ -1,9 +1,9 @@
-import { prometheus } from "@hono/prometheus";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { serveStatic } from "hono/bun";
 import { beginShutdown, isReady } from "./lifecycle";
 import { previewRoutes } from "./ssr/preview";
 import { uniformenSsrRoutes } from "./ssr/ssr";
+import { printMetrics, metricsRoute } from "./metrics";
 
 export const app = new OpenAPIHono();
 
@@ -23,8 +23,7 @@ const SHUTDOWN_DRAIN_MS = 5_000;
 const SHUTDOWN_STOP_MS = 10_000;
 
 // Prometheus metrics
-const { printMetrics, registerMetrics } = prometheus();
-app.use("*", registerMetrics);
+app.use("*", metricsRoute);
 app.get("/actuator/prometheus", printMetrics);
 
 // Health checks. Liveness is "this process is alive"; readiness is "send me
