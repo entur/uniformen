@@ -1,5 +1,15 @@
 {
   "name": "uniformen",
+  "private": true,
+  "description": "Header and footer for Entur",
+  "homepage": "https://github.com/entur/uniformen",
+  "bugs": "https://github.com/entur/uniformen/issues",
+  "license": "EUPL-1.2",
+  "author": "Entur AS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/entur/uniformen.git"
+  },
   "scripts": {
     "test": "bun test ./src",
     "dev": "bun run --hot src/index.ts",

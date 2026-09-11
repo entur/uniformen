@@ -1,0 +1,76 @@
+# Uniformen
+
+TypeScript service on Bun and Hono that server-renders the header and footer every
+Entur B2B application embeds, plus the `@entur/uniformen` client package that fetches
+and mounts them.
+
+## Entur Standards
+
+Read and follow the Entur platform standards at:
+https://github.com/entur/ai/blob/main/AGENTS.md
+
+## Project-Specific
+
+- App ID: `uniformen`
+- Kubernetes namespace: `uniformen`
+- GCP projects: `ent-uniformen-dev`, `ent-uniformen-tst`, `ent-uniformen-prd`
+- Owner: `@entur/team-portal`
+- Licence: EUPL-1.2 — this repository is public. Do not add code, assets, or
+  configuration that cannot be published under it.
+- Public to read, closed to outside contribution: pull requests are accepted from
+  Entur teams only. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Commands
+
+| Task | Command |
+|------|---------|
+| Install | `bun install` |
+| Run locally | `bun run dev` (http://localhost:4123) |
+| Types | `bun run tsc` |
+| Lint | `bun run lint` |
+| Format | `bun run fmt` / `bun run fmt:check` |
+| Test | `bun run test` |
+
+The client package in `packages/uniformen` has the same scripts, run from that
+directory.
+
+## Layout
+
+| Path | What it holds |
+|------|---------------|
+| `src/ssr/` | Server-side rendering of the bar and footer, and the preview page |
+| `src/components/` | The bar's pieces, their browser-side handlers, and the application registry |
+| `src/auth/` | Auth0 JWT validation and user-info lookup |
+| `packages/uniformen/` | The published client package, versioned separately |
+| `skills/entur-uniformen/` | Agent skill shipped through the Entur plugin marketplace |
+
+## Conventions
+
+- Commit subjects carry the Jira key where there is one, then the description in the
+  imperative: `ETU-76720 add new param loginUrl which renders the "Logg inn" button`.
+- Dependencies are pinned exactly; `bunfig.toml` also refuses any package version
+  published less than three days ago. Do not loosen either.
+- User-visible render changes go in `CHANGELOG.md`; client library API changes go in
+  `packages/uniformen/CHANGELOG.md`.
+- A new or changed query parameter must land in three places: the handler, the README
+  parameter table, and the preview page's controls.
+- Applications in `src/components/portalApplications.ts` are declared in the order the
+  switcher lists them — alphabetical by Norwegian collation, Ø last.
+
+## Critical Rules
+
+- Everything committed here is world-readable, including commit messages and git
+  history. Do **not** write internal-only material into the repository: Confluence or
+  Jira links, internal runbooks, customer names, or anything about Entur systems a
+  reader outside Entur should not have. A Jira key in a commit subject is fine; the
+  ticket's contents are not.
+- Do **not** commit secrets. Runtime secrets come from Secret Manager via the Helm
+  chart; `.env` is git-ignored and `.env.example` holds only public OIDC endpoints.
+- Do **not** add third-party font, image, or icon assets. Licensing of bundled assets
+  is the open-sourcing constraint for this repository.
+- The `/ssr` endpoint is public and treats its token as optional enrichment — an
+  invalid or missing token renders the anonymous bar rather than failing. Keep that
+  behaviour; do not turn it into an authorization check.
+- `loginUrl` accepts only a path on the app's own origin. Absolute URLs, `//host`, and
+  `javascript:` are rejected with a 400. This is open-redirect protection, keep it
+  strict.

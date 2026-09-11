@@ -83,3 +83,14 @@ page that it is not production, and production has never had one.
 
 The gate reads the token's profile, so a failed userinfo lookup renders the bar
 without the badge rather than with it.
+
+## Contributing
+
+Maintained by Team Portal. Pull requests are accepted from Entur teams only —
+[CONTRIBUTING.md](./CONTRIBUTING.md) covers the setup, the checks CI runs, and the
+conventions for commits, changelogs and new query parameters. Issues are open to
+everyone. Security problems go to [SECURITY.md](./SECURITY.md), not to an issue.
+
+## Licence
+
+[EUPL-1.2](./LICENSE). © Entur AS.
