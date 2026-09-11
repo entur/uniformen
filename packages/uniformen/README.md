@@ -339,7 +339,28 @@ bun run build
 
 ## Publishing
 
-```sh
-bun run build
-bun publish
+Releases are cut by release-please, never by hand — do not run `bun publish` or
+`npm publish` locally, and do not edit `version` in `package.json` or
+[CHANGELOG.md](CHANGELOG.md).
+
+On every push to `main`, release-please collects the commits touching
+`packages/uniformen/` and keeps a release pull request open with the next version and
+the generated changelog. Merging it tags the release and the
+[Release workflow](../../.github/workflows/release.yml) builds, tests and publishes
+`@entur/uniformen` to npm.
+
+The version comes from the commit subjects, so they use
+[Conventional Commits](https://www.conventionalcommits.org/):
+
+```text
+feat(uniformen): add loginUrl to the render options
 ```
+
+| Type                                                  | Effect on the published version |
+| ----------------------------------------------------- | ------------------------------- |
+| `feat`                                                | Minor bump                      |
+| `fix`                                                 | Patch bump                      |
+| `feat!`, or any type with a `BREAKING CHANGE:` footer | Major bump                      |
+| `chore`, `docs`, `refactor`, `test`, `build`, `ci`    | No release                      |
+
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for the full commit and release rules.

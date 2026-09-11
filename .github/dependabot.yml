@@ -9,6 +9,8 @@ updates:
   # Major updates will not be grouped together for github-actions updates
   - package-ecosystem: github-actions
     directory: "/"
+    commit-message:
+      prefix: "chore"
     schedule:
       # Every other monday at 08:00
       interval: "cron"
@@ -26,6 +28,8 @@ updates:
   # Group patch and minor, but major updates will not be grouped together for bun updates
   - package-ecosystem: "bun"
     directory: "/"
+    commit-message:
+      prefix: "chore"
     registries:
       - jfrog-artifactory
     schedule:
@@ -46,6 +50,8 @@ updates:
   # Major updates will not be grouped together for docker updates
   - package-ecosystem: "docker"
     directory: "/"
+    commit-message:
+      prefix: "chore"
     schedule:
       # Every other monday at 08:00
       interval: "cron"
