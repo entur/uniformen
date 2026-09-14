@@ -7,7 +7,7 @@ on:
 
 jobs:
   release-please:
-    uses: entur/gha-meta/.github/workflows/release.yml@68acfcc7fcd7213b8a41292998b0e2580a978749 # v1
+    uses: entur/gha-meta/.github/workflows/release.yml@c14eef7f4d90ed1be2c1df4dfb0927322bcbb3ba # v1
     with:
       release_type: manifest
     permissions:
