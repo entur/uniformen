@@ -57,9 +57,13 @@ directory.
   Put the Jira key in the body, not the subject. `Verify PR` enforces this on any pull
   request touching the package; pull requests that leave the package alone are not
   checked.
-- Keep a pull request on one side of that line. A pull request touching both the
-  service and the package is merged under a single subject, so a `feat(uniformen):`
-  title releases the package even when most of the diff is service code.
+- Keep a pull request on one side of that line. On a squash merge the pull request
+  lands under a single subject, so a `feat(uniformen):` title releases the package
+  even when most of the diff is service code. Two traps: a **single-commit** squash
+  uses the *commit* subject rather than the pull request title, and the squash body
+  carries every intermediate commit message — so a stray `BREAKING CHANGE:` footer
+  cuts a major release. Merge and rebase are also enabled, and there each commit
+  subject lands as it is.
 - Dependencies are pinned exactly; `bunfig.toml` also refuses any package version
   published less than three days ago. Do not loosen either.
 - User-visible render changes go in `CHANGELOG.md`, written by hand and dated.

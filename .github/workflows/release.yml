@@ -41,5 +41,11 @@ jobs:
         run: bun run test
       - name: Build
         run: bun run build
-      - name: Publish
-        run: npm publish --provenance --access public
+      - name: Publish #TODO: Remove publishing without provenance when we make the repository public
+        run: |
+          if [ "${{ github.event.repository.private }}" = "false" ]; then
+            npm publish --provenance --access public
+          else
+            echo "::warning::repository is private — publishing without provenance"
+            npm publish --access public
+          fi

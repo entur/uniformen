@@ -21,8 +21,12 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if gh api --paginate "repos/$GH_REPO/pulls/$PR_NUMBER/files" --jq '.[].filename' \
-            | grep -q '^packages/uniformen/'; then
+          set -euo pipefail
+          files=$(gh api --paginate "repos/$GH_REPO/pulls/$PR_NUMBER/files" --jq '.[].filename') || {
+            echo "::error::failed to list files for PR #$PR_NUMBER"
+            exit 1
+          }
+          if grep -q '^packages/uniformen/' <<<"$files"; then
             echo "package=true" >> "$GITHUB_OUTPUT"
           else
             echo "package=false" >> "$GITHUB_OUTPUT"
