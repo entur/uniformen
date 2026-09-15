@@ -89,6 +89,6 @@ directory.
 - The `/ssr` endpoint is public and treats its token as optional enrichment — an
   invalid or missing token renders the anonymous bar rather than failing. Keep that
   behaviour; do not turn it into an authorization check.
-- `loginUrl` accepts only a path on the app's own origin. Absolute URLs, `//host`, and
-  `javascript:` are rejected with a 400. This is open-redirect protection, keep it
-  strict.
+- `loginUrl` and `logoutUrl` accept only a path on the app's own origin. Absolute
+  URLs, `//host`, and `javascript:` are rejected with a 400. This is open-redirect
+  protection, keep it strict.

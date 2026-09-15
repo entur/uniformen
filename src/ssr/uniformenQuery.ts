@@ -28,6 +28,14 @@ export const uniformenQuerySchema = z
       .max(512)
       .regex(/^\/(?![/\\])[^\s"'<>]*$/, "loginUrl must be a path, e.g. /auth/login")
       .optional(),
+    // Where the signed-in user's menu leads out; absent renders no logout row. Same
+    // path-only rule as `loginUrl`, for the same reason: the session belongs to the
+    // consuming app, and a URL is not allowed to aim the way out off it.
+    logoutUrl: z
+      .string()
+      .max(512)
+      .regex(/^\/(?![/\\])[^\s"'<>]*$/, "logoutUrl must be a path, e.g. /auth/logout")
+      .optional(),
     // Defaulted, not optional: components take it required, no per-component fallback.
     locale: z.enum(LOCALES).default("nb-NO"),
     // The languages the consuming app offers, as a repeated key
@@ -75,6 +83,7 @@ export function topNavigationProps({
   locale,
   availableLocales,
   loginUrl,
+  logoutUrl,
 }: UniformenQuery) {
   const simpleMode = simple === "true";
   return {
@@ -87,5 +96,6 @@ export function topNavigationProps({
     locale,
     availableLocales,
     loginUrl,
+    logoutUrl,
   };
 }

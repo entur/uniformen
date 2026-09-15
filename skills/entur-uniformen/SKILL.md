@@ -57,14 +57,20 @@ import { fetchUniformenLayout } from "@entur/uniformen";
 const layout = await fetchUniformenLayout({
   token,                       // optional; the user's Auth0 access token
   environment: "dev",          // "local" | "dev" | "staging" | "production" (default)
-  params: { app: "partner", sidebar: true, locale: "nb-NO", loginUrl: "/auth/login" },
+  params: {
+    app: "partner",
+    sidebar: true,
+    locale: "nb-NO",
+    loginUrl: "/auth/login",
+    logoutUrl: "/auth/logout",
+  },
   timeoutMs: 5000,             // default
 });
 ```
 
 Call this where the document is rendered, on the server. The layout is part of the page's HTML from the first byte, not something the client fetches afterwards.
 
-`token` is what puts the user in the bar. Without it the layout still renders — an anonymous bar, no app switcher and no user menu — so a page rendered before sign-in passes nothing and is not a special case. That bar gets a "Logg inn" link only if you send `params.loginUrl`, a path on your own origin: the service does not guess your login route, and anything but a path is a `400`.
+`token` is what puts the user in the bar. Without it the layout still renders — an anonymous bar, no app switcher and no user menu — so a page rendered before sign-in passes nothing and is not a special case. That bar gets a "Logg inn" link only if you send `params.loginUrl`, a path on your own origin: the service does not guess your login route, and anything but a path is a `400`. The signed-in user menu's "Logg ut" row works the same way, from `params.logoutUrl` — the session is yours to end, so the route is yours to name.
 
 `environment` names which Uniformen the layout comes from, and it must match the environment your app is running in: the app switcher links to the environment you fetched from, so a production layout in dev hands your users production instances of every other portal application.
 

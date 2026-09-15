@@ -74,11 +74,19 @@ export type FetchUniformenParams = {
   loginUrl?: string;
 
   /**
+   * Where the top bar's "Logg ut" row points, in the user menu a `token` renders.
+   * Omitted renders no logout row — signing out ends your session, not ours, so the
+   * route is yours to name. A path on your own origin: an absolute URL, `//host` or
+   * `javascript:` is a `400`, so the call returns `null`.
+   */
+  logoutUrl?: string;
+
+  /**
    * Barebones top bar: hides the app switcher, notifications, the sidebar toggle
    * (whatever `sidebar` says) and "Mine tilganger". Left: logo and app name, plus the
    * environment badge for the users who get one at all; right: the `loginUrl` login
-   * link, or the user's name over a logout-only menu. For login, error and terms
-   * pages. Per page, not per app.
+   * link, or the user's name over a menu of the `logoutUrl` row alone. For login,
+   * error and terms pages. Per page, not per app.
    */
   simple?: boolean;
 };

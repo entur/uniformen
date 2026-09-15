@@ -44,6 +44,7 @@ const layout = await fetchUniformenLayout({
     locale: "nb-NO",
     availableLocales: ["nb-NO", "en-GB"],
     loginUrl: "/auth/login", // where the login link points when there is no token
+    logoutUrl: "/auth/logout", // where the user menu's logout row points
   },
 });
 
@@ -104,13 +105,14 @@ the button; you render the sidebar. See [Sidebar](#sidebar) for the contract.
 
 `params.simple` (`boolean`) hides the app switcher, notifications, the sidebar toggle
 and "Mine tilganger", leaving logo, app name and the login link `params.loginUrl` asks
-for — or the user's name over a logout-only menu. Overrides `params.sidebar`. Footer
-unchanged.
+for — or the user's name over a menu of the `params.logoutUrl` row alone. Overrides
+`params.sidebar`. Footer unchanged.
 
 `params.loginUrl` (`string`) is where the top bar's "Logg inn" link points on a
-render with no `token`. Omitted renders no login link. A path on your own origin —
-`/auth/login`; an absolute URL, `//host` or `javascript:` is a `400`, so the call
-returns `null`.
+render with no `token`. Omitted renders no login link. Must be a path on your own origin.
+
+`params.logoutUrl` (`string`) is where the user menu's "Logg ut" row points, on a
+render with a `token`. Omitted renders no logout row. Must be a path on your own origin.
 
 `params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) is the
 language of the header and footer. App names and environment labels are untranslated.

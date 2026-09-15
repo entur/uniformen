@@ -36,11 +36,14 @@ export function TopNavigation({
   locale,
   availableLocales,
   loginUrl,
+  logoutUrl,
 }: {
   /** The signed-in user. Absent renders the anonymous bar. */
   user?: UserMenuUser;
   /** Where the login link goes, on the anonymous bar. Absent renders no link. */
   loginUrl?: string;
+  /** Where the user menu's logout row goes. Absent renders no row. */
+  logoutUrl?: string;
   /**
    * Whether that user is in the Entur organisation. The environment chip, and the
    * switcher it becomes, is theirs alone: which environment a page is served from
@@ -59,8 +62,9 @@ export function TopNavigation({
   sidebar?: boolean;
   /**
    * Barebones bar: hides the app switcher, notifications and the sidebar toggle, and
-   * thins the user menu to logout. Left side untouched — the env chip comes and goes
-   * with `isEnturUser`, not with this.
+   * thins the user menu to the identity block and whatever `logoutUrl` and
+   * `availableLocales` add. Left side untouched — the env chip comes and goes with
+   * `isEnturUser`, not with this.
    */
   simple?: boolean;
   /** The language every string in the bar is rendered in. */
@@ -99,6 +103,7 @@ export function TopNavigation({
                 simple={simple}
                 locale={locale}
                 availableLocales={availableLocales}
+                logoutUrl={logoutUrl}
               />
             </>
           )}

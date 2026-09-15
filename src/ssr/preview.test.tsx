@@ -48,7 +48,7 @@ async function sha256(source: string): Promise<string> {
 describe("preview page debug user", () => {
   test("debugUser renders the signed-in bar, with its menu", async () => {
     const { res, html, chrome } = await preview(
-      "?debugUser=Navn+Navnesen&debugEmail=navn.navnesen@entur.org",
+      "?debugUser=Navn+Navnesen&debugEmail=navn.navnesen@entur.org&logoutUrl=/auth/logout",
     );
     expect(res.status).toBe(200);
     expect(html).toContain('id="uniformen-user-menu-panel"');
@@ -228,7 +228,7 @@ describe("preview page simple", () => {
     expect(anonymous.html).toContain('href="/auth/login"');
     expect(anonymous.html).not.toContain('aria-label="Velg applikasjon"');
 
-    const signedIn = await preview("?simple=true&debugUser=Navn+Navnesen");
+    const signedIn = await preview("?simple=true&debugUser=Navn+Navnesen&logoutUrl=/auth/logout");
     expect(signedIn.html).toContain("Navn Navnesen");
     expect(signedIn.html).toContain('href="/auth/logout"');
     expect(signedIn.html).not.toContain("Mine tilganger");
@@ -343,6 +343,7 @@ describe("preview page controls", () => {
     expect(where("debugEmail")).toBe("right");
     expect(where("availableLocales")).toBe("right");
     expect(where("loginUrl")).toBe("right");
+    expect(where("logoutUrl")).toBe("right");
     expect(where("simple")).toBe("whole");
     expect(where("locale")).toBe("whole");
   });
@@ -373,6 +374,14 @@ describe("preview page controls", () => {
     const { html } = await preview("?loginUrl=/oauth/start");
     expect(html).toContain('href="/oauth/start"');
     expect(html).toContain(">/?loginUrl=%2Foauth%2Fstart&amp;locale=nb-NO<");
+  });
+
+  test("logoutUrl reaches the menu, and the URL it was set from", async () => {
+    const { html } = await preview("?debugUser=Navn+Navnesen&logoutUrl=/oauth/end");
+    expect(html).toContain('href="/oauth/end"');
+    expect(html).toContain(
+      ">/?logoutUrl=%2Foauth%2Fend&amp;locale=nb-NO&amp;debugUser=Navn+Navnesen<",
+    );
   });
 
   test("the copy button copies the printed URL, address bar or not", async () => {
@@ -444,7 +453,7 @@ describe("preview page locale", () => {
   });
 
   test("the locale reaches the chrome the page renders, header and footer both", async () => {
-    const { html } = await preview("?locale=en-GB&debugUser=Navn+Navnesen");
+    const { html } = await preview("?locale=en-GB&debugUser=Navn+Navnesen&logoutUrl=/auth/logout");
     expect(html).toContain(">Log out<");
     expect(html).toContain(">Information<");
   });

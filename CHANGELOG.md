@@ -9,6 +9,15 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-09-14
+
+### Changed
+
+- The user menu's "Logg ut" row points where the new `logoutUrl` parameter says, and
+  renders only when it is sent. There is no hardcoded `/auth/logout` any more. It
+  takes a path on the consumer's own origin only, like `loginUrl`. An absolute URL,
+  `//host` or `javascript:` is not allowed.
+
 ## 2026-09-04
 
 ### Changed

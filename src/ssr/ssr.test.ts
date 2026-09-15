@@ -144,7 +144,9 @@ describe("/ssr user menu", () => {
     // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime,
     // so a sub another test has already fetched would serve that test's profile.
     const token = await signInternalToken({ sub: "auth0|withemail" });
-    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    const body = await (
+      await app.request("/ssr?logoutUrl=/auth/logout", { headers: bearer(token) })
+    ).json();
     expect(body.headerHtml).toContain('id="uniformen-user-menu-panel"');
     expect(body.headerHtml).toContain("hallstein@entur.org");
     // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
@@ -227,6 +229,63 @@ describe("/ssr login link", () => {
       await app.request(`/ssr?loginUrl=${encodeURIComponent("/auth/login?returnTo=/kort#top")}`)
     ).json();
     expect(body.headerHtml).toContain('href="/auth/login?returnTo=/kort#top"');
+  });
+});
+
+describe("/ssr logout link", () => {
+  const authed = async (query = "") => {
+    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime,
+    // so a sub another test has already fetched would serve that test's profile.
+    const token = await signInternalToken({ sub: "auth0|logout" });
+    return app.request(`/ssr${query}`, { headers: bearer(token) });
+  };
+
+  test("logoutUrl renders the row, pointing where it says", async () => {
+    const res = await authed("?logoutUrl=/oauth/end");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain(
+      'class="uniformen-user-menu__item uniformen-user-menu__logout"',
+    );
+    expect(body.headerHtml).toContain('href="/oauth/end"');
+    expect(body.headerHtml).toContain("Logg ut");
+  });
+
+  test("no logoutUrl, no row: the rest of the menu is untouched", async () => {
+    const body = await (await authed()).json();
+    expect(body.headerHtml).not.toContain("uniformen-user-menu__logout");
+    expect(body.headerHtml).not.toContain("Logg ut");
+    expect(body.headerHtml).toContain('id="uniformen-user-menu-panel"');
+    expect(body.headerHtml).toContain("Mine tilganger");
+  });
+
+  test("anonymous request renders no menu, logoutUrl or not", async () => {
+    const body = await (await app.request("/ssr?logoutUrl=/auth/logout")).json();
+    expect(body.headerHtml).not.toContain("uniformen-user-menu");
+    expect(body.headerHtml).not.toContain('href="/auth/logout"');
+  });
+
+  test("only a path on the consumer's own origin, the near misses included", async () => {
+    for (const value of [
+      "https://phish.example/logout",
+      "//phish.example/logout",
+      "/\\phish.example/logout",
+      "javascript:alert(1)",
+      "auth/logout",
+      "",
+      "/auth/logout onclick=x",
+    ]) {
+      const res = await app.request(`/ssr?logoutUrl=${encodeURIComponent(value)}`);
+      expect(res.status).toBe(400);
+    }
+  });
+
+  test("a path keeps its query and fragment", async () => {
+    const body = await (
+      await authed(`?logoutUrl=${encodeURIComponent("/auth/logout?returnTo=/kort#top")}`)
+    ).json();
+    expect(body.headerHtml).toContain('href="/auth/logout?returnTo=/kort#top"');
   });
 });
 
@@ -487,7 +546,7 @@ describe("/ssr simple query param", () => {
   });
 
   test("the signed-in bar names the user, with a menu that only logs out", async () => {
-    const body = await authed("?simple=true");
+    const body = await authed("?simple=true&logoutUrl=/auth/logout");
     expect(body.headerHtml).toContain("Hallstein Bronskimlet");
     expect(body.headerHtml).toContain('href="/auth/logout"');
     expect(body.headerHtml).toContain("data-uniformen-user-menu-toggle");
@@ -764,7 +823,9 @@ describe("/ssr locale", () => {
   test("the signed-in half is translated too", async () => {
     userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
-    const body = await (await app.request("/ssr?locale=en-GB", { headers: bearer(token) })).json();
+    const body = await (
+      await app.request("/ssr?locale=en-GB&logoutUrl=/auth/logout", { headers: bearer(token) })
+    ).json();
     expect(body.headerHtml).toContain('aria-label="Choose application"');
     expect((await signedIn("auth0|nynorsk", "?locale=nn-NO")).headerHtml).toContain(
       'aria-label="Vel applikasjon"',
