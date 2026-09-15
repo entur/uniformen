@@ -13,11 +13,19 @@ const ENVIRONMENTS: Environment[] = ["local", "dev", "staging", "production"];
 const hrefs = (html: string): string[] =>
   [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] as string);
 
+// The way out is the consuming app's to name, so a menu with a row in it is a menu
+// that was given one. Rendered here with the path a consumer would send.
+const LOGOUT_URL = "/auth/logout";
+
 const render = (
   user: { name: string; email?: string },
   environment?: Environment,
   locale: Locale = "nb-NO",
-) => renderComponentToString(<UserMenu user={user} environment={environment} locale={locale} />);
+  logoutUrl: string = LOGOUT_URL,
+) =>
+  renderComponentToString(
+    <UserMenu user={user} environment={environment} locale={locale} logoutUrl={logoutUrl} />,
+  );
 
 describe("user menu rendering", () => {
   test("names the user on the chip and in the panel", async () => {
@@ -59,14 +67,24 @@ describe("user menu rendering", () => {
     }
   });
 
-  test("logging out is relative in every environment, like logging in", async () => {
-    // The session belongs to the consuming app, so the link has to resolve
-    // against its host rather than ours or Partner's.
+  test("the way out points where logoutUrl says, in every environment", async () => {
+    // Unlike the account link, it is never ours or Partner's: the session belongs to
+    // the consuming app, so the path it sent is the path rendered.
     for (const env of ENVIRONMENTS) {
-      const html = await render({ name: "Navn Navnesen" }, env);
-      expect(html).toContain('href="/auth/logout"');
+      const html = await render({ name: "Navn Navnesen" }, env, "nb-NO", "/oauth/end");
+      expect(html).toContain('href="/oauth/end"');
       expect(html).toContain(">Logg ut<");
     }
+  });
+
+  test("no logoutUrl, no way out: the menu is the rest of itself", async () => {
+    const html = await renderComponentToString(
+      <UserMenu user={{ name: "Navn Navnesen" }} locale="nb-NO" />,
+    );
+    expect(html).not.toContain("uniformen-user-menu__logout");
+    expect(html).not.toContain("Logg ut");
+    expect(html).toContain("Mine tilganger");
+    expect(html).toContain('id="uniformen-user-menu-panel"');
   });
 
   test("a name long enough to break the layout is still rendered whole", async () => {
@@ -100,7 +118,7 @@ describe("user menu rendering", () => {
 
 describe("simple user menu", () => {
   const renderSimple = (user: { name: string; email?: string }) =>
-    renderComponentToString(<UserMenu user={user} simple locale="nb-NO" />);
+    renderComponentToString(<UserMenu user={user} simple locale="nb-NO" logoutUrl={LOGOUT_URL} />);
 
   test("the way out is the only row", async () => {
     const html = await renderSimple({ name: "Navn Navnesen" });
@@ -121,7 +139,9 @@ describe("simple user menu", () => {
     const html = await renderSimple({ name: "Navn Navnesen" });
     expect(html).toContain("uniformen-user-menu__panel--simple");
     expect(
-      await renderComponentToString(<UserMenu user={{ name: "N" }} locale="nb-NO" />),
+      await renderComponentToString(
+        <UserMenu user={{ name: "N" }} locale="nb-NO" logoutUrl={LOGOUT_URL} />,
+      ),
     ).not.toContain("uniformen-user-menu__panel--simple");
   });
 

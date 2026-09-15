@@ -35,8 +35,8 @@ const MY_PROFILE_PATH = "/permission-admin/my-profile";
  * form of it, the login link is that.
  *
  * The account link is absolute and per environment, like the app switcher's:
- * a dev header hands its user dev Partner. Logging out is relative, like logging
- * in — the session belongs to the consuming app, not to us.
+ * a dev header hands its user dev Partner. The way out is the consuming app's to
+ * name, like the way in — the session is theirs, not ours.
  *
  * The environment defaults to the one this instance serves; the prop exists so
  * every environment's links can be exercised from a test.
@@ -47,6 +47,7 @@ export function UserMenu({
   simple,
   locale,
   availableLocales,
+  logoutUrl,
 }: {
   user: UserMenuUser;
   environment?: Environment;
@@ -62,6 +63,8 @@ export function UserMenu({
    * app that translates nothing must not offer to switch.
    */
   availableLocales?: Locale[];
+  /** Where the logout row points. Absent renders no logout row. */
+  logoutUrl?: string;
 }) {
   const txt = texts[locale];
   return (
@@ -117,9 +120,11 @@ export function UserMenu({
           <LocaleMenu availableLocales={availableLocales} locale={locale} />
         )}
         {/* Its own group, below a divider: leaving is not one more place to go. */}
-        <a class="uniformen-user-menu__item uniformen-user-menu__logout" href="/auth/logout">
-          {txt.loggUt}
-        </a>
+        {logoutUrl && (
+          <a class="uniformen-user-menu__item uniformen-user-menu__logout" href={logoutUrl}>
+            {txt.loggUt}
+          </a>
+        )}
       </div>
     </div>
   );

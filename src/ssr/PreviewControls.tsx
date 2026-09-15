@@ -20,6 +20,7 @@ export function previewUrl(
   if (query.sidebar === "true") params.set("sidebar", "true");
   if (query.simple === "true") params.set("simple", "true");
   if (query.loginUrl) params.set("loginUrl", query.loginUrl);
+  if (query.logoutUrl) params.set("logoutUrl", query.logoutUrl);
   params.set("locale", query.locale);
   for (const locale of query.availableLocales ?? []) params.append("availableLocales", locale);
   if (environment !== "production") {
@@ -180,6 +181,17 @@ export function PreviewControls({
                 name="loginUrl"
                 value={query.loginUrl}
                 placeholder="/auth/login"
+                maxlength={512}
+              />
+            </Field>
+
+            <Field label="logoutUrl" hint="Hvor «Logg ut» peker. Tom gir ingen rad.">
+              <input
+                class="preview-controls__text"
+                type="text"
+                name="logoutUrl"
+                value={query.logoutUrl}
+                placeholder="/auth/logout"
                 maxlength={512}
               />
             </Field>

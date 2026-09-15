@@ -94,6 +94,7 @@ describe("locale menu in the user menu", () => {
         locale="nb-NO"
         availableLocales={availableLocales}
         simple={simple}
+        logoutUrl="/auth/logout"
       />,
     );
 
