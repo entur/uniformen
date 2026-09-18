@@ -1,0 +1,19 @@
+name: "CodeQL"
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/README.md"
+  schedule:
+    - cron: "0 3 * * MON"
+
+jobs:
+  code-scan:
+    name: Code Scan
+    uses: entur/gha-security/.github/workflows/code-scan.yml@aafa20a94ac3b2fbafb2951747b92a570e9e8542 # v2.16.0
+    secrets: inherit

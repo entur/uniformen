@@ -1,0 +1,39 @@
+name: Verify PR
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  changed-paths:
+    name: Detect package changes
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      package: ${{ steps.filter.outputs.package }}
+    steps:
+      - name: Check whether the PR touches packages/uniformen
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          files=$(gh api --paginate "repos/$GH_REPO/pulls/$PR_NUMBER/files" --jq '.[].filename') || {
+            echo "::error::failed to list files for PR #$PR_NUMBER"
+            exit 1
+          }
+          if grep -q '^packages/uniformen/' <<<"$files"; then
+            echo "package=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "package=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    name: Verify PR title
+    needs: [changed-paths]
+    if: ${{ needs.changed-paths.outputs.package == 'true' }}
+    uses: entur/gha-meta/.github/workflows/verify-pr.yml@c14eef7f4d90ed1be2c1df4dfb0927322bcbb3ba # v1

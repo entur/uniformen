@@ -1,0 +1,8 @@
+apiVersion: entur.io/securitytools/v1
+kind: DockerScanConfig
+metadata:
+  id: uniformen
+  name: uniformen
+  owner: team-portal
+spec:
+  inherit: portal-infrastructure

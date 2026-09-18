@@ -1,0 +1,20 @@
+apiVersion: v2
+name: uniformen
+version: "1.0.0"
+appVersion: "1"
+description: Frontend for header and footer
+keywords:
+  - entur
+  - uniformen
+  - header
+  - footer
+home: http://{{ .Release.Name }}{{ .Values.domain }}/
+sources:
+  - https://github.com/entur/uniformen
+maintainers:
+  - name: Team Portal
+    email: TeamPortal@entur.org
+dependencies:
+  - name: common
+    version: 1.21.1
+    repository: "https://entur.github.io/helm-charts"

@@ -1,0 +1,73 @@
+{
+  "name": "@entur/uniformen",
+  "version": "0.13.0",
+  "description": "Header and footer for Entur apps via the Uniformen layout service.",
+  "keywords": [
+    "entur",
+    "footer",
+    "header",
+    "layout",
+    "uniformen"
+  ],
+  "homepage": "https://github.com/entur/uniformen",
+  "bugs": "https://github.com/entur/uniformen/issues",
+  "license": "EUPL-1.2",
+  "author": "Entur AS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/entur/uniformen.git",
+    "directory": "packages/uniformen"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/reactAdapter.js",
+      "types": "./dist/reactAdapter.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "bun run build",
+    "build": "bun run build:js && bun run build:types",
+    "build:js": "bun build src/index.ts src/reactAdapter.tsx --outdir dist --target browser --format esm --external react --external html-react-parser --production",
+    "build:types": "tsc --project tsconfig.build.json",
+    "test": "bun test",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "tsc": "tsc"
+  },
+  "dependencies": {
+    "html-react-parser": "6.1.7"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

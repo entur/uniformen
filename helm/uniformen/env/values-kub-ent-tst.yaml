@@ -1,0 +1,17 @@
+common:
+  env: tst
+  ingress:
+    host: uniformen.staging.entur.no
+  configmap:
+    enabled: true
+    data:
+      ENVIRONMENT: staging
+      LOG_LEVEL: info
+      AUTH0_INTERNAL_AUDIENCE: https://api.staging.entur.io
+      AUTH0_INTERNAL_ISSUER: https://internal.staging.entur.org/
+      AUTH0_INTERNAL_JWKS_URI: https://internal.staging.entur.org/.well-known/jwks.json
+      AUTH0_INTERNAL_USERINFO_URI: https://internal.staging.entur.org/userinfo
+      AUTH0_PARTNER_AUDIENCE: https://api.staging.entur.io,https://portal.staging.entur.org
+      AUTH0_PARTNER_ISSUER: https://partner.staging.entur.org/
+      AUTH0_PARTNER_JWKS_URI: https://partner.staging.entur.org/.well-known/jwks.json
+      AUTH0_PARTNER_USERINFO_URI: https://partner.staging.entur.org/userinfo

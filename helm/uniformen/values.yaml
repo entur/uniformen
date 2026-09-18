@@ -1,0 +1,37 @@
+common:
+  app: uniformen
+  shortname: uniformen
+  team: portal
+  ingress:
+    enabled: true
+    trafficType: public
+  service:
+    internalPort: 4123
+  container:
+    image: <+artifacts.primary.image>
+    # Two everywhere, so a rollout always has somewhere else to send traffic.
+    # `maxReplicas` is also what turns the HPA on outside prd, where the chart enables
+    # it regardless; with it, `replicas` is the autoscaler's floor rather than a fixed
+    # count.
+    replicas: 2
+    maxReplicas: 6
+    cpu: 0.2
+    cpuLimit: 1
+    memory: 150
+    memoryLimit: 150
+    # Scrapes the service port's /actuator/prometheus, which is where the app already
+    # publishes its metrics.
+    prometheus:
+      enabled: true
+    # The defaults are /actuator/health/liveness and /actuator/health/readiness — the
+    # paths the app serves.
+    probes:
+      enabled: true
+  configmap:
+    enabled: true
+    data:
+      TZ: "Europe/Oslo"
+  secrets:
+    auth-credentials:
+      - MNG_AUTH0_INT_CLIENT_ID
+      - MNG_AUTH0_INT_CLIENT_SECRET

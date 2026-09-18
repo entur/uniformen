@@ -1,0 +1,17 @@
+common:
+  env: prd
+  ingress:
+    host: uniformen.entur.no
+  configmap:
+    enabled: true
+    data:
+      ENVIRONMENT: production
+      LOG_LEVEL: info
+      AUTH0_INTERNAL_AUDIENCE: https://api.entur.io
+      AUTH0_INTERNAL_ISSUER: https://internal.entur.org/
+      AUTH0_INTERNAL_JWKS_URI: https://internal.entur.org/.well-known/jwks.json
+      AUTH0_INTERNAL_USERINFO_URI: https://internal.entur.org/userinfo
+      AUTH0_PARTNER_AUDIENCE: https://api.entur.io,https://portal.entur.org
+      AUTH0_PARTNER_ISSUER: https://partner.entur.org/
+      AUTH0_PARTNER_JWKS_URI: https://partner.entur.org/.well-known/jwks.json
+      AUTH0_PARTNER_USERINFO_URI: https://partner.entur.org/userinfo

@@ -1,0 +1,70 @@
+name: PR
+on:
+  pull_request:
+
+jobs:
+  docker-lint:
+    uses: entur/gha-docker/.github/workflows/lint.yml@664fc307771c3dd17d2cc3925ea330d7f0c5f24c # v1.12.0
+
+  helm-lint:
+    uses: entur/gha-helm/.github/workflows/lint.yml@eebe21e7625a695085aefd79f64893a34adc2302 # v2.0.0
+    with:
+      environment: dev
+      chart: helm/uniformen
+
+  build:
+    name: Build app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Type check
+        run: bun run tsc
+      - name: Lint
+        run: bun run lint
+      - name: Format check
+        run: bun run fmt:check
+      - name: Test
+        run: bun run test
+      - name: Audit (fail on critical)
+        run: bun audit --audit-level=critical
+
+  build-package:
+    name: Build uniformen package
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/uniformen
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Type check
+        run: bun run tsc
+      - name: Lint
+        run: bun run lint
+      - name: Format check
+        run: bun run fmt:check
+      - name: Test
+        run: bun run test
+      - name: Build
+        run: bun run build
+
+  docker-build:
+    uses: entur/gha-docker/.github/workflows/build.yml@664fc307771c3dd17d2cc3925ea330d7f0c5f24c # v1.12.0
+
+  docker-scan:
+    name: Docker Scan
+    needs: [docker-build]
+    uses: entur/gha-security/.github/workflows/docker-scan.yml@aafa20a94ac3b2fbafb2951747b92a570e9e8542 # v2.16.0
+    with:
+      image_artifact: ${{ needs.docker-build.outputs.image_artifact }}
+    secrets:
+      external_repository_token: ${{ secrets.EXTERNAL_REPOSITORY_TOKEN }}
