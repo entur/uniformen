@@ -9,6 +9,15 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-09-21
+
+### Fixed
+
+- The language options carry their roving `tabindex` as rendered — `0` on the current
+  language, `-1` on the rest — instead of getting it from the inline script after
+  parse. A React app hydrating the header found three attributes its own tree did not
+  have and logged a hydration mismatch on every load. Keyboard behaviour is unchanged.
+
 ## 2026-09-14
 
 ### Changed

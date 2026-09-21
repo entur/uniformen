@@ -185,6 +185,7 @@ function install({
   toggle: withToggle = true,
   panel: withPanel = true,
   group: withGroup = "none",
+  roved = false,
   beforeOpen,
 }: {
   location?: { pathname: string; search: string; hash: string };
@@ -195,6 +196,8 @@ function install({
    * rows (the user menu), or nothing but the group (the bar's language chip).
    */
   group?: "none" | "section" | "only";
+  /** The group as the server renders it: the stop already on the checked option. */
+  roved?: boolean;
   beforeOpen?: (panel: HTMLElement) => void;
 } = {}) {
   const toggle = withToggle ? new FakeToggle() : null;
@@ -216,6 +219,9 @@ function install({
       : withGroup === "only"
         ? options
         : [new FakeItem("first"), new FakeItem("second"), new FakeItem("third")];
+  if (roved)
+    for (const option of options)
+      option.setAttribute("tabindex", option.getAttribute("aria-checked") === "true" ? "0" : "-1");
   const group = withGroup === "none" ? null : new FakeGroup(options);
   const panel = withPanel ? new FakePanel(links, items, group) : null;
   const doc = new FakeDocument(toggle, panel);
@@ -465,6 +471,12 @@ describe("panelToggle roving tabindex", () => {
     dom.escape();
     dom.toggleClick();
     expect(dom.active()).toBe("nn-NO");
+    expect(dom.tabstops()).toEqual(["-1", "0", "-1"]);
+  });
+
+  test("a group that arrives roved is left holding the values it came with", () => {
+    // Markup an app may be hydrating: a value rewritten here is one its tree lacks.
+    const dom = install({ group: "section", roved: true });
     expect(dom.tabstops()).toEqual(["-1", "0", "-1"]);
   });
 
