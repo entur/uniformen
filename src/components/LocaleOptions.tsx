@@ -12,6 +12,11 @@ import { LOCALE_NAMES, type Locale } from "../types";
  *
  * `lang` on each option is what makes a screen reader pronounce "English" as English
  * inside a Norwegian document, and it is why the labels are not translated.
+ *
+ * The group is one tab stop, not one per option — what `role="menu"` promises — so
+ * exactly one option carries `tabindex="0"`: the checked one. Rendered rather than
+ * scripted, so the arrows work from the first keypress, and an app hydrating this
+ * markup into its own tree finds the attributes it rendered.
  */
 export function LocaleOptions({
   availableLocales,
@@ -37,6 +42,7 @@ export function LocaleOptions({
           lang={option}
           class="uniformen-user-menu__item uniformen-locale-menu__item"
           data-uniformen-locale={option}
+          tabindex={option === locale ? 0 : -1}
         >
           {/* The dot is drawn in CSS off `aria-checked`, so the state a reader
               announces and the state an eye sees are the same attribute. */}

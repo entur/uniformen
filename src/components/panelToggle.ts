@@ -16,11 +16,9 @@
  *  - Tabbing out closes: an open panel behind the focus is a panel the user has no
  *    way of knowing is still there.
  *
- * A `role="menu"` group inside the panel — the language options — is one tab stop
- * rather than one per option, which is what that role promises. The roving
- * `tabindex` that makes it one is written here rather than server-rendered: with
- * scripts blocked there are no arrow keys either, and every option being tabbable is
- * the better of the two failures.
+ * A `role="menu"` group inside the panel — the language options — is one tab stop,
+ * which is what that role promises. Keeping that stop on whichever option has the
+ * focus is the roving `tabindex` written here.
  *
  * Bails out when either half of the markup is absent, so the same bundle serves
  * every combination of rendered controls.
@@ -72,6 +70,9 @@ export default function panelToggle(
     const stop = active && list.indexOf(active) !== -1 ? active : (checkedItem(list) ?? list[0]);
     for (const item of list) item.setAttribute("tabindex", item === stop ? "0" : "-1");
   };
+  // The markup arrives roved, on the checked option. Re-asserted rather than
+  // trusted: where it agrees these writes change nothing, and where it does not the
+  // group is one tab stop from here on.
   if (group) rove();
 
   // The stop follows the focus into the group however it got there: opening, the

@@ -25,6 +25,10 @@ const options = (html: string): { locale: string; checked: boolean; label: strin
     label: match[3] as string,
   }));
 
+/** The options' tab stops, in document order: which one Tab would reach. */
+const tabstops = (html: string): (string | undefined)[] =>
+  [...html.matchAll(/role="menuitemradio"[^>]*?tabindex="(-?\d+)"/g)].map((match) => match[1]);
+
 describe("locale menu rendering", () => {
   test("offers exactly the languages it was given, in that order", async () => {
     const html = await render(["en-GB", "nb-NO"], "nb-NO");
@@ -66,6 +70,11 @@ describe("locale menu rendering", () => {
     expect(html).toContain('aria-labelledby="uniformen-locale-heading"');
     expect(html).toContain('id="uniformen-locale-heading"');
     expect(html.match(/role="menuitemradio"/g)).toHaveLength(2);
+  });
+
+  test("the group is one tab stop, on the checked option, as rendered", async () => {
+    const html = await render(["nb-NO", "nn-NO", "en-GB"], "nn-NO");
+    expect(tabstops(html)).toEqual(["-1", "0", "-1"]);
   });
 
   test("the heading is bilingual in every locale, unlike everything else in the bar", async () => {

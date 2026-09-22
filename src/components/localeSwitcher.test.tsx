@@ -42,6 +42,9 @@ describe("locale switcher", () => {
     expect(html.match(/role="menuitemradio"/g)).toHaveLength(3);
     expect(html).toContain('aria-checked="true" lang="nn-NO"');
     expect(html.match(/data-uniformen-locale="/g)).toHaveLength(3);
+    // The single tab stop too, not only the options: both mount points render it.
+    expect(html.match(/tabindex="-1"/g)).toHaveLength(2);
+    expect(html).toContain('data-uniformen-locale="nn-NO" tabindex="0"');
     // The group is named where there is no heading to point at.
     expect(html).toContain('aria-label="Språk / Language"');
   });
