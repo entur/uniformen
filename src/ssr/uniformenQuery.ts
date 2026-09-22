@@ -17,6 +17,9 @@ export const uniformenQuerySchema = z
     // state. The state is restored on the client from storage, so the same markup
     // serves every user of the app.
     sidebar: z.enum(["true", "false"]).optional(),
+    // Paints the bar in the design system's contrast palette — the on-dark variant,
+    // for an app whose page behind the header is dark.
+    contrast: z.enum(["true", "false"]).optional(),
     // Hides the app switcher, notifications, the sidebar toggle and "Mine tilganger".
     // For pages that are not the app: login, error, terms.
     simple: z.enum(["true", "false"]).optional(),
@@ -80,6 +83,7 @@ export function topNavigationProps({
   app,
   sidebar,
   simple,
+  contrast,
   locale,
   availableLocales,
   loginUrl,
@@ -93,6 +97,7 @@ export function topNavigationProps({
     // so both arriving together is ordinary rather than a 400.
     sidebar: !simpleMode && sidebar === "true",
     simple: simpleMode,
+    contrast: contrast === "true",
     locale,
     availableLocales,
     loginUrl,

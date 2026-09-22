@@ -594,6 +594,47 @@ describe("/ssr simple query param", () => {
   });
 });
 
+describe("/ssr contrast query param", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+
+  test("contrast=true paints the bar with the modifier class", async () => {
+    const body = await (await ssr("?contrast=true")).json();
+    expect(body.headerHtml).toContain("uniformen-top-nav uniformen-top-nav--contrast");
+  });
+
+  test("contrast=false and no param render the light bar", async () => {
+    for (const query of ["", "?contrast=false"]) {
+      const body = await (await ssr(query)).json();
+      expect(body.headerHtml).toContain('class="uniformen-top-nav"');
+      expect(body.headerHtml).not.toContain("uniformen-top-nav--contrast");
+    }
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?contrast=yes", "?contrast=1", "?contrast="]) {
+      expect((await ssr(query)).status).toBe(400);
+    }
+  });
+
+  // Both palettes ship in the one stylesheet, so the `style-src` hash a consumer
+  // unions into its page CSP is the same whichever mode it asks for. Building the
+  // CSS per mode would hand out two hashes for one endpoint and break any consumer
+  // caching the header.
+  test("the stylesheet and its hash are the same in either mode", async () => {
+    const contrast = await (await ssr("?contrast=true")).json();
+    const light = await (await ssr()).json();
+    expect(contrast.headAssets).toBe(light.headAssets);
+    expect(contrast.csp).toEqual(light.csp);
+    expect(contrast.headAssets).toContain(".uniformen-top-nav--contrast");
+  });
+
+  test("the footer is untouched", async () => {
+    const contrast = await (await ssr("?contrast=true")).json();
+    const light = await (await ssr()).json();
+    expect(contrast.footerHtml).toBe(light.footerHtml);
+  });
+});
+
 describe("/ssr top bar chrome", () => {
   test("renders the environment badge for the running environment", async () => {
     const body = await enturSignedIn("auth0|chrome-env");

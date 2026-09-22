@@ -19,6 +19,7 @@ export function previewUrl(
   if (query.app) params.set("app", query.app);
   if (query.sidebar === "true") params.set("sidebar", "true");
   if (query.simple === "true") params.set("simple", "true");
+  if (query.contrast === "true") params.set("contrast", "true");
   if (query.loginUrl) params.set("loginUrl", query.loginUrl);
   if (query.logoutUrl) params.set("logoutUrl", query.logoutUrl);
   params.set("locale", query.locale);
@@ -241,6 +242,18 @@ export function PreviewControls({
             <label class="preview-controls__check">
               <input type="checkbox" name="simple" value="true" checked={query.simple === "true"} />
               appen har en enkel header og footer
+            </label>
+          </Field>
+
+          <Field label="contrast" hint="Kontrastpaletten fra designsystemet — for mørke sider.">
+            <label class="preview-controls__check">
+              <input
+                type="checkbox"
+                name="contrast"
+                value="true"
+                checked={query.contrast === "true"}
+              />
+              appen har en mørk side bak headeren
             </label>
           </Field>
 

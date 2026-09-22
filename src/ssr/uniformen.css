@@ -1,11 +1,39 @@
+/* What the header is painted with, named by the role a colour plays rather than by
+   the hue that fills it. Contrast mode re-fills these same roles from the design
+   system's on-dark variants (see `uniformenStyles.ts`) and touches nothing else, so
+   a new rule only needs the right role to work in both.
+
+   `surface` is the bar itself, `panel` the popovers hanging off it: the two are
+   opposite shades of each other in either mode, so they cannot share one name. */
+:root {
+  --uniformen-surface: var(--uniformen-color-brand-white);
+  --uniformen-surface-hover: var(--uniformen-color-blue-20);
+  --uniformen-surface-active: var(--uniformen-color-brand-lavender);
+  --uniformen-on-surface: var(--uniformen-color-brand-blue);
+  --uniformen-divider: var(--uniformen-color-grey-30);
+  --uniformen-panel: var(--uniformen-color-brand-white);
+  --uniformen-panel-body: var(--uniformen-color-blue-90);
+  --uniformen-panel-hover: var(--uniformen-color-brand-lavender);
+  --uniformen-panel-selected: var(--uniformen-color-blue-80);
+  --uniformen-panel-border: var(--uniformen-color-blue-70);
+  --uniformen-panel-border-strong: var(--uniformen-color-blue-60);
+  --uniformen-on-panel: var(--uniformen-color-blue-10);
+  --uniformen-on-panel-subdued: var(--uniformen-color-blue-40);
+  /* Three offset layers, matching the design's stacked drop shadows. */
+  --uniformen-shadow-bar:
+    1px 1px 2px rgba(204, 205, 212, 0.3), 3px 3px 6px rgba(229, 229, 233, 0.35),
+    6px 6px 10px rgba(229, 229, 233, 0.15);
+  --uniformen-shadow-panel: 0px 2px 4px rgba(0, 0, 0, 0.25);
+}
+
 .uniformen-top-nav {
   --top-nav-height: 4rem;
   /* Strip along the very top, tinted by the environment. Its pointer lives on
      the env badge so it stays centred on the chip. Zero height in production,
      where there is no non-prod environment to warn about. */
   border-top: var(--uniformen-env-strip-height) solid var(--uniformen-color-env);
-  background: var(--uniformen-color-brand-white);
-  color: var(--uniformen-color-brand-blue);
+  background: var(--uniformen-surface);
+  color: var(--uniformen-on-surface);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -20,11 +48,7 @@
   box-sizing: border-box;
   height: var(--top-nav-height);
   padding: 0 var(--uniformen-space-medium);
-  /* Three offset layers, matching the design's stacked drop shadows. */
-  box-shadow:
-    1px 1px 2px rgba(204, 205, 212, 0.3),
-    3px 3px 6px rgba(229, 229, 233, 0.35),
-    6px 6px 10px rgba(229, 229, 233, 0.15);
+  box-shadow: var(--uniformen-shadow-bar);
 }
 
 .uniformen-top-nav__left {
@@ -105,7 +129,7 @@
 .uniformen-top-nav__action:hover,
 .uniformen-top-nav__login:hover,
 .uniformen-top-nav__user:hover {
-  background: var(--uniformen-color-blue-20);
+  background: var(--uniformen-surface-hover);
 }
 
 .uniformen-top-nav__action:active,
@@ -113,7 +137,7 @@
 .uniformen-top-nav__user:active,
 /* Open reads as held down: the chip stays tinted for as long as its panel is up. */
 .uniformen-top-nav__user[aria-expanded="true"] {
-  background: var(--uniformen-color-brand-lavender);
+  background: var(--uniformen-surface-active);
 }
 
 .uniformen-top-nav__action:focus-visible,
@@ -127,7 +151,7 @@
   flex: none;
   width: 1px;
   height: 2rem;
-  background: var(--uniformen-color-grey-30);
+  background: var(--uniformen-divider);
 }
 
 .uniformen-top-nav__user-name {
@@ -222,10 +246,10 @@
   min-width: 100%;
   font-family: Nationale, sans-serif;
   z-index: calc(var(--uniformen-z-popover) + 1);
-  background: var(--uniformen-color-blue-90);
-  border: 1px solid var(--uniformen-color-blue-60);
+  background: var(--uniformen-panel-body);
+  border: 1px solid var(--uniformen-panel-border-strong);
   border-radius: var(--uniformen-radius-md);
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--uniformen-shadow-panel);
   overflow: hidden;
 }
 
@@ -245,7 +269,7 @@
   box-sizing: border-box;
   min-height: 3rem;
   padding: var(--uniformen-space-small) var(--uniformen-space-medium);
-  color: var(--uniformen-color-blue-10);
+  color: var(--uniformen-on-panel);
   font-size: var(--uniformen-font-lg);
   line-height: var(--uniformen-line-md);
   letter-spacing: 0.02em;
@@ -255,7 +279,7 @@
 }
 
 .uniformen-env-switcher__item:hover {
-  background: var(--uniformen-color-brand-lavender);
+  background: var(--uniformen-panel-hover);
 }
 
 .uniformen-env-switcher__item:focus-visible {
@@ -267,7 +291,7 @@
    hoverable, so hover leaves it alone. */
 .uniformen-env-switcher__item--current,
 .uniformen-env-switcher__item--current:hover {
-  background: var(--uniformen-color-brand-lavender);
+  background: var(--uniformen-panel-hover);
   font-weight: var(--uniformen-weight-heading);
 }
 
@@ -393,11 +417,11 @@
 }
 
 .uniformen-icon-button:hover {
-  background: var(--uniformen-color-blue-20);
+  background: var(--uniformen-surface-hover);
 }
 
 .uniformen-icon-button:active {
-  background: var(--uniformen-color-brand-lavender);
+  background: var(--uniformen-surface-active);
 }
 
 .uniformen-icon-button:focus-visible {
@@ -420,31 +444,31 @@
   width: 20rem;
   font-family: Nationale, sans-serif;
   z-index: calc(var(--uniformen-z-popover) + 1);
-  background: var(--uniformen-color-brand-white);
+  background: var(--uniformen-panel);
   border-radius: 0.75rem;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--uniformen-shadow-panel);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .uniformen-app-switcher__title {
-  background: var(--uniformen-color-brand-white);
+  background: var(--uniformen-panel);
   flex-shrink: 0;
   font-size: 1.25rem;
   font-weight: var(--uniformen-weight-heading);
-  color: var(--uniformen-color-blue-10);
+  color: var(--uniformen-on-panel);
   padding: var(--uniformen-space-medium);
   margin: 0;
   user-select: none;
 }
 
 .uniformen-app-switcher__body {
-  background: var(--uniformen-color-blue-90);
+  background: var(--uniformen-panel-body);
   padding: 0;
   overflow-y: auto;
   max-height: 18rem;
-  border-top: 1px solid var(--uniformen-color-blue-70);
+  border-top: 1px solid var(--uniformen-panel-border);
 }
 
 .uniformen-app-switcher__list {
@@ -460,14 +484,14 @@
   align-items: center;
   width: 100%;
   padding: var(--uniformen-space-small) var(--uniformen-space-medium);
-  color: var(--uniformen-color-blue-10);
+  color: var(--uniformen-on-panel);
   text-decoration: none;
   transition: background 0.15s ease;
   font-size: var(--uniformen-font-lg);
 }
 
 .uniformen-app-switcher__item:hover {
-  background: var(--uniformen-color-brand-lavender);
+  background: var(--uniformen-panel-hover);
 }
 
 .uniformen-app-switcher__item:focus-visible {
@@ -476,12 +500,12 @@
 }
 
 .uniformen-app-switcher__item--active {
-  background: var(--uniformen-color-blue-80);
+  background: var(--uniformen-panel-selected);
   font-weight: var(--uniformen-weight-heading);
 }
 
 .uniformen-app-switcher__item--active:hover {
-  background: var(--uniformen-color-blue-80);
+  background: var(--uniformen-panel-selected);
 }
 
 /* Wraps the chip so the panel can be positioned against it horizontally: the panel
@@ -535,9 +559,9 @@
   max-width: min(20rem, calc(100vw - 2 * var(--uniformen-space-medium)));
   font-family: Nationale, sans-serif;
   z-index: calc(var(--uniformen-z-popover) + 1);
-  background: var(--uniformen-color-brand-white);
+  background: var(--uniformen-panel);
   border-radius: 0.75rem;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--uniformen-shadow-panel);
   overflow: hidden;
 }
 
@@ -555,7 +579,7 @@
   font-size: var(--uniformen-font-lg);
   font-weight: var(--uniformen-weight-heading);
   line-height: var(--uniformen-line-md);
-  color: var(--uniformen-color-blue-10);
+  color: var(--uniformen-on-panel);
   /* A name has no length limit and the panel does; wrap rather than overflow the
      rounded corner. */
   overflow-wrap: anywhere;
@@ -565,7 +589,7 @@
   font-size: var(--uniformen-font-md);
   line-height: var(--uniformen-line-xs);
   letter-spacing: 0.02em;
-  color: var(--uniformen-color-blue-40);
+  color: var(--uniformen-on-panel-subdued);
   /* Addresses break at their own separators before anywhere else. */
   overflow-wrap: anywhere;
 }
@@ -587,8 +611,8 @@
   padding: var(--uniformen-space-small) var(--uniformen-space-medium);
   /* Each row is separated from what is above it, so the identity block, the
      links and the way out read as three groups however many links there are. */
-  border-top: 1px solid var(--uniformen-color-blue-70);
-  color: var(--uniformen-color-blue-10);
+  border-top: 1px solid var(--uniformen-panel-border);
+  color: var(--uniformen-on-panel);
   font-size: var(--uniformen-font-lg);
   line-height: var(--uniformen-line-md);
   text-decoration: none;
@@ -604,7 +628,7 @@
 }
 
 .uniformen-user-menu__item:hover {
-  background: var(--uniformen-color-brand-lavender);
+  background: var(--uniformen-panel-hover);
 }
 
 .uniformen-user-menu__item:focus-visible {
@@ -624,12 +648,12 @@
 .uniformen-locale-menu__heading {
   display: block;
   padding: var(--uniformen-space-small) var(--uniformen-space-medium) var(--uniformen-space-xs2);
-  border-top: 1px solid var(--uniformen-color-blue-70);
+  border-top: 1px solid var(--uniformen-panel-border);
   font-size: var(--uniformen-font-xs);
   font-weight: var(--uniformen-weight-body);
   line-height: var(--uniformen-line-xs);
   letter-spacing: 0.08em;
-  color: var(--uniformen-color-blue-40);
+  color: var(--uniformen-on-panel-subdued);
   text-transform: uppercase;
   user-select: none;
 }
@@ -655,7 +679,7 @@
   box-sizing: border-box;
   width: var(--menu-icon-size);
   height: var(--menu-icon-size);
-  border: 1px solid var(--uniformen-color-blue-40);
+  border: 1px solid var(--uniformen-on-panel-subdued);
   border-radius: 50%;
   transform: translateY(-0.08em);
 }
@@ -665,7 +689,7 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: var(--uniformen-color-blue-10);
+  background: var(--uniformen-on-panel);
 }
 
 /* Checked is one attribute: what the marker draws and what a screen reader
@@ -675,12 +699,12 @@
 }
 
 [aria-checked="true"] > .uniformen-locale-menu__marker {
-  border-color: var(--uniformen-color-blue-10);
+  border-color: var(--uniformen-on-panel);
 }
 
 /* Open reads as held down, the way the user chip does. */
 .uniformen-locale-switcher__toggle[aria-expanded="true"] {
-  background: var(--uniformen-color-brand-lavender);
+  background: var(--uniformen-surface-active);
 }
 
 /* The chevron follows the panel, the way the environment chip's does. The globe

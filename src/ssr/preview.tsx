@@ -42,6 +42,23 @@ const PREVIEW_BASE_CSS = `
                     }
                     main { flex: 1 0 auto; display: flex; }
 
+                    /* The stage the bar is judged against. contrast=true is the app
+                       saying its page behind the header is dark, so the preview's is
+                       too — the palette cannot be read against a white page. The
+                       controls keep their own card. */
+                    body.preview--contrast { background: #08091c; }
+
+                    /* The stand-in sidebar goes with the page: an app dark enough to
+                       ask for a contrast bar has a dark sidebar too, and left light it
+                       is unreadable against the stage. */
+                    .preview--contrast .preview-sidebar { border-right-color: #393d79; }
+                    .preview--contrast .preview-sidebar__title,
+                    .preview--contrast .preview-sidebar__close,
+                    .preview--contrast .preview-sidebar__link { color: #ffffff; }
+                    .preview--contrast .preview-sidebar__heading { color: #aeb7e2; }
+                    .preview--contrast .preview-sidebar__close:hover,
+                    .preview--contrast .preview-sidebar__link:hover { background: #393d79; }
+
                     /* Stand-in for a consuming app's side navigation, so the collapse
                        control can be checked by hand. Written the way apps should write
                        it: state read off the root attribute, no JavaScript involved.
@@ -529,7 +546,7 @@ export function previewRoutes(server: OpenAPIHono): void {
                 ${renderUniformenStyleTag()}
                 ${renderUniformenHeadScript()}
             </head>
-            <body>
+            <body${navProps.contrast ? ' class="preview--contrast"' : ""}>
                 ${await renderComponentToString(
                   <TopNavigation
                     {...navProps}

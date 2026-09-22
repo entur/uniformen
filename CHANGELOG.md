@@ -9,6 +9,14 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-09-22
+
+### Added
+
+- `contrast=true` paints the top bar in the design system's contrast palette — the
+  on-dark variant, the one `@entur/layout`'s `Contrast` puts its children on — for an
+  app whose page behind the header is dark. The panels come with it.
+
 ## 2026-09-21
 
 ### Fixed

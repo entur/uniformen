@@ -33,6 +33,7 @@ export function TopNavigation({
   activeAppId,
   sidebar,
   simple,
+  contrast,
   locale,
   availableLocales,
   loginUrl,
@@ -67,6 +68,15 @@ export function TopNavigation({
    * `isEnturUser`, not with this.
    */
   simple?: boolean;
+  /**
+   * Paint the bar in the design system's contrast palette, for an app whose page
+   * behind the header is dark.
+   *
+   * The class is the whole of it: the palette is a block of custom properties the
+   * header's subtree inherits, so the panels come with it and no component here
+   * knows which mode it is in.
+   */
+  contrast?: boolean;
   /** The language every string in the bar is rendered in. */
   locale: Locale;
   /**
@@ -81,7 +91,10 @@ export function TopNavigation({
   // Narrows for the switcher below, which takes the list required.
   const hasLocales = availableLocales !== undefined && availableLocales.length > 0;
   return (
-    <header id="top-navigation" class="uniformen-top-nav">
+    <header
+      id="top-navigation"
+      class={`uniformen-top-nav${contrast ? " uniformen-top-nav--contrast" : ""}`}
+    >
       <nav class="uniformen-top-nav__nav" aria-label={txt.toppnavigasjon}>
         <div class="uniformen-top-nav__left">
           {sidebar && <SidebarToggle locale={locale} />}
