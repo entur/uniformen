@@ -252,13 +252,42 @@ describe("preview page simple", () => {
   });
 });
 
+describe("preview page contrast", () => {
+  test("the page behind the header goes dark with the bar", async () => {
+    const { html } = await preview("?contrast=true");
+    expect(html).toContain('class="uniformen-top-nav uniformen-top-nav--contrast"');
+    expect(html).toContain('<body class="preview--contrast">');
+  });
+
+  // On the class the header carries, not on the name anywhere in the page: the
+  // preview inlines the whole stylesheet, and the contrast rules are in it either way.
+  test("without it the page and the bar are both light", async () => {
+    const { html } = await preview();
+    expect(html).toContain('class="uniformen-top-nav"');
+    expect(html).toContain("<body>");
+  });
+
+  test("the copyable link carries it", async () => {
+    const { html } = await preview("?contrast=true");
+    expect(html).toContain("contrast=true");
+  });
+});
+
 describe("preview page controls", () => {
   test("the parameters are on the page, as a form that sets them", async () => {
     // The point of the box: the parameters are findable by opening the page, not
     // only by knowing them already.
     const { html } = await preview();
     expect(html).toContain('<form class="preview-controls__form" method="get" action="/"');
-    for (const param of ["app", "sidebar", "simple", "locale", "availableLocales", "debugUser"]) {
+    for (const param of [
+      "app",
+      "sidebar",
+      "simple",
+      "contrast",
+      "locale",
+      "availableLocales",
+      "debugUser",
+    ]) {
       expect(html).toContain(`name="${param}"`);
     }
     // Named by the same ids the param takes, so the form is the list of valid values.
@@ -345,6 +374,7 @@ describe("preview page controls", () => {
     expect(where("loginUrl")).toBe("right");
     expect(where("logoutUrl")).toBe("right");
     expect(where("simple")).toBe("whole");
+    expect(where("contrast")).toBe("whole");
     expect(where("locale")).toBe("whole");
   });
 

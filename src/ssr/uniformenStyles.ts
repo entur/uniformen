@@ -8,6 +8,7 @@ import {
   space,
   zIndexes,
   primitive,
+  semantic,
 } from "@entur/tokens";
 import uniformenCss from "./uniformen.css" with { type: "text" };
 import { sha256Source } from "./sha256";
@@ -98,8 +99,40 @@ export function buildRootVars(env: Environment): string {
 `;
 }
 
+/**
+ * Contrast mode: the same roles, painted for a navy bar. Scoped to the modifier
+ * class rather than to `:root`, so a contrast header and a light one could be on
+ * one page; everything under the header inherits, panels included.
+ *
+ * Every value comes from the design system's `contrast` variants — the same set
+ * `@entur/layout`'s `<Contrast>` puts its children on.
+ *
+ * The environment badge is left alone. It is a tinted chip carrying its own
+ * background, border and text, picked to hold 4.5:1 against that tint rather than
+ * against whatever is behind it, so it reads on navy as it does on white.
+ */
+const CONTRAST_VARS = `.uniformen-top-nav--contrast {
+  --uniformen-surface: ${semantic.fill.background.contrast.light};
+  --uniformen-surface-hover: ${semantic.fill.background.contrast.lightalt};
+  --uniformen-surface-active: ${semantic.fill.selected.hover.contrast};
+  --uniformen-on-surface: ${semantic.text.light};
+  --uniformen-divider: ${semantic.fill.selected.hover.contrast};
+  --uniformen-panel: ${semantic.fill.background.contrast.lightalt2};
+  --uniformen-panel-body: ${semantic.fill.background.contrast.light};
+  --uniformen-panel-hover: ${semantic.fill.background.contrast.lightalt};
+  --uniformen-panel-selected: ${semantic.fill.selected.hover.contrast};
+  --uniformen-panel-border: ${semantic.fill.selected.hover.contrast};
+  --uniformen-panel-border-strong: ${semantic.fill.selected.hover.contrast};
+  --uniformen-on-panel: ${semantic.text.light};
+  --uniformen-on-panel-subdued: ${semantic.text.contrast};
+  --uniformen-shadow-bar: ${shadows.boxShadowContrast};
+  --uniformen-shadow-panel: ${shadows.cardShadowContrast};
+  --uniformen-shadow-focus: ${shadows.focusContrast};
+}
+`;
+
 // Resolved once at startup for the environment this instance serves.
-const UNIFORMEN_CSS = buildRootVars(environment).trim() + uniformenCss.trim();
+const UNIFORMEN_CSS = buildRootVars(environment).trim() + uniformenCss.trim() + CONTRAST_VARS;
 
 export const uniformenCssHash = await sha256Source(UNIFORMEN_CSS);
 
