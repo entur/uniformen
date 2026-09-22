@@ -82,6 +82,11 @@ export type FetchUniformenParams = {
   logoutUrl?: string;
 
   /**
+   * Paint the top bar in a dark blue contrast palette.
+   */
+  contrast?: boolean;
+
+  /**
    * Barebones top bar: hides the app switcher, notifications, the sidebar toggle
    * (whatever `sidebar` says) and "Mine tilganger". Left: logo and app name, plus the
    * environment badge for the users who get one at all; right: the `loginUrl` login
