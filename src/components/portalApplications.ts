@@ -30,6 +30,15 @@ type Hosts = Partial<Record<SwitchableEnvironment, string>>;
  */
 const APPLICATIONS = [
   {
+    id: "bedrift",
+    appName: "Bedrift",
+    unlisted: true,
+    hosts: {
+      staging: "skoleskyss.staging.entur.no/bedrift",
+      production: "skoleskyss.entur.no/bedrift",
+    },
+  },
+  {
     id: "cleos",
     appName: "CLEOS",
     hosts: {

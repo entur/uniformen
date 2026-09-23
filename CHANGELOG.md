@@ -9,6 +9,12 @@ gets these on its next request, whatever version of
 versioned. Changes to the package's own API are in
 [its changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-09-23
+
+### Added
+
+- `app=bedrift` now renders Bedrift beside the logo.
+
 ## 2026-09-22
 
 ### Added

@@ -64,6 +64,7 @@ describe("application ids", () => {
     // new application is accepted as a query value by being listed — whether or
     // not the switcher offers it.
     expect(PORTAL_APPLICATION_IDS).toEqual([
+      "bedrift",
       "cleos",
       "nplan",
       "ops-center",
