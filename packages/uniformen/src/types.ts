@@ -11,7 +11,7 @@ export type FetchUniformenParams = {
    * The portal application asking for the layout. It gets its name beside the
    * Entur logo.
    */
-  app?: "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis";
+  app?: "bedrift" | "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis";
 
   /** Language of the header and footer, default `nb-NO`. App names and env labels are untranslated. */
   locale?: Locale;
