@@ -80,7 +80,7 @@ render, so a service that goes quiet must not become an app that goes quiet: whe
 timeout is reached the call returns `null` — the same answer every other failure
 gives — and your page renders without the shared chrome rather than not at all.
 
-`params.app` (`"cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis"`)
+`params.app` (`"bedrift" | "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis"`)
 names the portal application asking for the layout: it renders the app name next to
 the Entur logo, and marks that application as the current page in the app switcher if not marked as unlisted.
 

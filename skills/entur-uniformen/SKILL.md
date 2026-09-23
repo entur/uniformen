@@ -46,17 +46,17 @@ React 18 or later, as a peer dependency. The package ships two entry points: `@e
 
 There are two, and they take the same options. Call one of them, not both:
 
-| Entry point                                       | Returns                                            | Use it when                                                                     |
-| ------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `fetchUniformenComponents` (`@entur/uniformen/react`) | `{ HeadAssets, Header, Footer, Scripts, csp }`     | React app. The one to reach for — it parses the HTML into real elements          |
-| `fetchUniformenLayout` (`@entur/uniformen`)       | `UniformenLayout \| null` — four HTML strings plus `csp` | No React: place the four strings yourself                                       |
+| Entry point                                           | Returns                                                  | Use it when                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `fetchUniformenComponents` (`@entur/uniformen/react`) | `{ HeadAssets, Header, Footer, Scripts, csp }`           | React app. The one to reach for — it parses the HTML into real elements |
+| `fetchUniformenLayout` (`@entur/uniformen`)           | `UniformenLayout \| null` — four HTML strings plus `csp` | No React: place the four strings yourself                               |
 
 ```ts
 import { fetchUniformenLayout } from "@entur/uniformen";
 
 const layout = await fetchUniformenLayout({
-  token,                       // optional; the user's Auth0 access token
-  environment: "dev",          // "local" | "dev" | "staging" | "production" (default)
+  token, // optional; the user's Auth0 access token
+  environment: "dev", // "local" | "dev" | "staging" | "production" (default)
   params: {
     app: "partner",
     sidebar: true,
@@ -64,7 +64,7 @@ const layout = await fetchUniformenLayout({
     loginUrl: "/auth/login",
     logoutUrl: "/auth/logout",
   },
-  timeoutMs: 5000,             // default
+  timeoutMs: 5000, // default
 });
 ```
 
@@ -74,7 +74,7 @@ Call this where the document is rendered, on the server. The layout is part of t
 
 `environment` names which Uniformen the layout comes from, and it must match the environment your app is running in: the app switcher links to the environment you fetched from, so a production layout in dev hands your users production instances of every other portal application.
 
-The `params` are documented as JSDoc on `FetchUniformenParams` — read the type rather than guessing. `app` accepts `"cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis"`, and the service answers `400` to anything else, which the client turns into `null`.
+The `params` are documented as JSDoc on `FetchUniformenParams` — read the type rather than guessing.
 
 ### Registering a new app
 
@@ -102,12 +102,12 @@ The same id then goes into the `app` union of `FetchUniformenParams` in `package
 
 `UniformenLayout` has four HTML fields, and each has one correct home:
 
-| Field         | React component  | Where                                    |
-| ------------- | ---------------- | ---------------------------------------- |
-| `headAssets`  | `<HeadAssets />` | inside `<head>`                          |
-| `headerHtml`  | `<Header />`     | inside `<body>`, before `<main>`         |
-| `footerHtml`  | `<Footer />`     | inside `<body>`, after `<main>`          |
-| `scripts`     | `<Scripts />`    | inside `<body>`, as the last element     |
+| Field        | React component  | Where                                |
+| ------------ | ---------------- | ------------------------------------ |
+| `headAssets` | `<HeadAssets />` | inside `<head>`                      |
+| `headerHtml` | `<Header />`     | inside `<body>`, before `<main>`     |
+| `footerHtml` | `<Footer />`     | inside `<body>`, after `<main>`      |
+| `scripts`    | `<Scripts />`    | inside `<body>`, as the last element |
 
 The React adapter takes the same options as `fetchUniformenLayout` — pass them, all of them. Calling it bare defaults to the production Uniformen with no user and no app name:
 
