@@ -1,19 +1,18 @@
-/** BCP 47 tags, exact match. Source of the query schema's enum: add a language here. */
+/** Supported locales as BCP 47 tags, matched exactly. Add a new language here. */
 export const LOCALES = ["nb-NO", "nn-NO", "en-GB"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
 /**
- * What the language control is called, and the one string in the bar that is not
- * translated into the current locale: it is the signpost for a user who cannot read
- * that locale, so a Norwegian page has to say "Language" too. Both Norwegian
- * written standards call it the same thing, so bokmål and nynorsk share a side.
+ * The label of the language control. It is not translated, so a user who cannot
+ * read the current language can still find it. Bokmål and nynorsk both use
+ * "Språk", so there is one Norwegian word.
  */
 export const LANGUAGE_LABEL = "Språk / Language";
 
 /**
- * Each language named in itself, never translated into the current one: a label
- * you can't read is one you can't pick your way out of.
+ * Each language's name, written in that language. They are not translated, so
+ * users can find their own language even if they cannot read the current one.
  */
 export const LOCALE_NAMES: Record<Locale, string> = {
   "nb-NO": "Norsk bokmål",

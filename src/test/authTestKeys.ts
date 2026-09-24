@@ -35,8 +35,8 @@ async function publicJwks(publicKey: CryptoKey, kid: string) {
 }
 
 /**
- * Public JWKS the test server (see `authTestSetup`) serves — one per tenant,
- * each containing only that tenant's key so cross-tenant signatures fail.
+ * The public keys for each test tenant. Each set has only that tenant's key, so a
+ * token signed by one tenant fails with the other. See `authTestSetup`.
  */
 export const internalJwks = await publicJwks(internalKeys.publicKey, INTERNAL_KID);
 export const partnerJwks = await publicJwks(partnerKeys.publicKey, PARTNER_KID);
@@ -66,8 +66,8 @@ async function sign(
 }
 
 /**
- * `signInternalToken` mints valid RS256 access tokens for the internal tenant;
- * pass overrides to forge bad ones.
+ * Creates a valid RS256 access token for the internal tenant. Pass claims to
+ * override the defaults, for example to make an invalid token.
  */
 export async function signInternalToken(claims: Record<string, unknown> = {}): Promise<string> {
   return sign(
@@ -79,8 +79,8 @@ export async function signInternalToken(claims: Record<string, unknown> = {}): P
 }
 
 /**
- * `signPartnerToken` mints valid RS256 access tokens signed with the partner
- * tenant's key; pass overrides to forge bad ones.
+ * Creates a valid RS256 access token for the partner tenant. Pass claims to
+ * override the defaults, for example to make an invalid token.
  */
 export async function signPartnerToken(claims: Record<string, unknown> = {}): Promise<string> {
   return sign(

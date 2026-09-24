@@ -1,6 +1,6 @@
-// Lockup traced from the design system Logo (entur/design-system, packages/menu).
-// viewBox bottom sits 0.7734 below the coral bar; uniformen.css offsets that so the
-// app name baseline lands on the bar.
+// Copied from the Logo in the design system (entur/design-system, packages/menu).
+// The bottom of the viewBox is 0.7734 below the coral bar. uniformen.css uses this
+// value to put the app name on the bar.
 const EnturBaseLogo = () => (
   <svg
     viewBox="0 0 68.625 20.8254"

@@ -1,21 +1,17 @@
 import type { UserInfo } from "./userInfo";
 
-/** Namespaced Auth0 claim naming the organisation the user belongs to. */
+/** The custom Auth0 claim that holds the id of the user's organisation. */
 export const ORGANISATION_ID_CLAIM = "https://entur.io/organisationID";
 
-/**
- * Entur's own id in the organisation register. The same number in every
- * environment, and the same one entur-partner reads the claim against.
- */
+/** Entur's id in the organisation register. It is the same in every environment. */
 export const ENTUR_ORGANISATION_ID = 1;
 
 /**
- * Whether this profile belongs to the Entur organisation.
+ * Checks whether the user belongs to the Entur organisation.
  *
- * Strict on the claim: the id as the number Auth0 mints it as, nothing else. A
- * string spelling of it, an array, or an absent claim is a profile we cannot place,
- * and reading one as Entur is the only direction with a cost. No userinfo at all —
- * anonymous, or a lookup that failed — is likewise not Entur.
+ * The claim must be exactly the number 1. A string, an array or a missing claim
+ * returns false, because treating an unknown user as Entur is the unsafe mistake.
+ * Missing userinfo (anonymous user or failed lookup) also returns false.
  */
 export function isEnturOrganisation(info: UserInfo | undefined): boolean {
   return info?.[ORGANISATION_ID_CLAIM] === ENTUR_ORGANISATION_ID;

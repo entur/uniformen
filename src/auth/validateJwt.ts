@@ -8,14 +8,14 @@ declare module "hono" {
   interface ContextVariableMap {
     authTenant: AuthTenant["name"] | undefined;
     jwtPayload: (JWTPayload & { name?: string }) | undefined;
-    /** Raw verified bearer token, for forwarding to Auth0's userinfo endpoint. */
+    /** The verified bearer token. It is sent on to Auth0's userinfo endpoint. */
     authToken: string | undefined;
   }
 }
 
 /**
- * The tenant's JWKS endpoint could not be fetched, so the token can be
- * neither verified nor rejected.
+ * Thrown when the tenant's JWKS endpoint cannot be fetched. Without the keys we
+ * cannot tell whether the token is valid or not.
  */
 export class JwksUnavailableError extends HTTPException {
   constructor(message: string, options?: { cause?: unknown }) {
@@ -39,15 +39,17 @@ function unauthorized(_ctx: { req: { url: string } }, error: string, description
  * Builds the validation middleware for a set of tenants.
  */
 export function createValidateJwt(tenants: AuthTenant[]) {
-  // One validator per tenant so issuer, audiences and JWKS endpoint are strictly paired
+  // Create one validator per tenant, so a token is always checked against the
+  // issuer, audiences and JWKS endpoint of the same tenant.
   const validators = new Map(
     tenants.map((tenant) => {
-      // jose caches the JWKS for 10 minutes, dedupes concurrent fetches,
-      // times out after 5 seconds, and refetches on an unknown `kid` (with a
-      // 30-second cooldown) so a rotated signing key is picked up promptly.
+      // jose caches the keys for 10 minutes and shares one request between
+      // parallel fetches, with a 5-second timeout. If a token has an unknown `kid`,
+      // jose fetches the keys again (at most every 30 seconds), so a new signing
+      // key is found quickly.
       const jwks = createRemoteJWKSet(new URL(tenant.jwksUri));
-      // Distinguish "keys could not be fetched" (503) from "token matches no key" (401)
-      // only `JWKSNoMatchingKey` indicates the token itself.
+      // Tell apart "the keys could not be fetched" (503) and "no key matches the
+      // token" (401). Only `JWKSNoMatchingKey` means the token itself is bad.
       const getKey: JWTVerifyGetKey = async (header, token) => {
         try {
           return await jwks(header, token);
@@ -70,14 +72,14 @@ export function createValidateJwt(tenants: AuthTenant[]) {
       unauthorized(c, "invalid_request", "no authorization included in request");
     }
     const parts = credentials.split(/\s+/);
-    // Enforce the Bearer scheme (case-insensitive per RFC 9110).
+    // Require the Bearer scheme. RFC 9110 says the scheme name is case-insensitive.
     if (parts.length !== 2 || parts[0]?.toLowerCase() !== "bearer" || !parts[1]) {
       unauthorized(c, "invalid_request", "invalid credentials structure");
     }
     const token = parts[1];
 
-    // Peek at the (unverified) `iss` claim to pick the tenant; verification
-    // below checks it again against the tenant's configured issuer.
+    // Read the unverified `iss` claim to pick the tenant. `jwtVerify` below checks
+    // it again against the tenant's configured issuer.
     let issuer: unknown;
     try {
       issuer = decodeJwt(token).iss;
@@ -99,8 +101,8 @@ export function createValidateJwt(tenants: AuthTenant[]) {
       }));
     } catch (error) {
       if (error instanceof JwksUnavailableError) throw error;
-      // The response stays generic, so log the real reason for debugging
-      // (expired, bad signature, wrong audience)
+      // The response does not say why the token failed, so log the reason
+      // (for example expired, bad signature or wrong audience) for debugging.
       console.warn(
         `JWT verification failed for tenant "${validator.tenant.name}":`,
         error instanceof errors.JOSEError ? `${error.code} ${error.message}` : error,
@@ -116,14 +118,13 @@ export function createValidateJwt(tenants: AuthTenant[]) {
 }
 
 /**
- * Validates an Auth0-issued access token sent as `Authorization: Bearer <token>`.
+ * Validates an Auth0 access token sent as `Authorization: Bearer <token>`.
  *
- * The token's (unverified) `iss` claim selects the matching tenant, whose JWKS
- * endpoint then verifies the token signature, issuer, audience and expiry.
- * Tokens from unknown issuers are rejected. On success, decoded claims are
- * available via `c.get("jwtPayload")` and the tenant name via
- * `c.get("authTenant")`; on failure it throws an HTTPException — 401 for a
- * bad token, 503 (`JwksUnavailableError`) when the tenant's keys could not
- * be fetched at all.
+ * The unverified `iss` claim picks the tenant. The token's signature, issuer,
+ * audience and expiry are then checked with that tenant's keys. Tokens from
+ * unknown issuers are rejected. On success, the claims are available with
+ * `c.get("jwtPayload")`, the tenant name with `c.get("authTenant")` and the token
+ * with `c.get("authToken")`. On failure it throws an HTTPException: 401 for a bad
+ * token, or 503 (`JwksUnavailableError`) when the tenant's keys could not be fetched.
  */
 export const validateJwt = createValidateJwt(config.tenants);

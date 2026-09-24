@@ -6,16 +6,12 @@ const SECTIONS = [
 ];
 
 /**
- * Stand-in for a consuming app's side navigation, so the top bar's collapse
- * control has something to collapse. Preview page only — Uniformen ships no
- * sidebar.
+ * Renders an example side navigation for the preview page, so the top bar's
+ * collapse button has something to collapse. Uniformen does not ship a sidebar.
  *
- * Written the way apps should write one: the collapsed width is CSS keyed off
- * `data-uniformen-sidebar` on the root element (see the preview's own styles), and
- * the close button in the header writes that same attribute. Nothing here mirrors
- * the top bar's state or listens for an event.
- *
- * No locale: it stands in for app content, and `?locale=` is the chrome only.
+ * It has no state of its own. CSS uses `data-uniformen-sidebar` on the root element
+ * to collapse it. The texts are not translated, because it stands in for app
+ * content and `?locale=` only applies to the header and footer.
  */
 export function PreviewSidebar() {
   return (
@@ -23,7 +19,8 @@ export function PreviewSidebar() {
       <div class="preview-sidebar__inner">
         <div class="preview-sidebar__head">
           <span class="preview-sidebar__title">Meny</span>
-          {/* The app's own control: writes the attribute, same as the top bar button. */}
+          {/* Stands in for the app's own close button. It sets the same attribute as the
+              top bar button. */}
           <button
             type="button"
             class="preview-sidebar__close"

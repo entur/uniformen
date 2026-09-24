@@ -8,14 +8,13 @@ const texts = {
 } as const;
 
 /**
- * Collapse/expand control for the consuming app's side navigation. Uniformen
- * renders no sidebar itself. Clicking flips `data-uniformen-sidebar` on `<html>`
- * and the app reacts to that (see `sidebarHandlers`).
+ * Renders the button that collapses and expands the consuming app's sidebar.
+ * Uniformen does not render a sidebar. A click toggles `data-uniformen-sidebar` on
+ * `<html>`, and the app styles its sidebar from it. See `sidebarHandlers`.
  *
- * Nothing is bound here: the head script delegates the click and restores the state
- * before this markup is parsed, and the icon follows the root attribute in CSS.
- * `aria-expanded` is the one thing rendered here that script has to correct on load,
- * since it can't be derived in CSS. The default matches an expanded sidebar.
+ * No click handler is attached here, and CSS picks the icon from the attribute.
+ * `aria-expanded` is rendered as `true` to match an expanded sidebar. Script fixes
+ * it on load, because CSS cannot set it.
  */
 export function SidebarToggle({ locale }: { locale: Locale }) {
   const txt = texts[locale];

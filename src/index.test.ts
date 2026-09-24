@@ -22,13 +22,8 @@ describe("server", () => {
   });
 });
 
-/**
- * A draining pod has to stop being sent traffic before it stops serving, or a
- * rollout answers whatever arrived in the same instant with a dropped connection.
- * Readiness is what says so, so it has to actually fail.
- *
- * Last in the file: the flip is one-way, as it is in a shutdown.
- */
+// Keep this block last in the file. Nothing resets the shutdown state, so every
+// test after it would see a server that is shutting down.
 describe("shutdown", () => {
   test("readiness fails once a shutdown has begun, and liveness does not", async () => {
     expect(isReady()).toBe(true);
@@ -38,8 +33,6 @@ describe("shutdown", () => {
     expect(readiness.status).toBe(503);
     expect(await readiness.json()).toEqual({ status: "OUT_OF_SERVICE" });
 
-    // The process is up and still answering — that is what the drain is for — so
-    // nothing should be restarting it, and requests still get a layout.
     const liveness = await app.request("/actuator/health/liveness");
     expect(liveness.status).toBe(200);
     const ssr = await app.request("/ssr");

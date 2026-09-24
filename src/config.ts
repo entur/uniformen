@@ -4,10 +4,9 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-// Audiences may be a comma-separated list. jose's jwtVerify treats an array as
-// "match any", so one tenant can accept tokens minted for several resources
-// (e.g. partner web-app users carry the portal audience, while other
-// partner-tenant apps carry the api audience). Same issuer, multiple audiences.
+// The audience env var can be a comma-separated list. jose's jwtVerify accepts a
+// token that matches any audience in an array. This lets one tenant accept tokens
+// for several resources, for example both the portal audience and the api audience.
 function requiredAudiences(name: string): string | string[] {
   const [first, ...rest] = requiredEnv(name)
     .split(",")

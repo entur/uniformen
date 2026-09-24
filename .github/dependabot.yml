@@ -6,13 +6,13 @@ registries:
     url: "https://entur2.jfrog.io/entur2"
     token: ${{secrets.ARTIFACTORY_AUTH_TOKEN}}
 updates:
-  # Major updates will not be grouped together for github-actions updates
+  # Group minor and patch updates into one PR. Major updates get their own PR.
   - package-ecosystem: github-actions
     directory: "/"
     commit-message:
       prefix: "chore"
     schedule:
-      # Every other monday at 08:00
+      # Every other Monday at 08:00
       interval: "cron"
       cronjob: "0 8 * * mon%2"
       timezone: "Europe/Oslo"
@@ -25,7 +25,7 @@ updates:
     cooldown:
       default-days: 7
 
-  # Group patch and minor, but major updates will not be grouped together for bun updates
+  # Group minor and patch updates into one PR. Major updates get their own PR.
   - package-ecosystem: "bun"
     directory: "/"
     commit-message:
@@ -33,7 +33,7 @@ updates:
     registries:
       - jfrog-artifactory
     schedule:
-      # Every other monday at 08:00
+      # Every other Monday at 08:00
       interval: "cron"
       cronjob: "0 8 * * mon%2"
       timezone: "Europe/Oslo"
@@ -47,9 +47,9 @@ updates:
     cooldown:
       default-days: 7
 
-  # The package is released by release-please; its dependencies live in their own
-  # lockfile (packages/uniformen/bun.lock) and are not covered by the root "/" entry.
-  # "chore" keeps these out of the release notes and cuts no release.
+  # packages/uniformen has its own lockfile, so the root "/" entry does not update it.
+  # With the "chore" prefix, release-please leaves these updates out of the release
+  # notes and does not make a release for them.
   - package-ecosystem: "bun"
     directory: "/packages/uniformen"
     commit-message:
@@ -57,7 +57,7 @@ updates:
     registries:
       - jfrog-artifactory
     schedule:
-      # Every other monday at 08:00
+      # Every other Monday at 08:00
       interval: "cron"
       cronjob: "0 8 * * mon%2"
       timezone: "Europe/Oslo"
@@ -71,13 +71,13 @@ updates:
     cooldown:
       default-days: 7
 
-  # Major updates will not be grouped together for docker updates
+  # Group minor and patch updates into one PR. Major updates get their own PR.
   - package-ecosystem: "docker"
     directory: "/"
     commit-message:
       prefix: "chore"
     schedule:
-      # Every other monday at 08:00
+      # Every other Monday at 08:00
       interval: "cron"
       cronjob: "0 8 * * mon%2"
       timezone: "Europe/Oslo"

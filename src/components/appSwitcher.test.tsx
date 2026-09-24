@@ -6,16 +6,15 @@ import { renderComponentToString } from "../ssr/renderComponentToString";
 import type { Environment } from "../config";
 import type { Locale } from "../types";
 
-// The server resolves its environment once at startup, so the suite as a whole
-// only ever runs as one of them (dev, see test/authTestSetup). The switcher takes
-// the environment as a prop so the other lists can be rendered here.
+// The test server always runs as dev (see test/authTestSetup). The switcher takes
+// the environment as a prop, so these tests can render the other environments too.
 const ENVIRONMENTS: Environment[] = ["local", "dev", "staging", "production"];
 
-/** Hrefs in document order. The switcher's only links are the application list. */
+/** Returns the hrefs in document order. The switcher only links to the applications. */
 const hrefs = (html: string): string[] =>
   [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] as string);
 
-/** Bokmål unless the test is about the language. */
+/** Renders the switcher in Bokmål unless the test passes a locale. */
 const render = (
   props: { environment?: Environment; activeAppId?: PortalApplicationId; locale?: Locale } = {},
 ) => renderComponentToString(<AppSwitcher locale="nb-NO" {...props} />);
@@ -47,7 +46,7 @@ describe("app switcher rendering", () => {
   test("the app the header is rendered for is the current page", async () => {
     const html = await render({ environment: "dev", activeAppId: "cleos" });
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
-    // The marker sits on CLEOS' own link, not on whichever item renders first.
+    // Check that the marker is on the CLEOS link, not just on the first item.
     expect(html).toMatch(
       /href="https:\/\/cleos-client\.dev\.entur\.io"[^>]*aria-current="page"|aria-current="page"[^>]*href="https:\/\/cleos-client\.dev\.entur\.io"/,
     );
@@ -76,7 +75,7 @@ describe("app switcher rendering", () => {
       expect(html.match(/aria-current="page"/g)).toHaveLength(1);
       expect(html).toContain(url);
       const [marked] = html.split('aria-current="page"');
-      // The marked link is the one whose href immediately precedes the marker.
+      // No `</a>` may come between the href and the marker, so the marker is on this link.
       expect((marked as string).lastIndexOf(`href="${url}"`)).toBeGreaterThan(
         (marked as string).lastIndexOf("</a>"),
       );

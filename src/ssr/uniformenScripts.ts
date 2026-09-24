@@ -3,16 +3,16 @@ import panelToggle from "../components/panelToggle.ts";
 import retargetEnvironmentLinks from "../components/retargetEnvironmentLinks.ts";
 import { sha256Source } from "./sha256.ts";
 
-// The handlers are emitted as the declarations they already are — `toString()` on a
-// `function foo() {}` is source that declares `foo` — so the calls below are written
-// out as the page will run them. Every panel in the top bar is one of those lines.
+// `toString()` on a function declaration returns source that declares the function,
+// so the script can call the handlers by name below. There is one `panelToggle` call
+// per panel in the top bar.
 //
-// Wrapped in an IIFE: a top-level declaration in a classic script is a binding the
-// consuming page's own scripts can see, and these names are ours, not theirs.
+// The code is wrapped in an IIFE so the function names do not become globals that
+// the consuming page's scripts can see.
 //
-// Each handler bails out when its markup is absent, so the same bundle serves every
-// combination of rendered controls. A handler that has to run before the first paint,
-// or before the app's own scripts, goes in `uniformenHeadScript` instead.
+// Each handler does nothing when its markup is missing, so the same script works for
+// every combination of controls. Code that must run before the first paint goes in
+// `uniformenHeadScript`.
 const UNIFORMEN_SCRIPTS = `(() => {
 ${panelToggle.toString().trim()}
 ${retargetEnvironmentLinks.toString().trim()}
@@ -27,7 +27,7 @@ localeHandlers();
 export const uniformenScriptsHash = await sha256Source(UNIFORMEN_SCRIPTS);
 
 /**
- * Render the uniformen scripts as a single inline `<script>`.
+ * Renders the uniformen scripts as one inline `<script>`.
  */
 export const renderUniformenScripts = () => {
   return `<script>${UNIFORMEN_SCRIPTS}</script>` as const;

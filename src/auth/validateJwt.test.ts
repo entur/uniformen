@@ -115,7 +115,7 @@ describe("validateJwt (multiple audiences)", () => {
     name: "partner",
     issuer: PARTNER_ISSUER,
     audience: [PARTNER_AUDIENCE, SECOND_AUDIENCE],
-    // authTestSetup points these at the local test server.
+    // authTestSetup sets these variables to URLs on the local test server.
     jwksUri: process.env["AUTH0_PARTNER_JWKS_URI"]!,
     userInfoUri: process.env["AUTH0_PARTNER_USERINFO_URI"]!,
   };
@@ -152,7 +152,7 @@ describe("validateJwt (multiple audiences)", () => {
   });
 });
 
-/** Serves `respond(hit)` and counts hits; `hits()` returns the count. */
+/** Starts a JWKS server that answers with `respond(hit)` and counts the requests. */
 function jwksServer(respond: (hit: number) => Response) {
   let hits = 0;
   const server = Bun.serve({
@@ -167,7 +167,7 @@ function jwksServer(respond: (hit: number) => Response) {
 }
 
 describe("JWKS endpoint unavailable", () => {
-  /** A tenant matching the internal test issuer, pointed at the given (broken) JWKS endpoint. */
+  /** Returns a tenant with the internal test issuer that uses the given JWKS endpoint. */
   function deadTenant(jwksUri: string): AuthTenant {
     return {
       name: "internal",

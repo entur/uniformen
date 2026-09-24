@@ -9,9 +9,9 @@ import {
 } from "./authTestKeys";
 
 /**
- * Controllable mock for the Auth0 userinfo endpoints. Tests can swap
- * `respond` to simulate failures/delays and read `calls` to assert how many
- * requests reached upstream; call `reset()` in `beforeEach`.
+ * A mock of the Auth0 userinfo endpoints. Tests can replace `respond` to simulate
+ * errors or slow answers, and read `calls` to check how many requests were made.
+ * Call `reset()` in `beforeEach`.
  */
 export const userInfoMock = {
   calls: 0,
@@ -24,11 +24,9 @@ export const userInfoMock = {
 };
 
 /**
- * Test-only auth harness. Loaded via `preload` in bunfig.toml so it runs
- * before any test module (and thus before `config.ts`) reads env:
- *  - serves the test JWKS and userinfo (one endpoint per tenant) from a
- *    local server,
- *  - points the app's Auth0 config at those endpoints via env vars.
+ * Starts a local server with the test JWKS and userinfo endpoints for each tenant,
+ * and sets the Auth0 env vars to point at it. bunfig.toml preloads this file, so
+ * it runs before any test module, and before `config.ts` reads the env vars.
  */
 const server = Bun.serve({
   port: 0,

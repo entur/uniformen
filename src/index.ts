@@ -10,24 +10,23 @@ export const app = new OpenAPIHono();
 const PORT = 4123;
 
 /**
- * How long a pod keeps serving after SIGTERM before it stops accepting.
+ * How long the server keeps accepting requests after SIGTERM.
  *
- * Deleting a pod stops routing to it and signals it at roughly the same moment, so
- * requests keep arriving for a little while after the signal. Serving through that
- * window is what makes a rollout invisible to consumers. Well inside Kubernetes'
- * 30-second grace period, which is the ceiling on the whole shutdown.
+ * Kubernetes stops routing to a pod and sends SIGTERM at about the same time, so
+ * requests can still arrive for a short while after the signal. Serving them
+ * means no requests fail during a rollout. The whole shutdown must finish within
+ * Kubernetes' 30-second grace period.
  */
 const SHUTDOWN_DRAIN_MS = 5_000;
 
-/** How long in-flight requests get to finish before the socket is closed on them. */
+/** How long open requests get to finish before their connections are closed. */
 const SHUTDOWN_STOP_MS = 10_000;
 
-// Prometheus metrics
 app.use("*", metricsRoute);
 app.get("/actuator/prometheus", printMetrics);
 
-// Health checks. Liveness is "this process is alive"; readiness is "send me
-// traffic", which stops being true as soon as the pod starts draining.
+// Liveness says the process is running. Readiness says the pod should get
+// traffic, and it fails as soon as shutdown starts.
 app.get("/actuator/health/liveness", (c) => c.json({ status: "UP" }));
 app.get("/actuator/health/readiness", (c) =>
   isReady() ? c.json({ status: "UP" }) : c.json({ status: "OUT_OF_SERVICE" }, 503),
@@ -46,23 +45,22 @@ app.doc("/doc", {
   },
 });
 
-// Served when this file is the entrypoint, so importing it — from a test — costs
-// nothing but the routes.
+// Only start the server when this file is run directly. Tests import `app`
+// without starting a server.
 if (import.meta.main) {
   const server = Bun.serve({ port: PORT, fetch: app.fetch });
 
   /**
-   * Fail readiness, keep serving through the drain, then stop accepting and let
-   * what is already in flight finish. Without it a rollout answers whatever arrived
-   * in the same instant with a dropped connection — and every consuming app's page
-   * render is one of those requests.
+   * Fails readiness, keeps serving for `SHUTDOWN_DRAIN_MS`, then stops accepting
+   * new connections and lets open requests finish. Without this, requests that
+   * arrive during a rollout would get a dropped connection.
    */
   const shutdown = async (signal: string) => {
     if (!beginShutdown()) return;
     console.info(`${signal} received, draining for ${SHUTDOWN_DRAIN_MS}ms`);
     await Bun.sleep(SHUTDOWN_DRAIN_MS);
-    // Graceful first, then forced: a connection that won't end must not hold the
-    // pod until the kubelet kills it.
+    // Wait for open requests to finish, but at most `SHUTDOWN_STOP_MS`. Then close
+    // all connections, so a connection that never ends does not keep the pod alive.
     await Promise.race([server.stop(), Bun.sleep(SHUTDOWN_STOP_MS)]);
     await server.stop(true);
     process.exit(0);

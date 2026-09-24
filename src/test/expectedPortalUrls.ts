@@ -1,16 +1,16 @@
 import type { Environment } from "../config";
 
 /**
- * The exact links each environment hands out, in the order the panel lists them —
- * by name, so Partner sits under its host's `entur-partner`.
+ * The exact app links for each environment, in the order the panel shows them.
+ * The panel sorts by app name, so Partner (host `entur-partner`) comes after
+ * Ops center, not first.
  *
- * Written out rather than derived: the hosts follow no single pattern (CLEOS is
- * served from a different subdomain and TLD outside production, and Partner's host
- * keeps the `entur-` prefix its name dropped), so a rule here would only restate a
- * coincidence.
+ * The URLs are written out by hand because the hosts do not follow one pattern.
+ * For example, CLEOS uses a different subdomain and top-level domain outside
+ * production.
  *
- * Lives outside the suites that assert against it so both can share it without
- * importing a test file, which would register its cases twice.
+ * This is its own file so several test files can use it. Importing a test file
+ * would run its tests twice.
  */
 const EXPECTED_URLS: Record<"dev" | "staging" | "production", string[]> = {
   dev: [
@@ -36,6 +36,6 @@ const EXPECTED_URLS: Record<"dev" | "staging" | "production", string[]> = {
   ],
 };
 
-/** The links an environment serves, dev standing in for local. */
+/** Returns the expected links for an environment. Local uses the dev links. */
 export const expectedUrls = (environment: Environment): string[] =>
   EXPECTED_URLS[environment === "local" ? "dev" : environment];

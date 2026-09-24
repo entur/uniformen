@@ -12,8 +12,8 @@ import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenH
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 
-// The preview page's own base styles (fonts + layout reset). Held as a const so
-// its exact bytes can be hashed for the CSP `style-src` directive.
+// Base styles for the preview page: fonts and layout. It is a constant so its exact
+// text can be hashed for the CSP `style-src` directive.
 const PREVIEW_BASE_CSS = `
                     @font-face {
                       font-family: "Nationale";
@@ -42,15 +42,13 @@ const PREVIEW_BASE_CSS = `
                     }
                     main { flex: 1 0 auto; display: flex; }
 
-                    /* The stage the bar is judged against. contrast=true is the app
-                       saying its page behind the header is dark, so the preview's is
-                       too — the palette cannot be read against a white page. The
-                       controls keep their own card. */
+                    /* With contrast=true the app's page behind the header is dark, so
+                       the preview page is dark too. The contrast colours are hard to
+                       judge on a white page. The controls keep their white card. */
                     body.preview--contrast { background: #08091c; }
 
-                    /* The stand-in sidebar goes with the page: an app dark enough to
-                       ask for a contrast bar has a dark sidebar too, and left light it
-                       is unreadable against the stage. */
+                    /* Dark colours for the example sidebar in contrast mode, so it can
+                       be read on the dark page. */
                     .preview--contrast .preview-sidebar { border-right-color: #393d79; }
                     .preview--contrast .preview-sidebar__title,
                     .preview--contrast .preview-sidebar__close,
@@ -59,11 +57,9 @@ const PREVIEW_BASE_CSS = `
                     .preview--contrast .preview-sidebar__close:hover,
                     .preview--contrast .preview-sidebar__link:hover { background: #393d79; }
 
-                    /* Stand-in for a consuming app's side navigation, so the collapse
-                       control can be checked by hand. Written the way apps should write
-                       it: state read off the root attribute, no JavaScript involved.
-                       The width animates; the inner column keeps a fixed width so the
-                       content slides out of view instead of reflowing on the way. */
+                    /* Example side navigation, for testing the collapse button by hand.
+                       The width animates. The inner column has a fixed width, so the
+                       content slides out of view instead of wrapping. */
                     .preview-sidebar {
                         width: 16rem;
                         flex: 0 0 auto;
@@ -72,11 +68,10 @@ const PREVIEW_BASE_CSS = `
                         transition: width 150ms ease, visibility 150ms ease;
                     }
 
-                    /* Zero width alone only hides it from the eye: the links stay
-                       focusable and announced, so a collapsed sidebar becomes a run of
-                       invisible tab stops. Hiding visibility takes it out of the tab
-                       order and the a11y tree, and transitioning that keeps the content
-                       visible until the collapse has finished animating. */
+                    /* Zero width alone does not remove the links from the tab order or
+                       from screen readers. visibility: hidden does. Because visibility
+                       has a transition, the content stays visible until the animation
+                       ends. */
                     :root[data-uniformen-sidebar="collapsed"] .preview-sidebar {
                         width: 0;
                         visibility: hidden;
@@ -150,13 +145,12 @@ const PREVIEW_BASE_CSS = `
 
                     .preview-sidebar__link:hover { background: #e9eaf3; }
 
-                    /* The knobs, in the content area: the parameters are the page's
-                       subject, so they are what the page shows when you open it. */
+                    /* The parameter controls, in the content area. */
                     .preview-controls {
                         flex: 1 1 auto;
-                        /* A flex item stops at its content's width without this, so the
-                           box would push the page sideways instead of letting the two
-                           ends fall into one column. */
+                        /* Without this, a flex item cannot get narrower than its content.
+                           The box would then make the page scroll sideways instead of
+                           putting the two groups in one column. */
                         min-width: 0;
                         display: flex;
                         flex-direction: column;
@@ -190,10 +184,9 @@ const PREVIEW_BASE_CSS = `
                         color: #4c4f70;
                     }
 
-                    /* The two ends of the bar, at the two ends of the box: a knob sits
-                       on the side of the page the thing it moves is on. They fall into
-                       one column when there is no room to keep them apart, where the
-                       titles are what is left of the mapping. */
+                    /* The left and right groups, on the same sides as the parts of the
+                       bar they control. When there is not enough room they wrap into one
+                       column, and the group titles show which side is which. */
                     .preview-controls__sides {
                         display: flex;
                         flex-wrap: wrap;
@@ -214,8 +207,8 @@ const PREVIEW_BASE_CSS = `
                     .preview-controls__group--left,
                     .preview-controls__group--right { flex: 0 1 21rem; }
 
-                    /* Under both ends, and told apart from them by the rule rather than
-                       by a title alone: what is in it belongs to no one end. */
+                    /* The group for the whole bar is below the other two, with a line
+                       above it. */
                     .preview-controls__group--whole {
                         padding-top: 1.25rem;
                         border-top: 1px solid #e5e5e9;
@@ -240,7 +233,7 @@ const PREVIEW_BASE_CSS = `
                         gap: 0.375rem;
                     }
 
-                    /* The one group short enough to read across instead of down. */
+                    /* Options in one row, used for the short list of locales. */
                     .preview-controls__row {
                         display: flex;
                         flex-wrap: wrap;
@@ -279,8 +272,7 @@ const PREVIEW_BASE_CSS = `
 
                     .preview-controls__text { flex: 1 1 auto; min-width: 0; }
 
-                    /* The two text knobs sit on their labels' right, so the labels
-                       hold a column between them. */
+                    /* Fixed label width, so the two text fields line up. */
                     .preview-controls__name { flex: 0 0 5.5rem; }
 
                     .preview-controls__actions {
@@ -340,26 +332,16 @@ const PREVIEW_BASE_CSS = `
 `.trim();
 
 /**
- * The consuming app's half of the two contracts the page demonstrates, written the
- * way an app writes it.
+ * Script for the preview page. It does what a consuming app would do.
  *
- * The demo sidebar's close button stands in for whatever an app collapses from: a
- * shortcut, a route change, a button of its own. It writes the state attribute — the
- * same thing the top bar button does — and that is all an app ever has to do.
+ * The example sidebar's close button sets the sidebar attribute on the root element,
+ * like the top bar button does. On a `uniformen:locale` event the page reloads with
+ * the new `locale` in the URL. A real app would save the choice, for example in a
+ * cookie, and reload.
  *
- * The language event is the app's to finish: persist the choice, then load a new
- * document in it. The preview page's URL is its persistence, so it puts the picked
- * language in `locale` and navigates — where an app would write its cookie and
- * reload. Nothing here re-labels the bar, because nothing can.
- *
- * Both are bound unconditionally: neither has anything to do on a page that renders
- * no sidebar and no switcher.
- *
- * The last two belong to the knobs, and neither is the form working: it submits on its
- * own. Emptying a control means the parameter is absent, but a form posts it as `app=`
- * — a rejected value on every one of them — so empty controls are disabled on the way
- * out, which is how a form omits a field. The URL that produces is also the one worth
- * copying.
+ * The form handlers submit the form on every change. On submit they disable empty
+ * controls, because a form would send them as `app=` and the schema rejects empty
+ * values. A disabled field is not submitted.
  */
 const PREVIEW_SCRIPT = `(${function previewHandlers() {
   const close = document.querySelector("[data-preview-sidebar-close]");
@@ -380,10 +362,10 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
     );
     for (const field of fields) if (!field.value) field.disabled = true;
 
-    // The locked entry in `availableLocales` is the language the page was rendered in —
-    // the one a locale pick is leaving — so a list ticks the language being picked on the
-    // way out, rather than submitting the one combination the schema rejects. Nothing else
-    // ticked is no list at all, and then the locked entry is dropped like an empty field.
+    // The hidden entry in `availableLocales` is the locale the page was rendered in. If
+    // the user picked a new locale, check its box too, because the schema rejects a list
+    // without `locale`. If no other box is checked, there is no list, so drop the hidden
+    // entry as well.
     const boxes = [
       ...controls.querySelectorAll<HTMLInputElement>("input[type=checkbox][name=availableLocales]"),
     ];
@@ -396,13 +378,13 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
     }
   });
 
-  // A change applies itself. `change` is what makes that bearable on both kinds of
-  // control: a box or a menu fires it on the pick, a text field only once it is left.
+  // Submit on every change. Checkboxes and menus fire `change` when picked, and a
+  // text field fires it only when it loses focus, not on every key.
   const FOCUS_KEY = "uniformen-preview-focus";
   controls?.addEventListener("change", (event) => {
     const field = event.target as HTMLInputElement | HTMLSelectElement;
-    // Applying means navigating, which drops focus on the floor. Named rather than
-    // indexed, so the control is found again in a form that renders differently.
+    // Submitting loads a new page, which loses focus. Save the control's name and value
+    // so it can be focused again, even if the form renders differently.
     sessionStorage.setItem(FOCUS_KEY, `${field.name}\n${field.value}`);
     controls.requestSubmit();
   });
@@ -410,8 +392,8 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
   const [name = "", value = ""] = (sessionStorage.getItem(FOCUS_KEY) ?? "").split("\n");
   sessionStorage.removeItem(FOCUS_KEY);
   if (controls && name) {
-    // One name covers a group, so the value picks the member out of it. A text field's
-    // value is its own, and an emptied one has none — both fall back to the name.
+    // Radio buttons and checkboxes share a name, so use the value to find the right one.
+    // If that finds nothing, for example for a text field, find the control by name only.
     const field =
       (value &&
         controls.querySelector<HTMLElement>(
@@ -423,8 +405,8 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
 
   const copy = document.querySelector("[data-preview-copy]");
   copy?.addEventListener("click", async () => {
-    // The printed URL, not the address bar: the page prints the canonical spelling of
-    // the query it validated, which is the one worth pasting somewhere.
+    // Copy the URL printed on the page, not the one in the address bar. The printed URL
+    // is built from the validated query and has no extra parameters.
     const printed = document.querySelector("[data-preview-url]");
     const label = copy.textContent;
     try {
@@ -433,7 +415,7 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
       );
       copy.textContent = "Kopiert";
     } catch {
-      // Clipboard denied. Select it instead of claiming a copy that did not happen.
+      // The clipboard is blocked. Select the URL instead, so the user can copy it.
       if (printed) window.getSelection()?.selectAllChildren(printed);
       copy.textContent = "Merket";
     }
@@ -446,47 +428,38 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
 const previewBaseCssHash = await sha256Source(PREVIEW_BASE_CSS);
 const previewScriptHash = await sha256Source(PREVIEW_SCRIPT);
 
-// CSP restricting inline scripts/styles to the exact hashed blocks we render.
+// CSP that only allows the inline scripts and styles this page renders, by hash.
 const previewCsp = [
   `script-src ${uniformenHeadScriptHash} ${uniformenScriptsHash} ${previewScriptHash}`,
   `style-src ${previewBaseCssHash} ${uniformenCssHash}`,
 ].join("; ");
 
 /**
- * The preview page's own parameters: everything `/ssr` takes, plus the ones that
- * only make sense for looking at the page by hand. Those carry a `debug` prefix,
- * so which of them is part of the contract and which is a knob on the dev tool is
- * readable straight off the URL.
+ * Query parameters for the preview page. These are the `/ssr` parameters plus some
+ * for testing by hand, which start with `debug`.
  *
- * Deliberately an extension here rather than a widening of the shared schema:
- * signing in is something a consumer's token establishes, and a `user` parameter
- * on `/ssr` would let any page put a name of its choosing in the signed-in
- * chrome. The preview page has no token to go on, and nothing reads its output
- * but a developer, so there it is only a knob.
+ * Do not add the `debug` parameters to the shared schema. On `/ssr` they would let
+ * any page show any name as the signed-in user. The user must come from the token.
  */
 const previewQuerySchema = uniformenQuerySchema.extend({
-  // Free text, and bounded rather than validated: feeding the bar a 100-character
-  // name or an address that is not one is the point of having the knob.
+  // Any text up to 120 characters. The email is not validated, so you can test long
+  // names and odd values.
   debugUser: z.string().min(1).max(120).optional(),
   debugEmail: z.string().min(1).max(120).optional(),
-  // Whether to render the bar as an Entur user's. The organisation is a claim on a
-  // token, and the page has none, so on the dev tool it is a knob like the rest.
+  // Whether to render the bar for an Entur user. In `/ssr` this comes from the token.
+  // The preview page has no token, so it is a parameter here.
   debugEnturUser: z.enum(["true", "false"]).optional(),
 });
 
 export type PreviewQuery = z.infer<typeof previewQuerySchema>;
 
 /**
- * The user the preview page renders the bar for. No `debugUser` is `undefined`,
- * which is the anonymous bar with its login link.
+ * Returns the user to render the preview bar for. Returns `undefined`, which renders
+ * the anonymous bar, when `debugUser` is missing or the environment is production.
  *
- * Production renders nobody whatever the URL says. The preview page ships to every
- * environment, and a prod URL that puts a name in the signed-in chrome is a
- * confusing thing to be able to hand someone — there is no session or token behind
- * it, which is exactly what makes it misleading.
- *
- * The environment is a parameter because the server resolves its own once at
- * startup: passing it is the only way to cover the production branch from a test.
+ * Production ignores the parameters, because a production link that shows a
+ * signed-in user with no real session would be misleading. `environment` is a
+ * parameter so tests can check the production case.
  */
 export function previewUser(
   { debugUser, debugEmail }: Pick<PreviewQuery, "debugUser" | "debugEmail">,
@@ -497,12 +470,9 @@ export function previewUser(
 }
 
 /**
- * Whether the preview page renders the environment chip and switcher, i.e. whether
- * the bar is an Entur user's.
- *
- * Held to the same production rule as `previewUser`, and for the same reason: the
- * knob would otherwise hand out a prod URL showing chrome the viewer's own
- * organisation does not entitle them to.
+ * Checks whether the preview bar is rendered for an Entur user, which shows the
+ * environment chip and switcher. Always false in production, for the same reason
+ * as in `previewUser`.
  */
 export function previewIsEnturUser(
   { debugEnturUser }: Pick<PreviewQuery, "debugEnturUser">,
@@ -527,16 +497,16 @@ export function previewRoutes(server: OpenAPIHono): void {
 
   server.openapi(previewRoute, async (ctx) => {
     ctx.header("Content-Security-Policy", previewCsp);
-    // A dev tool, and one whose output depends on the instance's own environment as
-    // much as on the URL: never worth a stale copy.
+    // Never cache this developer tool. Its output depends on the instance's
+    // environment as well as on the URL.
     ctx.header("Cache-Control", "no-store");
     const query = ctx.req.valid("query");
     const navProps = topNavigationProps(query);
     const user = previewUser(query);
-    // `?sidebar=true` also gets the demo sidebar: the control is pointless to look
-    // at without something for it to collapse.
+    // With `?sidebar=true`, also render the example sidebar, so the collapse button
+    // has something to collapse.
     const sidebar = navProps.sidebar ? await renderComponentToString(<PreviewSidebar />) : "";
-    // Locale codes double as BCP 47 tags.
+    // The locale codes are valid BCP 47 language tags.
     return ctx.html(`
         <html lang="${navProps.locale}">
             <head>

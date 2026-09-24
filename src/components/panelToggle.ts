@@ -1,31 +1,26 @@
 /// <reference lib="dom" />
 
 /**
- * One panel in the top bar: a toggle button whose `aria-expanded` is the open
- * state, and the panel that attribute shows. Opening on a click, closing on a
- * second click, on a click outside and on Escape is the same behaviour for every
- * panel in the bar, so this is serialized once and called once per panel — the
- * list of them is in `uniformenScripts`.
+ * Makes one top bar panel open and close. The toggle button's `aria-expanded` holds
+ * the open state, and CSS shows the panel from it. A click on the toggle opens or
+ * closes the panel. A click outside, Escape, or moving focus out of the panel closes it.
  *
- * One keyboard model, for every panel:
+ * Keyboard:
  *
- *  - opening moves focus into the panel — onto the checked item where there is one,
- *    the first otherwise, so a language menu opens on the language you are in;
- *  - Up/Down step through the panel's items and wrap, Home/End jump to the ends;
- *  - Escape closes and hands focus back to the chip;
- *  - Tabbing out closes: an open panel behind the focus is a panel the user has no
- *    way of knowing is still there.
+ *  - Opening moves focus to the first item. If the panel contains only the language
+ *    options, it moves focus to the checked language instead.
+ *  - Up and Down move through the items and wrap around. Home and End go to the
+ *    first and last item.
+ *  - Escape closes the panel and moves focus back to the toggle.
+ *  - Tab out of the panel closes it, so no open panel is left behind the focus.
  *
- * A `role="menu"` group inside the panel — the language options — is one tab stop,
- * which is what that role promises. Keeping that stop on whichever option has the
- * focus is the roving `tabindex` written here.
+ * A `role="menu"` group in the panel is a single tab stop. This function moves that
+ * tab stop to the option that has focus (a roving `tabindex`).
  *
- * Bails out when either half of the markup is absent, so the same bundle serves
- * every combination of rendered controls.
- *
- * `beforeOpen` is for a panel with something to bring up to date first, and runs
- * while the panel is still hidden. It ships as source alongside the call, so it
- * can only reach what it is handed and what the browser provides.
+ * Does nothing if the toggle or the panel is not in the page. `beforeOpen` runs
+ * while the panel is still hidden, so it can update the panel first. This function
+ * is sent to the browser as source code, so `beforeOpen` can only use its argument
+ * and browser globals.
  */
 export default function panelToggle(
   toggleSelector: string,
@@ -40,8 +35,8 @@ export default function panelToggle(
 
   const isOpen = () => toggle.getAttribute("aria-expanded") === "true";
 
-  // Everything the user can land on, in document order: links and buttons. Read per
-  // keypress rather than once, since a panel's contents are the app's to change.
+  // Returns the links and enabled buttons in the panel, in document order. It is
+  // called on every keypress because the panel's contents can change after load.
   const items = (): HTMLElement[] => {
     const found: HTMLElement[] = [];
     for (const node of panel.querySelectorAll("a[href], button:not([disabled])")) {
@@ -53,8 +48,8 @@ export default function panelToggle(
   const checkedItem = (list: HTMLElement[]) =>
     list.filter((item) => item.getAttribute("aria-checked") === "true")[0];
 
-  // The radio group, if this panel has one. Its items are the ones the roving
-  // tabindex applies to; the rest of the panel keeps a tab stop each.
+  // The radio group, if the panel has one. Its items share one tab stop. The other
+  // items in the panel each keep their own tab stop.
   const group = panel.querySelector('[role="menu"]');
   const groupItems = (): HTMLElement[] => {
     const found: HTMLElement[] = [];
@@ -64,20 +59,20 @@ export default function panelToggle(
     return found;
   };
 
-  /** Give the group a single tab stop, on `active`. */
+  /**
+   * Sets `tabindex="0"` on `active` and `-1` on the other group items. Without a
+   * valid `active`, it uses the checked item, or the first item.
+   */
   const rove = (active?: HTMLElement) => {
     const list = groupItems();
     const stop = active && list.indexOf(active) !== -1 ? active : (checkedItem(list) ?? list[0]);
     for (const item of list) item.setAttribute("tabindex", item === stop ? "0" : "-1");
   };
-  // The markup arrives roved, on the checked option. Re-asserted rather than
-  // trusted: where it agrees these writes change nothing, and where it does not the
-  // group is one tab stop from here on.
+  // Set the tabindex again here in case the server-rendered markup is wrong.
   if (group) rove();
 
-  // The stop follows the focus into the group however it got there: opening, the
-  // arrows, a click. Focus landing outside the group never reaches this, so leaving
-  // it leaves its stop where it was.
+  // Move the tab stop to the group item that gets focus, whether by opening, arrow
+  // keys or a click. Focus outside the group does not change the tab stop.
   group?.addEventListener("focusin", (event) => {
     if (event.target instanceof HTMLElement) rove(event.target);
   });
@@ -91,13 +86,9 @@ export default function panelToggle(
     }
     beforeOpen?.(panel);
     toggle.setAttribute("aria-expanded", "true");
-    // The panel is shown by CSS off the attribute just written, so this is the first
-    // moment there is anything focusable to move to.
-    //
-    // A panel that is nothing but the radio group — the bar's language chip — opens
-    // on the checked option, which is where the user already is. A menu that merely
-    // contains one opens at the top like any other list: someone reaching for the
-    // user menu is not reaching for the language.
+    // CSS shows the panel from `aria-expanded`, so its items can only get focus now.
+    // If the panel contains only the radio group, focus the checked option. If it
+    // also has other items, like the user menu, focus the first item.
     const list = items();
     const start = groupItems().length === list.length ? (checkedItem(list) ?? list[0]) : list[0];
     start?.focus();
@@ -124,7 +115,8 @@ export default function panelToggle(
     const active = document.activeElement;
     const from = active instanceof HTMLElement ? list.indexOf(active) : -1;
 
-    // Wrapping, and from nowhere in particular the ends are the two starting points.
+    // The arrow keys wrap around. When no item has focus, Down goes to the first
+    // item and Up goes to the last.
     let to: number;
     if (event.key === "ArrowDown") to = from === -1 ? 0 : (from + 1) % list.length;
     else if (event.key === "ArrowUp") to = from <= 0 ? list.length - 1 : from - 1;
@@ -132,19 +124,18 @@ export default function panelToggle(
     else if (event.key === "End") to = list.length - 1;
     else return;
 
-    // Only once a key of ours has been recognised: everything else, the page's own
-    // scrolling included, is left alone.
+    // Only prevent the default for the keys above. Other keys, like page scrolling,
+    // keep working.
     event.preventDefault();
     const next = list[to];
     if (!next) return;
     next.focus();
   });
 
-  // Tab (or anything else) taking focus out of the panel closes it. Focus moving
-  // within the panel, or back onto the chip, is not leaving — and neither is focus
-  // going nowhere at all: clicking the panel's own heading, or leaving the window,
-  // has no `relatedTarget`, and closing on that would pull the panel out from under
-  // the click. Tab always names where it went, which is the case this is for.
+  // Close the panel when focus moves out of it, for example with Tab. Focus that
+  // moves inside the panel or to the toggle does not close it. A click on the panel
+  // heading or leaving the window has no `relatedTarget`. The panel stays open then,
+  // so a click inside the panel does not close it.
   panel.addEventListener("focusout", (event) => {
     if (!isOpen()) return;
     const next = event.relatedTarget;

@@ -14,14 +14,13 @@ import uniformenCss from "./uniformen.css" with { type: "text" };
 import { sha256Source } from "./sha256";
 import { environment, type Environment } from "../config";
 
-// @entur/tokens *.rem fields are unitless numbers (px/16). Append the unit here.
+// The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
 
-// Env accent palette. Four shades per environment: `strip` paints the bar along
-// the top of the header plus the pointer above the env badge, and
-// `tint`/`border`/`text` style the badge itself. The text shade is the darkest
-// of each hue so the label stays >=4.5:1 on the tint (local is a hand-picked
-// purple, not a token hue).
+// Colours per environment. `strip` is used for the strip along the top of the header
+// and the pointer above the badge. `tint`, `border` and `text` are used for the badge.
+// The text colour is dark enough for a contrast of at least 4.5:1 on the tint. The
+// local colours are picked by hand, not taken from the tokens.
 const ENV_PALETTES = {
   local: { strip: "#B482FB", tint: "#F0E7FF", border: "#B482FB", text: "#5A2EA6" },
   dev: {
@@ -45,19 +44,17 @@ const ENV_PALETTES = {
 } satisfies Record<Environment, Record<string, string>>;
 
 /**
- * Height of the coloured strip along the top of the header. Production gets
- * none: the strip (and the pointer under it) is a "you are not in prod"
- * warning, so in prod there is nothing to warn about.
+ * Returns the height of the coloured strip along the top of the header. The strip
+ * warns that this is not production, so production has no strip.
  *
- * Zero carries a unit on purpose. The value is summed inside a `calc()` (the
- * app switcher panel's offset), and a unitless zero is a `<number>` there, not
- * a `<length>` — `calc(4rem + 0 + 0.25rem)` is invalid and drops the whole
- * declaration.
+ * Zero must have a unit. The value is used inside a `calc()`, and there a zero
+ * without a unit is a number, not a length. `calc(4rem + 0 + 0.25rem)` is invalid,
+ * and the browser ignores the whole declaration.
  */
 export const envStripHeight = (env: Environment): string =>
   env === "production" ? "0rem" : "0.25rem";
 
-/** The `:root` custom properties every component reads, resolved for one environment. */
+/** Returns the `:root` CSS variables that all components use, for one environment. */
 export function buildRootVars(env: Environment): string {
   const palette = ENV_PALETTES[env];
   return `:root {
@@ -100,16 +97,12 @@ export function buildRootVars(env: Environment): string {
 }
 
 /**
- * Contrast mode: the same roles, painted for a navy bar. Scoped to the modifier
- * class rather than to `:root`, so a contrast header and a light one could be on
- * one page; everything under the header inherits, panels included.
+ * Colours for contrast mode, for a navy bar. They are set on the modifier class, not
+ * on `:root`, so they only apply inside a contrast header, including its panels. All
+ * values are the design system's `contrast` variants.
  *
- * Every value comes from the design system's `contrast` variants — the same set
- * `@entur/layout`'s `<Contrast>` puts its children on.
- *
- * The environment badge is left alone. It is a tinted chip carrying its own
- * background, border and text, picked to hold 4.5:1 against that tint rather than
- * against whatever is behind it, so it reads on navy as it does on white.
+ * The environment badge keeps its colours. It has its own background, so its text
+ * contrast does not depend on the bar colour.
  */
 const CONTRAST_VARS = `.uniformen-top-nav--contrast {
   --uniformen-surface: ${semantic.fill.background.contrast.light};
@@ -131,7 +124,7 @@ const CONTRAST_VARS = `.uniformen-top-nav--contrast {
 }
 `;
 
-// Resolved once at startup for the environment this instance serves.
+// Built once at startup, for the environment this instance runs in.
 const UNIFORMEN_CSS = buildRootVars(environment).trim() + uniformenCss.trim() + CONTRAST_VARS;
 
 export const uniformenCssHash = await sha256Source(UNIFORMEN_CSS);

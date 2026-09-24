@@ -1,6 +1,6 @@
 /**
- * User avatar. The 17.5x17.5 glyph is centred in the shared 20x20 icon frame,
- * so it lines up with the other top bar icons whatever their glyph measures.
+ * User avatar icon. The 17.5x17.5 shape is centred in the 20x20 frame, so it lines up with
+ * the other top bar icons.
  */
 export const UserIcon = () => (
   <svg

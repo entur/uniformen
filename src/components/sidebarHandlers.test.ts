@@ -2,10 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import sidebarHandlers from "./sidebarHandlers";
 
 /**
- * The handler ships as serialized source to the browser, so it only touches
- * `document`, `window`, `localStorage`, `MutationObserver` and the DOM interfaces
- * below. Rather than pull in a full DOM implementation, install the slice it uses
- * and run the real handler against it.
+ * The handler is sent to the browser as source text, so it only uses browser globals.
+ * These fakes provide the parts of `document`, `window`, `localStorage` and
+ * `MutationObserver` that it uses, and the tests run the real handler against them.
  */
 class FakeElement {
   private readonly attributes = new Map<string, string>();
@@ -22,13 +21,12 @@ class FakeElement {
     for (const observer of this.observers) observer();
   }
 
-  /** What delegation resolves a click on the button, or on the icon inside it, to. */
   closest(selector: string): FakeElement | null {
     return selector === this.selector ? this : null;
   }
 }
 
-/** An element inside the button — where a click on the chevron actually lands. */
+/** Fakes an element inside the button, such as the chevron icon. */
 class FakeChild extends FakeElement {
   constructor(private readonly parent: FakeElement) {
     super();
@@ -40,26 +38,24 @@ class FakeChild extends FakeElement {
 }
 
 /**
- * Fires once per write, where the real observer coalesces the writes in a task into
- * a single microtask callback. Safe to simplify because the callback re-reads the
- * attribute and compares it to the last published state instead of reading the
- * mutation records — one callback or three, it reaches the same answer.
+ * Calls the callback once per write. A real MutationObserver groups the writes in one
+ * task into a single callback. That difference does not matter here, because the
+ * callback reads the attribute again instead of reading the mutation records.
  */
 class FakeMutationObserver {
   constructor(private readonly callback: () => void) {}
 
   observe(target: FakeElement, options: { attributeFilter: string[] }): void {
-    // The handler must not observe the whole subtree: on a large app page that is
-    // a callback per DOM mutation.
+    // Check that the handler only watches the sidebar attribute, not every change
+    // in the page.
     expect(options.attributeFilter).toEqual(["data-uniformen-sidebar"]);
     target.observers.push(this.callback);
   }
 }
 
 /**
- * Clicks are delegated from `document` and the button is looked up per change, since
- * the handler runs from the head with no button parsed yet. `parse` is that button
- * arriving.
+ * `querySelector` returns null until `parse` is called. `parse` adds the button to
+ * the document, as if the browser had just parsed it.
  */
 class FakeDocument {
   private readonly listeners = new Map<string, ((event: unknown) => void)[]>();
@@ -116,12 +112,12 @@ function install({
   button = "parsed",
   readyState = "loading",
 }: {
-  /** The user's stored preference, as `localStorage` holds it. */
+  /** The value saved in `localStorage`. */
   stored?: string;
   storageThrows?: boolean;
-  /** `data-uniformen-sidebar` the app server-rendered on `<html>`. */
+  /** The `data-uniformen-sidebar` value that the app rendered on `<html>` on the server. */
   rendered?: string;
-  /** Whether the button is in the document when the head script runs, later, or never. */
+  /** Whether the button exists when the handler runs, is added later, or never exists. */
   button?: "parsed" | "unparsed" | "absent";
   readyState?: string;
 } = {}) {
@@ -156,15 +152,15 @@ function install({
     state: () => root.getAttribute("data-uniformen-sidebar"),
     aria: () => toggle?.getAttribute("aria-expanded"),
     click: () => doc.fire("click", { target: toggle }),
-    /** A click on the chevron inside the button, which is where clicks land. */
+    /** Clicks the chevron inside the button, because that is where most clicks land. */
     clickIcon: () => doc.fire("click", { target: toggle && new FakeChild(toggle) }),
     clickElsewhere: () => doc.fire("click", { target: new FakeElement("main") }),
-    /** The button being parsed, and the document reaching `DOMContentLoaded`. */
+    /** Adds the button to the document and fires `DOMContentLoaded`. */
     ready: () => {
       if (toggle) doc.parse(toggle);
       doc.fire("DOMContentLoaded");
     },
-    // What an app does with its own close button, shortcut or route change.
+    // Writes the attribute the way an app does, for example from its own close button.
     push: (value: string) => root.setAttribute("data-uniformen-sidebar", value),
   };
 }
@@ -217,8 +213,6 @@ describe("sidebarHandlers with the attribute already server-rendered", () => {
   });
 
   test("the app's default is not written to storage, since it is not the user's choice", () => {
-    // Storing it would make a per-request server default stick as a preference, and
-    // there would be no telling it apart from a state the user picked.
     const { storage, announced } = install({ rendered: "collapsed" });
 
     expect([...storage.keys()]).toEqual([]);
@@ -289,8 +283,7 @@ describe("sidebarHandlers button", () => {
   });
 
   test("a restored collapsed state corrects the aria-expanded the server rendered", () => {
-    // The markup ships `aria-expanded="true"`: the server can't know the state. The
-    // head script runs before the button is parsed, so the fix waits for the load.
+    // The button is only added to the document when `ready()` is called.
     const { aria, ready } = install({ stored: "collapsed", button: "unparsed" });
 
     ready();
@@ -316,9 +309,6 @@ describe("sidebarHandlers state written by the app", () => {
   });
 
   test("a write before the button is parsed is still announced and persisted", () => {
-    // The reason the handler runs from the head: an app that writes the attribute
-    // early — an inline script, a blocking bundle — would otherwise have that write
-    // read as the starting state, so it would reach neither storage nor the event.
     const { state, storage, announced, push } = install({ button: "unparsed" });
 
     push("collapsed");

@@ -1,6 +1,6 @@
 /**
- * Eye, for the access-overview row in the user menu. Drawn in the same 20x20
- * frame as the top bar's icons so the menu rows and the bar align on one grid.
+ * Eye icon for the access link in the user menu. It uses the same 20x20 frame as
+ * the top bar icons, so the menu and the bar line up.
  */
 export const EyeIcon = () => (
   <svg

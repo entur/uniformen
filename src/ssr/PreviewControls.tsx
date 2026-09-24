@@ -4,12 +4,12 @@ import { LOCALE_NAMES, LOCALES } from "../types";
 import type { PreviewQuery } from "./preview";
 
 /**
- * The page's own URL rebuilt from the query as it validated: the canonical spelling
- * of what is on screen, so unknown params, a repeated key and a `sidebar=false`
- * that only says the default out loud all drop out of the copyable link.
+ * Returns the preview page URL built from the validated query. Unknown parameters,
+ * repeated keys and default values such as `sidebar=false` are left out, so the link
+ * is short and clean.
  *
- * Held to the same production rule as the knobs it echoes — a prod URL carrying a
- * `debugUser` renders nobody, so printing it would hand out a link that lies.
+ * In production the `debug` parameters are left out, because production ignores
+ * them and the link would not show what it claims.
  */
 export function previewUrl(
   query: PreviewQuery,
@@ -49,12 +49,9 @@ const GROUP_TITLES = {
 } as const;
 
 /**
- * The knobs for one part of the bar, placed where that part is: the two ends at the
- * two ends of the box, with the fields running outside-in like the bar does, and what
- * belongs to neither end below them both.
- *
- * Only ever as true as a centred box can be — an app's sidebar shifts the content area
- * off the bar's own left edge — so it is a hint, not an alignment.
+ * Renders the controls for one part of the bar. The left group is on the left and
+ * the right group is on the right, like the parts of the bar they control. Controls
+ * for the whole bar are below both.
  */
 function Group({ where, children }: { where: keyof typeof GROUP_TITLES; children?: unknown }) {
   return (
@@ -66,24 +63,20 @@ function Group({ where, children }: { where: keyof typeof GROUP_TITLES; children
 }
 
 /**
- * The preview page's knobs as a form, so the parameters can be found by looking at
- * the page instead of by knowing them already.
+ * Renders a form with one control per query parameter, so a developer can see all
+ * parameters on the page.
  *
- * A plain GET form, submitting to the page itself: every control is named after the
- * parameter it sets, so the address bar it produces is the documentation. Nothing is
- * mirrored in JavaScript — the server re-renders, and the controls come back set from
- * the query it validated. A parameter combination the schema rejects gets the same 400
- * a hand-written URL would, which is the contract, not a bug in the form.
+ * It is a plain GET form that submits to the page itself. Each control has the same
+ * name as its parameter. The server renders the page again and sets the controls from
+ * the validated query. If the schema rejects a combination, the form gets a 400, the
+ * same as a hand-written URL.
  *
- * A change applies itself (see the page's script), so the button is what is left for
- * a keyboard: Enter in a text field needs a form with a submit button in it.
+ * The page script submits the form on every change and leaves out empty controls.
+ * The submit button is still needed, because Enter in a text field only submits a
+ * form that has one.
  *
- * A control left empty is dropped on submit rather than sent as `app=` (see the page's
- * script): the empty spellings are rejected values, and a URL is worth more to copy
- * without them.
- *
- * Norwegian whatever `locale` says, like the demo sidebar: that parameter is the
- * language of the chrome being looked at, not of the tool looking at it.
+ * The texts are always Norwegian. `locale` only sets the language of the header and
+ * footer.
  */
 export function PreviewControls({
   query,
@@ -126,8 +119,8 @@ export function PreviewControls({
               </select>
             </Field>
 
-            {/* Production renders no chip whatever the URL says, so it gets no control
-                claiming otherwise. Beside the app name, hence this end. */}
+            {/* Production never shows the environment chip, so the control is hidden
+                there. It is in the left group because the chip is next to the app name. */}
             {environment === "production" ? null : (
               <Field label="debugEnturUser" hint="Bare forhåndsvisningen — kommer fra tokenet.">
                 <label class="preview-controls__check">
@@ -144,7 +137,7 @@ export function PreviewControls({
           </Group>
 
           <Group where="right">
-            {/* Same production rule, same reason: no session behind the name. */}
+            {/* Hidden in production, because production ignores these parameters. */}
             {environment === "production" ? null : (
               <Field
                 label="debugUser / debugEmail"
@@ -203,12 +196,10 @@ export function PreviewControls({
             >
               {LOCALES.map((locale) =>
                 locale === query.locale ? (
-                  /* Locked on: a list that leaves out the language being rendered is a
-                     400, so the box that would produce one can't be unticked. Disabled
-                     submits nothing, hence the hidden twin in its place. It carries the
-                     language the page was rendered in, so the way out is where a locale
-                     pick is caught up with and where a twin left alone is dropped (see
-                     the page's script). */
+                  /* The current locale is always checked and cannot be unchecked,
+                     because a list without it gets a 400. A disabled checkbox is not
+                     submitted, so a hidden input sends the value instead. The page
+                     script updates or removes it on submit. */
                   <label class="preview-controls__check">
                     <input type="checkbox" checked disabled />
                     <input
@@ -235,8 +226,7 @@ export function PreviewControls({
           </Group>
         </div>
 
-        {/* Neither end: one hides controls at both, the other is the language of
-            everything the page renders, footer included. */}
+        {/* These parameters affect both ends of the bar, or the whole page. */}
         <Group where="whole">
           <Field label="simple" hint="Skjuler app-velger, varsler og sidemeny-knappen.">
             <label class="preview-controls__check">
@@ -284,8 +274,7 @@ export function PreviewControls({
         </div>
       </form>
 
-      {/* Outside the form: a submit button here would apply the pending edits, and
-          what this copies is the URL on screen. */}
+      {/* This is outside the form, so the copy button does not submit it. */}
       <div class="preview-controls__url">
         <code class="preview-controls__url-text" data-preview-url>
           {url}

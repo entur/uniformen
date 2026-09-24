@@ -1,32 +1,31 @@
 import type { Environment } from "../config";
 
-/** One resolved link, as the app switcher panel renders it. */
+/** One application link in the app switcher. */
 export type PortalApplication = { id: PortalApplicationId; appName: string; url: string };
 
 /**
- * The environments an application can be switched to from another environment.
- * `local` is absent on purpose: a localhost URL means nothing to anyone but the
- * developer running it, so a local instance offers the three deployed ones.
+ * The environments the header can link to. `local` is not included, because a
+ * localhost URL only works for the developer who runs it.
  */
 export type SwitchableEnvironment = "dev" | "staging" | "production";
 
-/** Declaration order, and the order the environment switcher lists them in. */
+/** The environments in the order the environment switcher lists them. */
 export const SWITCHABLE_ENVIRONMENTS: readonly SwitchableEnvironment[] = [
   "dev",
   "staging",
   "production",
 ];
 
-/** Host per environment. An environment left out is not deployed. */
+/** The host for each environment. A missing environment means the app is not deployed there. */
 type Hosts = Partial<Record<SwitchableEnvironment, string>>;
 
 /**
- * Every B2B application the portal knows about. An entry's `id` is the value apps
- * send as the `app` query param, and `appName` names it in both the switcher and
- * the logo slot. `unlisted` keeps an entry out of the switcher.
+ * All B2B applications in the portal. `id` is the value apps send in the `app`
+ * query param. `appName` is shown in the app switcher and next to the logo.
+ * `unlisted` hides the application from the app switcher.
  *
- * Declared in the order the switcher lists them: alphabetical by name in
- * Norwegian collation, where Ø sorts last.
+ * The app switcher uses the order of this list. Keep it sorted by name in
+ * Norwegian alphabetical order, where Ø comes after Z.
  */
 const APPLICATIONS = [
   {
@@ -94,19 +93,17 @@ const APPLICATIONS = [
   },
 ] as const satisfies readonly { id: string; appName: string; hosts: Hosts; unlisted?: true }[];
 
-/** Every id the `app` param accepts, unlisted ones included. */
+/** All ids the `app` param accepts, including unlisted ones. */
 export const PORTAL_APPLICATION_IDS = APPLICATIONS.map(({ id }) => id);
 
 export type PortalApplicationId = (typeof APPLICATIONS)[number]["id"];
 
-/** One application's URLs, keyed by the environments it is deployed to. */
+/** One application's URL in each environment it is deployed to. */
 export type ApplicationUrls = Readonly<Partial<Record<SwitchableEnvironment, string>>>;
 
 /**
- * One application's hosts as the URLs the header links to, keyed by environment.
- * The single place a host becomes a URL, so both tables below — every app in one
- * environment, and one app in every environment — read the same scheme and the
- * same set of environments.
+ * Turns an application's hosts into `https://` URLs, keyed by environment. This is
+ * the only place a host becomes a URL, so all links use the same scheme.
  */
 const urlsFor = (hosts: Hosts): ApplicationUrls =>
   Object.fromEntries(
@@ -117,10 +114,8 @@ const urlsFor = (hosts: Hosts): ApplicationUrls =>
   );
 
 /**
- * Every application with its hosts already turned into URLs, resolved once at
- * module load. Both tables below are views onto this one pass: the app switcher
- * needs every app in one environment, the environment switcher needs one app in
- * every environment.
+ * All applications with their URLs, computed once when the module loads. Both
+ * tables below are built from this list.
  */
 const APPLICATIONS_WITH_URLS = APPLICATIONS.map((app) => ({
   id: app.id,
@@ -129,7 +124,7 @@ const APPLICATIONS_WITH_URLS = APPLICATIONS.map((app) => ({
   unlisted: "unlisted" in app,
 }));
 
-/** The switcher entries one environment has: listed, and deployed here. */
+/** Returns the listed applications that are deployed in one environment. */
 const resolve = (key: SwitchableEnvironment): PortalApplication[] =>
   APPLICATIONS_WITH_URLS.flatMap(({ id, appName, urls, unlisted }) => {
     const url = urls[key];
@@ -137,10 +132,10 @@ const resolve = (key: SwitchableEnvironment): PortalApplication[] =>
   });
 
 /**
- * Whose hosts an instance hands out. Every environment serves its own, except
- * `local`, which has none deployed and rides dev: nobody can be sent to localhost.
- * The single statement of that rule — everything resolving a link for a running
- * instance reads it from here.
+ * Maps each environment to the environment whose hosts it links to. Each
+ * environment links to its own hosts, except `local`, which links to dev because
+ * users cannot be sent to localhost. Use this table for every link the running
+ * instance renders.
  */
 const LINKED_ENVIRONMENT: Record<Environment, SwitchableEnvironment> = {
   local: "dev",
@@ -150,8 +145,8 @@ const LINKED_ENVIRONMENT: Record<Environment, SwitchableEnvironment> = {
 };
 
 /**
- * The link list per environment, resolved once at module load so rendering a
- * header costs no work beyond the markup.
+ * The app switcher links for each environment. They are computed once when the
+ * module loads, so rendering a header does not compute them again.
  */
 export const PORTAL_APPLICATIONS: Record<Environment, PortalApplication[]> = {
   local: resolve(LINKED_ENVIRONMENT.local),
@@ -161,16 +156,17 @@ export const PORTAL_APPLICATIONS: Record<Environment, PortalApplication[]> = {
 };
 
 /**
- * One application's own URL in each environment it is deployed to, keyed by id.
- * Keyed by the id union rather than by `string`, so looking an application up with
- * an id from the table is total: no absent case to handle, and dropping an
- * application from the table breaks every link into it at compile time instead of
- * resolving to `undefined` at runtime. Each entry keeps only the environments its
- * own hosts declare, so a link into an app deployed everywhere is a `string` and
- * one into a partly deployed app has to be checked.
+ * Each application's URLs, keyed by id. The keys are the known ids, not `string`,
+ * so a lookup with a known id always finds an entry. If an application is removed
+ * from the list, every link to it fails at compile time instead of being
+ * `undefined` at runtime.
  *
- * Reaching that from `Object.fromEntries`, whose keys are `string` however narrow
- * the input, is what the assertion is for.
+ * Each entry only has the environments the application has hosts for. A link to an
+ * application deployed everywhere is a `string`. A link to one that is only
+ * deployed in some environments must be checked first.
+ *
+ * `Object.fromEntries` always returns `string` keys, so the table below needs a
+ * type assertion to get this type.
  */
 type ApplicationUrlTable = {
   readonly [A in (typeof APPLICATIONS)[number] as A["id"]]: {
@@ -186,13 +182,13 @@ const isPortalApplicationId = (id: string): id is PortalApplicationId =>
   Object.hasOwn(APPLICATION_URLS, id);
 
 /**
- * Where the same application lives in each environment it is deployed to.
- * Undefined for an unknown or absent id, and for one with no host in the
- * environment given: switching is switching away from here, so an app this
- * instance does not run has nowhere to switch from.
+ * Returns the application's URL in each environment it is deployed to. Returns
+ * undefined when the id is missing or unknown, or when the application has no host
+ * in the given environment. The user can only switch away from an environment the
+ * application runs in.
  *
- * The record is the shared instance from the table, so it is handed out readonly:
- * mutating it would change what every later render links to.
+ * The returned object is shared by all renders, so it is readonly. Changing it
+ * would change the links in every later render.
  */
 export function portalApplicationUrls(
   id: string | undefined,
@@ -203,18 +199,18 @@ export function portalApplicationUrls(
   return urls[LINKED_ENVIRONMENT[environment]] === undefined ? undefined : urls;
 }
 
-/** The applications with a host in every environment. */
+/** The ids of the applications that have a host in every environment. */
 type FullyDeployedApplicationId = Extract<
   (typeof APPLICATIONS)[number],
   { hosts: Required<Hosts> }
 >["id"];
 
 /**
- * One application's host in the environment given, as the base for a link to a
- * page inside it. `local` gets dev's, like every other link the header renders.
+ * Returns the application's URL in the given environment, to use as the base for a
+ * link to one of its pages. `local` gets the dev URL.
  *
- * Takes one of the applications deployed everywhere: a link written without a
- * check needs a host wherever this instance runs.
+ * It only accepts applications deployed in every environment, so the result is
+ * never missing and callers need no check.
  */
 export function portalApplicationUrl(
   id: FullyDeployedApplicationId,
@@ -225,7 +221,7 @@ export function portalApplicationUrl(
 
 const APP_NAMES = new Map<string, string>(APPLICATIONS.map(({ id, appName }) => [id, appName]));
 
-/** The name an application goes by beside the logo. */
+/** Returns the application name shown next to the logo, or undefined for an unknown id. */
 export function portalApplicationName(id?: string): string | undefined {
   return id === undefined ? undefined : APP_NAMES.get(id);
 }

@@ -6,16 +6,15 @@ import { LocaleOptions } from "./LocaleOptions";
 const PANEL_ID = "uniformen-locale-switcher-panel";
 
 /**
- * The language switcher as a control of its own, for the bar that has no user menu
- * to hold it: the anonymous one. Wherever there is a menu, `simple` or not, the
- * switcher is a section of it (`LocaleMenu`) — one control on screen, not two chips
- * side by side saying different things.
+ * Renders the language switcher as its own button in the top bar. It is for the
+ * anonymous bar, which has no user menu. When there is a user menu, the switcher is
+ * a section in it instead (`LocaleMenu`), so the bar never shows two language
+ * controls.
  *
- * The chip names the current language rather than only marking the panel: on a login
- * page the bar is the whole chrome, and which language the page is in has to be
- * readable without opening anything. `aria-label` repeats it for the mobile
- * breakpoint, where the label is hidden and the globe stands alone — bilingual, like
- * everywhere else the control names itself.
+ * The button shows the name of the current language. On a login page the bar is
+ * the only header, and users must see the language without opening anything.
+ * `aria-label` also contains the name, because at mobile widths the text is hidden
+ * and only the globe is shown. The label is in two languages, like the menu heading.
  */
 export function LocaleSwitcher({
   availableLocales,

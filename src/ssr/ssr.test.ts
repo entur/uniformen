@@ -15,23 +15,22 @@ function bearer(token: string): { Authorization: string } {
 }
 
 /**
- * The signed-in bar. Every call site brings its own `sub`: userinfo is cached per
- * `tenant|sub` for the process' lifetime, so a sub another test has fetched would
- * serve that test's profile.
+ * Requests `/ssr` as a signed-in user. Each caller passes its own `sub`, because
+ * userinfo is cached by `tenant|sub` for the whole test run.
  */
 async function signedIn(sub: string, query = ""): Promise<{ headerHtml: string }> {
   const token = await signInternalToken({ sub });
   return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
 }
 
-/** Userinfo for a profile in the Entur organisation, which the env chip is for. */
+/** Returns userinfo for a profile in the Entur organisation. */
 const enturProfile = (extra: Record<string, unknown> = {}) => ({
   name: "Hallstein Bronskimlet",
   [ORGANISATION_ID_CLAIM]: ENTUR_ORGANISATION_ID,
   ...extra,
 });
 
-/** `signedIn`, for a user the organisation claim places inside Entur. */
+/** Works like `signedIn`, but for a user in the Entur organisation. */
 async function enturSignedIn(
   sub: string,
   query = "",
@@ -141,8 +140,7 @@ describe("/ssr user menu", () => {
   test("the signed-in user gets a menu, with the email under the name", async () => {
     userInfoMock.respond = () =>
       Response.json({ name: "Hallstein Bronskimlet", email: "hallstein@entur.org" });
-    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime,
-    // so a sub another test has already fetched would serve that test's profile.
+    // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|withemail" });
     const body = await (
       await app.request("/ssr?logoutUrl=/auth/logout", { headers: bearer(token) })
@@ -235,8 +233,7 @@ describe("/ssr login link", () => {
 describe("/ssr logout link", () => {
   const authed = async (query = "") => {
     userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
-    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime,
-    // so a sub another test has already fetched would serve that test's profile.
+    // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|logout" });
     return app.request(`/ssr${query}`, { headers: bearer(token) });
   };
@@ -304,10 +301,8 @@ describe("/ssr", () => {
   });
 
   test("every handler ships in the inline bundle", async () => {
-    // The failure this covers is silent: drop a handler from the array and the
-    // control it wires up simply never responds in a consumer's page, with no
-    // markup missing and no other assertion to notice. Each handler is keyed by
-    // the attribute it queries for.
+    // Each attribute is used by one handler, so a missing attribute means a missing
+    // handler.
     const res = await app.request("/ssr");
     const body = await res.json();
     for (const attribute of [
@@ -327,11 +322,8 @@ describe("/ssr", () => {
   });
 
   test("the inline bundle is valid JavaScript", async () => {
-    // The bundle is assembled as source text, so nothing but a browser would
-    // otherwise notice a syntax error. Emitting the handlers as the declarations
-    // they are is what makes them callable by name below them: rewrite one as an
-    // arrow function, or rename it without the call following, and this is where it
-    // surfaces rather than in a consumer's console.
+    // The bundle is built as source text, so without this test only a browser would
+    // notice a syntax error.
     const body = await (await app.request("/ssr")).json();
     const scripts = body.scripts.trim();
     const hasOpenTag = scripts.slice(0, 8).toLowerCase() === "<script>";
@@ -391,8 +383,8 @@ describe("/ssr app query param", () => {
   }
 
   test("an unlisted app names itself without joining the switcher", async () => {
-    // Tests run as dev (see test/authTestSetup), which Skoleskyss has no deploy in,
-    // so the chip is static here too.
+    // Tests run as dev (see test/authTestSetup). Skoleskyss has no dev deployment, so
+    // the environment chip has no switcher.
     const body = await enturSignedIn("auth0|app-unlisted", "?app=skoleskyss");
     expect(body.headerHtml).toContain('<span class="uniformen-logo__app">Skoleskyss</span>');
     expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
@@ -466,8 +458,6 @@ describe("/ssr sidebar query param", () => {
   });
 
   test("the param says whether the app has a sidebar, never which state it is in", async () => {
-    // The state is a per-user preference restored on the client, so it must not
-    // reach the markup — one response body serves every user of the app.
     const body = await (await ssr("?sidebar=true")).json();
     expect(body.headerHtml).not.toContain('data-uniformen-sidebar="');
     for (const query of ["?sidebar=expanded", "?sidebar=collapsed", "?sidebar=yes"]) {
@@ -486,14 +476,10 @@ describe("/ssr sidebar query param", () => {
 
   test("the whole sidebar ships from the head, not the end of the body", async () => {
     const body = await (await ssr("?sidebar=true")).json();
-    // `scripts` ships at the end of the body, which is too late twice over: the
-    // expanded sidebar would paint first and then collapse, and an app that writes
-    // the state attribute before that point would have the write go unobserved.
     expect(body.headAssets).toContain("data-uniformen-sidebar");
     expect(body.headAssets).toContain("uniformen:sidebar");
     expect(body.headAssets).toContain("MutationObserver");
     expect(body.scripts).not.toContain("data-uniformen-sidebar");
-    // Both inline blocks are hashed for the consumer's script-src.
     expect(body.csp["script-src"]).toHaveLength(2);
     for (const source of body.csp["script-src"]) expect(source).toStartWith("'sha256-");
   });
@@ -502,8 +488,6 @@ describe("/ssr sidebar query param", () => {
     const body = await (await ssr("?sidebar=true")).json();
     expect(body.headerHtml).toContain("uniformen-sidebar-toggle__chevron--collapse");
     expect(body.headerHtml).toContain("uniformen-sidebar-toggle__chevron--expand");
-    // Only CSS distinguishes the two, so the rules have to be in the served
-    // stylesheet — otherwise the button looks identical expanded and collapsed.
     expect(body.headAssets).toMatch(
       /:root\[data-uniformen-sidebar="collapsed"\]\s*\.uniformen-sidebar-toggle__chevron--collapse/,
     );
@@ -518,8 +502,7 @@ describe("/ssr simple query param", () => {
   const authed = async (query = "") => {
     userInfoMock.respond = () =>
       Response.json({ name: "Hallstein Bronskimlet", email: "hallstein@entur.org" });
-    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime,
-    // so a sub another test has already fetched would serve that test's profile.
+    // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|simple" });
     return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
   };
@@ -539,8 +522,6 @@ describe("/ssr simple query param", () => {
     expect(body.headerHtml).toContain('class="uniformen-logo__app">Partner<');
     expect(body.headerHtml).toContain('data-uniformen-environment="dev"');
     expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');
-    // The env switcher is the badge's own control, not the app switcher's, so
-    // naming an app still hands it its hosts.
     expect(body.headerHtml).toContain("data-uniformen-env-switcher-toggle");
     expect(body.headerHtml).toContain('id="uniformen-environment-switcher-panel"');
   });
@@ -573,8 +554,6 @@ describe("/ssr simple query param", () => {
   test("simple wins over sidebar: a barebones bar carries no controls", async () => {
     const body = await (await ssr("?simple=true&sidebar=true")).json();
     expect(body.headerHtml).not.toContain("data-uniformen-sidebar-toggle");
-    // The head script is unconditional, so an app styling off the root attribute
-    // keeps its own sidebar working — it just loses our button.
     expect(body.headAssets).toContain("data-uniformen-sidebar");
   });
 
@@ -616,10 +595,6 @@ describe("/ssr contrast query param", () => {
     }
   });
 
-  // Both palettes ship in the one stylesheet, so the `style-src` hash a consumer
-  // unions into its page CSP is the same whichever mode it asks for. Building the
-  // CSS per mode would hand out two hashes for one endpoint and break any consumer
-  // caching the header.
   test("the stylesheet and its hash are the same in either mode", async () => {
     const contrast = await (await ssr("?contrast=true")).json();
     const light = await (await ssr()).json();
@@ -641,7 +616,6 @@ describe("/ssr top bar chrome", () => {
     // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
     expect(body.headerHtml).toContain('data-uniformen-environment="dev"');
     expect(body.headerHtml).toContain('class="uniformen-env-badge__label">DEV');
-    // Non-prod environments carry the strip pointer; production drops both.
     expect(body.headerHtml).toContain("uniformen-env-badge__pointer");
     expect(body.headAssets).toContain("--uniformen-env-strip-height: 0.25rem");
   });
@@ -657,7 +631,6 @@ describe("/ssr top bar chrome", () => {
     expect(body.headerHtml).not.toContain('aria-label="Velg applikasjon"');
     expect(body.headerHtml).not.toContain("data-uniformen-app-switcher-toggle");
     expect(body.headerHtml).not.toContain("uniformen-top-nav__divider");
-    // The rest of the anonymous bar is untouched.
     expect(body.headerHtml).toContain('href="/auth/login"');
     expect(body.headerHtml).toContain('class="uniformen-logo__app">Partner<');
   });
@@ -674,20 +647,13 @@ describe("/ssr top bar chrome", () => {
   });
 
   test("the chip panels hang leftwards, so none of them can run off the page", async () => {
-    // They are wider than the chips they belong to, and the chips sit at the right
-    // end of the bar: growing rightwards puts a panel past the viewport and the page
-    // into horizontal scroll. On a simple bar the user chip is the last thing in the
-    // row, which is where that used to happen.
     const body = await (await app.request("/ssr")).json();
     const rule = body.headAssets.match(
       /\.uniformen-user-menu__panel,\s*\.uniformen-locale-switcher__panel \{([^}]*)\}/,
     )?.[1];
-    // Against the chip rather than the viewport, and hanging from its right edge:
-    // a panel belongs to the control that opened it, and travels with the bar.
     expect(rule).toContain("position: absolute");
     expect(rule).toContain("right: 0");
     expect(rule).not.toContain("left: 0");
-    // And no breakpoint puts either of them back: one alignment at every width.
     expect(body.headAssets).not.toMatch(/@media[^{]*\{[^}]*__panel[^}]*left: auto/);
   });
 
@@ -699,15 +665,13 @@ describe("/ssr top bar chrome", () => {
 
   test("the switcher links to the environment this instance serves", async () => {
     const body = await signedIn("auth0|switcher-env");
-    // Tests run with ENVIRONMENT=dev (see test/authTestSetup): a dev header must
-    // not hand its user production apps.
+    // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
     expect(body.headerHtml).toContain('href="https://sorvis.dev.entur.io"');
     expect(body.headerHtml).not.toContain('href="https://sorvis.entur.io"');
   });
 
   test("the requesting app is marked as the current one", async () => {
-    // The `app` value and the switcher entry it marks are the same string, so
-    // `?app=partner` marks the Partner entry, whose host is `entur-partner`.
+    // The host of the Partner entry is `entur-partner`.
     const withApp = await signedIn("auth0|current-app", "?app=partner");
     expect(withApp.headerHtml).toContain('aria-current="page"');
     expect(withApp.headerHtml).toMatch(
@@ -731,14 +695,9 @@ describe("/ssr top bar chrome", () => {
   });
 });
 
-/**
- * Which environment a page is served from, and being able to land on the same page in
- * another one, is Entur's own chrome. The gate is the organisation claim on the
- * profile behind the token: not a query param, and not the anonymous bar.
- */
 describe("/ssr environment selector", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
-  /** The header of a bar rendered for one profile. Own `sub`: userinfo is cached. */
+  /** Returns the header for one profile. Pass a unique `sub`, because userinfo is cached. */
   const forProfile = async (sub: string, profile: unknown, query = "") => {
     userInfoMock.respond = () => Response.json(profile);
     const token = await signPartnerToken({ sub });
@@ -759,7 +718,6 @@ describe("/ssr environment selector", () => {
   test("another organisation gets neither, app named or not", async () => {
     const other = { name: "Ollvar O. Kleppvold", [ORGANISATION_ID_CLAIM]: 9999 };
     const header = await forProfile("auth0|env-other-org", other, "?app=nplan");
-    // Signed in, with everything else the bar gives them.
     expect(header).toContain("Ollvar O. Kleppvold");
     expect(header).toContain("data-uniformen-app-switcher-toggle");
     expect(header).not.toContain("uniformen-env-badge");
@@ -773,8 +731,6 @@ describe("/ssr environment selector", () => {
   });
 
   test("the claim is the number, not a string that looks like it", async () => {
-    // Reading a spelling of the id as the id is the one direction with a cost, so an
-    // upstream that changes the claim's shape loses the chip rather than leaks it.
     for (const [index, value] of [
       String(ENTUR_ORGANISATION_ID),
       [ENTUR_ORGANISATION_ID],
@@ -795,8 +751,8 @@ describe("/ssr environment selector", () => {
   });
 
   test("a userinfo failure fails closed", async () => {
-    // The organisation is the userinfo's to say, so an outage costs an Entur user the
-    // chip rather than handing everyone one.
+    // The organisation comes only from userinfo. When userinfo fails, nobody gets the
+    // chip.
     userInfoMock.respond = () => new Response("server error", { status: 500 });
     const token = await signInternalToken({ sub: "auth0|env-userinfo-500" });
     const body = await (await app.request("/ssr?app=nplan", { headers: bearer(token) })).json();
@@ -819,13 +775,11 @@ describe("/ssr environment selector", () => {
     expect(entur.headAssets).toBe(anonymous.headAssets);
     expect(entur.scripts).toBe(anonymous.scripts);
     expect(entur.csp).toEqual(anonymous.csp);
-    // The handler ships to a page with no switcher, and bails out there.
     expect(anonymous.scripts).toContain("data-uniformen-env-switcher-toggle");
   });
 
   test("no query param unlocks it", async () => {
-    // Being in an organisation is something a token establishes. `/ssr` ignores
-    // unknown params, so these render the plain anonymous bar.
+    // Only the verified token can place a user in the Entur organisation.
     for (const query of [
       "?isEnturUser=true",
       "?debugEnturUser=true",
@@ -878,7 +832,7 @@ describe("/ssr locale", () => {
 
   test("a nameless profile gets its placeholder in the locale", async () => {
     userInfoMock.respond = () => Response.json({});
-    // Own `sub`: userinfo is cached per subject.
+    // Use its own sub, because userinfo is cached per subject.
     const token = await signInternalToken({ sub: "auth0|bare-en" });
     const body = await (await app.request("/ssr?locale=en-GB", { headers: bearer(token) })).json();
     expect(body.headerHtml).toContain("User without a name");
@@ -895,8 +849,6 @@ describe("/ssr locale", () => {
     for (const query of [
       "?locale=de-DE",
       "?locale=",
-      // One spelling per language: the bare language subtag is not an alias for
-      // the region-qualified tag, and matching is exact, not case-folded.
       "?locale=nb",
       "?locale=nb-no",
       "?locale=en",
@@ -911,7 +863,7 @@ describe("/ssr availableLocales query param", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
   const authed = async (query = "") => {
     userInfoMock.respond = () => Response.json({ name: "Sigmunn Sagbladet" });
-    // Its own sub: userinfo is cached per `tenant|sub` for the process' lifetime.
+    // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|availableLocales" });
     return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
   };
@@ -925,7 +877,6 @@ describe("/ssr availableLocales query param", () => {
     expect(body.headerHtml).toContain(
       '<button type="button" role="menuitemradio" aria-checked="true" lang="en-GB"',
     );
-    // Not the service's supported set — Partner translates two of the three.
     expect(body.headerHtml).not.toContain("Norsk nynorsk");
   });
 
@@ -940,7 +891,6 @@ describe("/ssr availableLocales query param", () => {
     const { headerHtml } = await res.json();
     expect(headerHtml).toContain("data-uniformen-locale-switcher-toggle");
     expect(headerHtml).toContain('id="uniformen-locale-switcher-panel"');
-    // The bar's own control, not the menu's section: there is no menu to hold it.
     expect(headerHtml).not.toContain("uniformen-locale-menu__heading");
     expect(headerHtml.indexOf("uniformen-locale-switcher")).toBeLessThan(
       headerHtml.indexOf('href="/auth/login"'),
@@ -953,8 +903,6 @@ describe("/ssr availableLocales query param", () => {
     ).json();
     expect(anonymous.headerHtml).toContain("data-uniformen-locale-switcher-toggle");
 
-    // The barebones menu keeps the language, unlike the links it drops: a chip
-    // beside the chip that opens it would be two controls in one bar.
     const signedIn = await authed("?simple=true&availableLocales=nb-NO&availableLocales=en-GB");
     expect(signedIn.headerHtml).toContain("uniformen-locale-menu__heading");
     expect(signedIn.headerHtml).not.toContain("data-uniformen-locale-switcher-toggle");
@@ -990,8 +938,6 @@ describe("/ssr availableLocales query param", () => {
   });
 
   test("a list that contradicts itself is rejected, not read past", async () => {
-    // A repeat would render the language twice, and a list without the locale being
-    // rendered would leave every option unchecked.
     expect((await ssr("?availableLocales=nb-NO&availableLocales=nb-NO")).status).toBe(400);
     expect((await ssr("?locale=nn-NO&availableLocales=nb-NO&availableLocales=en-GB")).status).toBe(
       400,
@@ -1000,8 +946,6 @@ describe("/ssr availableLocales query param", () => {
   });
 
   test("the client half ships with every layout, switcher rendered or not", async () => {
-    // One bundle serves every combination of controls, and the handler bails out
-    // when the markup is absent.
     const without = await (await ssr()).json();
     const with_ = await authed("?availableLocales=nb-NO&availableLocales=en-GB");
     expect(without.scripts).toContain("uniformen:locale");
@@ -1010,9 +954,8 @@ describe("/ssr availableLocales query param", () => {
   });
 });
 /**
- * The bar names the signed-in user, so what a cache in front of the service is
- * allowed to keep is part of the endpoint's contract rather than a detail of it: one
- * stored authenticated response is one user's name handed to another.
+ * The bar shows the signed-in user's name. If a cache stored an authenticated
+ * response, it could show one user's name to another user.
  */
 describe("/ssr caching", () => {
   test("an anonymous response is cacheable, and varies on the token", async () => {
@@ -1030,9 +973,8 @@ describe("/ssr caching", () => {
   });
 
   test("a request carrying a token it could not verify is not cached either", async () => {
-    // It renders the anonymous bar, so the body is shareable — but the caller sent
-    // credentials, and a response to those is not something to leave lying around
-    // on the strength of what we made of them.
+    // The body is the anonymous bar, but the request sent credentials, so the
+    // response must not be stored.
     const token = await signInternalToken({ aud: "https://wrong.audience" });
     const res = await app.request("/ssr", { headers: bearer(token) });
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");

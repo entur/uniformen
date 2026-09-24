@@ -39,56 +39,50 @@ export function TopNavigation({
   loginUrl,
   logoutUrl,
 }: {
-  /** The signed-in user. Absent renders the anonymous bar. */
+  /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
-  /** Where the login link goes, on the anonymous bar. Absent renders no link. */
+  /** The target of the login link on the anonymous bar. Without it, there is no link. */
   loginUrl?: string;
-  /** Where the user menu's logout row goes. Absent renders no row. */
+  /** The target of the logout row in the user menu. Without it, there is no row. */
   logoutUrl?: string;
   /**
-   * Whether that user is in the Entur organisation. The environment chip, and the
-   * switcher it becomes, is theirs alone: which environment a page is served from
-   * is ours to know and nobody else's to move between. Off for anonymous bars —
-   * there is no organisation behind a bar with no user.
+   * Whether the user is in the Entur organisation. Only these users see the
+   * environment chip and switcher. Other users should not see or switch between
+   * environments.
    */
   isEnturUser?: boolean;
   appName?: string;
   /** The portal application this header is rendered for. */
   activeAppId?: PortalApplicationId;
   /**
-   * Whether to render the side navigation collapse control. Off means the app has
-   * no sidebar. The control's state is not ours to know: it lives on the root
-   * element, restored client-side before paint.
+   * Whether to render the button that collapses the side navigation. Set it when the
+   * app has a sidebar. The server does not know if the sidebar is collapsed. That
+   * state is set on the root element in the browser before the first paint.
    */
   sidebar?: boolean;
   /**
-   * Barebones bar: hides the app switcher, notifications and the sidebar toggle, and
-   * thins the user menu to the identity block and whatever `logoutUrl` and
-   * `availableLocales` add. Left side untouched — the env chip comes and goes with
-   * `isEnturUser`, not with this.
+   * Renders a simpler bar. It hides the app switcher, notifications and the sidebar
+   * toggle. The user menu only shows the user's name and email, plus the logout row
+   * and language options when `logoutUrl` and `availableLocales` are set.
    */
   simple?: boolean;
   /**
-   * Paint the bar in the design system's contrast palette, for an app whose page
-   * behind the header is dark.
-   *
-   * The class is the whole of it: the palette is a block of custom properties the
-   * header's subtree inherits, so the panels come with it and no component here
-   * knows which mode it is in.
+   * Uses the design system's contrast colours, for apps with a dark page behind the
+   * header. It only adds a class. The panels get the colours through CSS variables,
+   * so no component needs to know about contrast mode.
    */
   contrast?: boolean;
   /** The language every string in the bar is rendered in. */
   locale: Locale;
   /**
-   * The languages to offer in the user menu's switcher, in this order. Empty or
-   * absent renders no switcher. Where the bar has a user menu it is a section of
-   * that, `simple` or not; on an anonymous bar, which has none, it is a control of
-   * its own.
+   * The languages to offer, in this order. Without it, or when it is empty, there is
+   * no language switcher. For a signed-in user it is a section in the user menu. For
+   * an anonymous user it is a separate control in the bar.
    */
   availableLocales?: Locale[];
 }) {
   const txt = texts[locale];
-  // Narrows for the switcher below, which takes the list required.
+  // Also narrows the type, because `LocaleSwitcher` needs a defined list.
   const hasLocales = availableLocales !== undefined && availableLocales.length > 0;
   return (
     <header
@@ -102,9 +96,8 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
-          {/* Ahead of the identity controls: the language the page is in is chrome,
-              not something about who is signed in. Rendered here only for the bars
-              with no user menu to hold the switcher — see `LocaleSwitcher`. */}
+          {/* Only for anonymous users. Signed-in users get the language options in
+              the user menu. */}
           {hasLocales && !user && (
             <LocaleSwitcher availableLocales={availableLocales} locale={locale} />
           )}
@@ -126,8 +119,8 @@ export function TopNavigation({
               <span class="uniformen-top-nav__action-label">{txt.loggInn}</span>
             </a>
           )}
-          {/* Signed in only: every app it lists is behind a login. The divider is
-              the switcher's, not the bar's, so it comes and goes with it. */}
+          {/* Only for signed-in users, because every app in the list needs a login.
+              The divider is only shown together with the app switcher. */}
           {user && !simple && (
             <>
               <span class="uniformen-top-nav__divider" aria-hidden="true"></span>

@@ -15,14 +15,14 @@ const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
 });
 
-// The label for a profile the identity provider gave no name for.
+// The name to show when the identity provider returns no name or email.
 const texts = {
   "nb-NO": { brukerUtenNavn: "Bruker uten navn" },
   "nn-NO": { brukerUtenNavn: "Brukar utan namn" },
   "en-GB": { brukerUtenNavn: "User without a name" },
 } as const;
 
-// Per-directive CSP sources the consumer unions into its own page CSP header.
+// CSP sources per directive. The consumer merges them into its own CSP header.
 const cspContributionSchema = z.record(z.string(), z.array(z.string()));
 
 const uniformenBodySchema = z.object({
@@ -40,8 +40,8 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     bearerFormat: "JWT",
   });
 
-  // Public endpoint. A valid Auth0 token is optional and only used to enrich
-  // the rendered output
+  // Public endpoint. A valid Auth0 token is optional. It is only used to add the
+  // user to the rendered header.
   server.use("/ssr", optionalAuth);
 
   const rootRoute = createRoute({
@@ -73,8 +73,8 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     const payload = ctx.get("jwtPayload");
     const token = ctx.get("authToken");
     const tenant = ctx.get("authTenant");
-    // Resolve userinfo via the tenant's userinfo endpoint (cached); on
-    // failure render anonymously — never the raw `sub`.
+    // Get the user's profile from the tenant's userinfo endpoint (cached). If that
+    // fails, render the anonymous header. Never show the raw `sub`.
     const info =
       payload?.sub && token && tenant
         ? await userInfoService.getUserInfo(tenant, token, payload.sub)
@@ -82,10 +82,9 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
 
     const query = ctx.req.valid("query");
     const navProps = topNavigationProps(query);
-    // Only authenticated users get a menu; a nameless profile still shows a
-    // placeholder, but anonymous/failed lookups render an empty slot. The email is
-    // the menu's second line, and only when there is a name for it to sit under —
-    // a profile labelled by its email does not repeat it underneath.
+    // Only signed-in users get a user menu. If the profile has no name, show the
+    // email instead, or a placeholder if there is no email either. The email is only
+    // shown as a second line when there is a name, so it is not shown twice.
     const user = info
       ? {
           name: info.name ?? info.email ?? texts[navProps.locale].brukerUtenNavn,
@@ -99,14 +98,12 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       authenticated: String(!!info),
     });
 
-    // Who is signed in is in the body, so an authenticated render is nobody's to
-    // store: the bar names the user. Anything carrying an `Authorization` header
-    // counts as authenticated, whether or not the token verified — a response a
-    // caller could read as personal never becomes a shared one. Everything else is
-    // the same answer for every caller asking the same question, so it is
-    // cacheable, briefly: the layout changes without a consumer release, and this
-    // is the ceiling on how long a change takes to reach their pages. `Vary` keeps
-    // the two apart in whatever caches in between.
+    // A response for a signed-in user contains the user's name, so no cache may
+    // store it. Any request with an `Authorization` header is treated this way, even
+    // if the token is invalid, so a personal response is never shared. Other
+    // responses are the same for everyone, so caches may keep them for 60 seconds.
+    // A layout change then reaches the consumers' pages within a minute. `Vary`
+    // stops caches from mixing the two kinds of response.
     ctx.header("Vary", "Authorization");
     ctx.header(
       "Cache-Control",
@@ -116,9 +113,8 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     return ctx.json(
       {
         headAssets: `${renderUniformenStyleTag()}${renderUniformenHeadScript()}`,
-        // Token-derived props last: `navProps` is the query's half, and who is
-        // signed in — and what organisation they are in — is the token's to say,
-        // never a URL's.
+        // Put `user` and `isEnturUser` after `navProps` so the query cannot override
+        // them. They must come from the verified token, never from the URL.
         headerHtml: await renderComponentToString(
           <TopNavigation {...navProps} user={user} isEnturUser={isEnturOrganisation(info)} />,
         ),

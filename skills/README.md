@@ -1,10 +1,10 @@
 # Skills
 
 > **Audience:** Entur employees installing or contributing to the skills in this repo.
-> **AI agents:** the skill itself is [entur-uniformen/SKILL.md](./entur-uniformen/SKILL.md) — read that, not this file.
+> **AI agents:** read the skill itself in [entur-uniformen/SKILL.md](./entur-uniformen/SKILL.md), not this file.
 
-Agent skills that live with the code they describe. Each is a folder named for the
-skill, with a `SKILL.md` at minimum:
+This folder holds agent skills for the code in this repository. Each skill is a folder
+with the skill's name and contains at least a `SKILL.md`:
 
 ```text
 skills/
@@ -12,9 +12,9 @@ skills/
     └── SKILL.md
 ```
 
-| Skill                                | What it teaches an agent                                                              |
-| ------------------------------------ | ------------------------------------------------------------------------------------- |
-| [`entur-uniformen`](./entur-uniformen/SKILL.md) | Adding, upgrading and debugging Uniformen — the shared header and footer — in an Entur portal application |
+| Skill                                           | What it teaches an agent                                                                              |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [`entur-uniformen`](./entur-uniformen/SKILL.md) | How to add, upgrade and debug Uniformen, the shared header and footer, in an Entur portal application |
 
 ## Installing
 
@@ -23,13 +23,13 @@ claude plugin marketplace add entur/ai
 claude   # then /plugin, and install "entur-uniformen"
 ```
 
-Codex CLI: `codex plugin marketplace add entur/ai`.
+For Codex CLI, run `codex plugin marketplace add entur/ai`.
 
 ## How it ships
 
-The marketplace in [`entur/ai`](https://github.com/entur/ai) does not vendor a copy of
-this skill. Its entry points a `git-subdir` source at this repo's `skills/` directory
-on `main`, the same way `entur/design-system` publishes `entur-linje`:
+The marketplace in [`entur/ai`](https://github.com/entur/ai) does not keep a copy of
+this skill. Its entry has a `git-subdir` source that points to the `skills/` directory
+of this repo on `main`. `entur/design-system` publishes `entur-linje` the same way:
 
 ```json
 {
@@ -51,19 +51,19 @@ on `main`, the same way `entur/design-system` publishes `entur-linje`:
 }
 ```
 
-Two consequences worth knowing:
+This means:
 
-- **A merge to `main` is a release.** There is no version to bump and nothing to
-  publish — an edit to `SKILL.md` reaches every installed agent on its next sync.
-  Treat the file as shipped documentation, not as notes.
-- **It reaches [ki.entur.no](https://ki.entur.no) too.** The KI portal's catalogue is
-  generated from `entur/ai` at build, so the marketplace entry is also what makes the
-  skill findable there.
+- **A merge to `main` publishes the skill.** There is no version to change and no
+  publish step. Every installed agent gets the new `SKILL.md` the next time it syncs.
+  Write it as published documentation, not as notes.
+- **The skill is also listed on [ki.entur.no](https://ki.entur.no).** The KI portal
+  builds its catalogue from `entur/ai`, so the marketplace entry also makes the skill
+  show up there.
 
 ## Contributing
 
-Keep `SKILL.md` consistent with the source of truth it describes — the JSDoc on
-`FetchUniformenParams` in `packages/uniformen/src/types.ts` and
-[the package README](../packages/uniformen/README.md), which the skill names as the
-authority where it is thinner. Ask in **#work-micro-frontend** if that authority is
-unclear.
+Keep `SKILL.md` in line with the JSDoc on `FetchUniformenParams` in
+`packages/uniformen/src/types.ts` and with
+[the package README](../packages/uniformen/README.md). The skill tells agents to
+trust the package README where the skill has less detail. If you are not sure which
+source is correct, ask in **#work-micro-frontend**.

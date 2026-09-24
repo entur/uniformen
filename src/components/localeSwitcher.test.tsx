@@ -18,15 +18,11 @@ describe("locale switcher", () => {
   });
 
   test("the chip names the current language, in that language", async () => {
-    // On a login page the bar is the whole chrome: which language the page is in
-    // has to be readable without opening anything.
     const html = await render(["nb-NO", "en-GB"], "en-GB");
     expect(html).toContain('class="uniformen-top-nav__action-label" lang="en-GB">English<');
   });
 
   test("the accessible name survives the breakpoint that hides the label", async () => {
-    // Bilingual, like the heading in the menu: the control has to be findable by a
-    // user who cannot read the language the page is in.
     expect(await render(["nb-NO", "en-GB"])).toContain(
       'aria-label="Språk / Language: Norsk bokmål"',
     );
@@ -42,10 +38,8 @@ describe("locale switcher", () => {
     expect(html.match(/role="menuitemradio"/g)).toHaveLength(3);
     expect(html).toContain('aria-checked="true" lang="nn-NO"');
     expect(html.match(/data-uniformen-locale="/g)).toHaveLength(3);
-    // The single tab stop too, not only the options: both mount points render it.
     expect(html.match(/tabindex="-1"/g)).toHaveLength(2);
     expect(html).toContain('data-uniformen-locale="nn-NO" tabindex="0"');
-    // The group is named where there is no heading to point at.
     expect(html).toContain('aria-label="Språk / Language"');
   });
 });
@@ -69,8 +63,6 @@ describe("which control the bar renders", () => {
     ]) {
       const html = await bar(props);
       expect(hasSection(html)).toBe(true);
-      // Never both: a chip beside the chip that opens the menu is two controls
-      // where the bar has room for one.
       expect(hasChip(html)).toBe(false);
     }
   });

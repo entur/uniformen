@@ -2,23 +2,25 @@
 
 Header og footer for Entur
 
-What the service renders is changelogged in [CHANGELOG.md](./CHANGELOG.md); the
-client library's own API in [its changelog](./packages/uniformen/CHANGELOG.md).
+Changes to what the service renders are listed in [CHANGELOG.md](./CHANGELOG.md).
+Changes to the client library's API are listed in
+[its own changelog](./packages/uniformen/CHANGELOG.md).
 
 ## Skill for AI coding agents
 
-[`skills/entur-uniformen`](./skills/entur-uniformen/SKILL.md) teaches an agent to add Uniformen
-to an Entur application. It is published through the Entur plugin marketplace, which
-sources it straight from this repo — there is no vendored copy to drift:
+[`skills/entur-uniformen`](./skills/entur-uniformen/SKILL.md) teaches an agent how to add
+Uniformen to an Entur application. It is published through the Entur plugin
+marketplace. The marketplace reads the skill directly from this repo and keeps no copy
+of it. To install it:
 
 ```sh
 claude plugin marketplace add entur/ai
 claude   # then /plugin, and install "entur-uniformen"
 ```
 
-Codex CLI: `codex plugin marketplace add entur/ai`. Editing `SKILL.md` on `main` is
-what ships a change; the marketplace entry pins nothing but the branch. See
-[skills/README.md](./skills/README.md).
+For Codex CLI, run `codex plugin marketplace add entur/ai`. The marketplace entry
+points to the `main` branch, so a change to `SKILL.md` on `main` is published right
+away. See [skills/README.md](./skills/README.md).
 
 ## Install
 
@@ -34,64 +36,68 @@ To run:
 bun run dev
 ```
 
-open http://localhost:4123
+Then open http://localhost:4123.
 
 ## Preview
 
-The root path renders the header and footer in a page, so they can be looked at by
-hand. It takes the same query parameters as `/ssr`, plus a few that only make sense
-for a dev tool — those carry a `debug` prefix.
+The root path renders the header and footer on a page, so you can look at them in
+the browser. It takes the same query parameters as `/ssr`, plus a few parameters for
+testing. Those have a `debug` prefix.
 
-The page content is a form of every parameter below, so none of them has to be
-remembered. The controls are laid out like the bar itself — the ones that move its
-left end on the left, its right end on the right, the rest below both — and a change
-applies itself: a box or a menu on the pick, a text field once you leave it. It prints the URL behind what
-is on screen, as the server validated it and with unknown parameters and defaults
-dropped, for copying somewhere else.
+The page has a form with a control for every parameter below. The controls are
+placed like the parts of the bar they change: controls for the left side of the bar
+on the left, controls for the right side on the right, and the rest below. A checkbox
+or a menu applies the change when you pick a value. A text field applies it when you
+leave the field. The page also shows the URL for the current settings, so you can copy
+it. The URL has only the parameters the server accepted, and leaves out unknown
+parameters and parameters set to their default value.
 
-| Parameter          | Values                                                                                       | What it does                                                                                                                                                                                                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app`              | `bedrift`, `cleos`, `nplan`, `ops-center`, `partner`, `skoleskyss`, `sorvis`                 | Names the app beside the logo, marks its entry in the app switcher, and turns the environment badge into a switcher offering the environments that app is deployed to.                                                                                                                                  |
-| `debugEnturUser`   | `true`, `false`                                                                              | Renders the bar as an Entur user's, which is the one that carries the environment badge. Preview only.                                                                                                                                                                                                  |
-| `sidebar`          | `true`, `false`                                                                              | Whether the app has a side navigation to collapse. The preview page also gets a demo sidebar for the control to act on.                                                                                                                                                                                 |
-| `simple`           | `true`, `false`                                                                              | Hides the app switcher, notifications, the sidebar toggle and "Mine tilganger". Overrides `sidebar`. Footer unchanged.                                                                                                                                                                                  |
-| `contrast`         | `true`, `false`                                                                              | Paints the bar in the design system's contrast palette, for an app whose page behind the header is dark. The panels come with it.                                                                                                                                                                       |
-| `loginUrl`         | any path on the app's own origin, e.g. `/auth/login`                                         | Where "Logg inn" points on the anonymous bar. Absent renders no login link. An absolute URL, `//host` or `javascript:` is a `400`.                                                                                                                                                                      |
-| `logoutUrl`        | any path on the app's own origin, e.g. `/auth/logout`                                        | Where "Logg ut" points in the signed-in user's menu. Absent renders no logout row. An absolute URL, `//host` or `javascript:` is a `400`.                                                                                                                                                               |
-| `locale`           | `nb-NO` (default), `nn-NO`, `en-GB`                                                          | The language the header and footer are written in. The preview page also renders `<html lang>` as it.                                                                                                                                                                                                   |
-| `availableLocales` | any of `nb-NO`, `nn-NO`, `en-GB`, repeated: `?availableLocales=nb-NO&availableLocales=en-GB` | The languages the app offers, in this order, as a switcher: a section of the user menu where the bar has one (`simple` included), its own chip beside the login link, where there is one, when it does not. Must include `locale`, which is the option rendered as current. Absent renders no switcher. |
-| `debugUser`        | any text, 1–120 chars                                                                        | Renders the bar as signed in, under that name. Absent renders the anonymous bar. Preview only.                                                                                                                                                                                                          |
-| `debugEmail`       | any text, 1–120 chars                                                                        | The line under the name in the user menu. Preview only.                                                                                                                                                                                                                                                 |
+| Parameter          | Values                                                                                       | What it does                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app`              | `bedrift`, `cleos`, `nplan`, `ops-center`, `partner`, `skoleskyss`, `sorvis`                 | Shows the app name beside the logo and marks the app in the app switcher. For Entur users, the environment badge becomes a switcher with links to the environments the app is deployed to. No default. Any other value returns `400`.                                                                                                                                                                                                 |
+| `debugEnturUser`   | `true`, `false`                                                                              | `true` renders the bar as for an Entur user, which shows the environment badge. Default `false`. Any other value returns `400`. Preview page only.                                                                                                                                                                                                                                                                                    |
+| `sidebar`          | `true`, `false`                                                                              | `true` renders the button that collapses the app's side navigation. The preview page also shows a demo sidebar for the button to act on. Default `false`. Any other value returns `400`.                                                                                                                                                                                                                                              |
+| `simple`           | `true`, `false`                                                                              | `true` hides the app switcher, notifications, the sidebar button and "Mine tilganger". When `true`, `sidebar` is ignored. The footer does not change. Default `false`. Any other value returns `400`.                                                                                                                                                                                                                                 |
+| `contrast`         | `true`, `false`                                                                              | `true` renders the bar and its panels in the design system's contrast colours. Use it when the page behind the header is dark. Default `false`. Any other value returns `400`.                                                                                                                                                                                                                                                        |
+| `loginUrl`         | a path on the app's own origin, e.g. `/auth/login`, at most 512 characters                   | The link target for "Logg inn" on the bar for users who are not signed in. If it is not set, there is no login link. An absolute URL, `//host` or `javascript:` returns `400`.                                                                                                                                                                                                                                                        |
+| `logoutUrl`        | a path on the app's own origin, e.g. `/auth/logout`, at most 512 characters                  | The link target for "Logg ut" in the signed-in user's menu. If it is not set, there is no logout link. An absolute URL, `//host` or `javascript:` returns `400`.                                                                                                                                                                                                                                                                      |
+| `locale`           | `nb-NO` (default), `nn-NO`, `en-GB`                                                          | The language of the header and footer. The preview page also sets `<html lang>` to this value. Any other value returns `400`.                                                                                                                                                                                                                                                                                                         |
+| `availableLocales` | any of `nb-NO`, `nn-NO`, `en-GB`, repeated: `?availableLocales=nb-NO&availableLocales=en-GB` | The languages the app offers, in the order to list them in the language switcher. For a signed-in user the switcher is a section in the user menu, also with `simple`. For other users it is a separate button next to the login link. The list must include `locale`, which is shown as the selected language. If it is not set, there is no switcher. An unknown value, a repeated value, or a list without `locale` returns `400`. |
+| `debugUser`        | any text, 1–120 characters                                                                   | Renders the bar as signed in, with this name. If it is not set, the bar is rendered for a user who is not signed in. Text outside the length limits returns `400`. Preview page only.                                                                                                                                                                                                                                                 |
+| `debugEmail`       | any text, 1–120 characters                                                                   | The line under the name in the user menu. Text outside the length limits returns `400`. Preview page only.                                                                                                                                                                                                                                                                                                                            |
 
 ```
 http://localhost:4123/?app=partner&sidebar=true&debugUser=Navne+Navnesen&debugEmail=navne.navnesen@entur.org&debugEnturUser=true
 ```
 
-The `debug` parameters are the preview page's own: `/ssr` ignores them, since who is
-signed in and what organisation they are in are things a consumer's token
-establishes and not something its URL gets to claim. They are ignored in production
-too — a page that names a user with no session behind it, or offers chrome the
-viewer is not entitled to, is a misleading thing to be able to link to.
+Only the preview page reads the `debug` parameters. `/ssr` ignores them, because the
+signed-in user and their organisation must come from the token, not from the URL. The
+preview page also ignores them in production. Otherwise anyone could share a
+production link that shows a signed-in user without a session, or shows controls the
+viewer does not have access to.
 
 ## The environment badge
 
-The badge next to the logo, and the switcher it becomes when the consumer sends
-`app`, are rendered only for users in the Entur organisation — the ones whose
-userinfo carries `https://entur.io/organisationID` as `ENTUR_ORGANISATION_ID`
-(`src/auth/enturOrganisation.ts`, the same id entur-partner reads the claim
-against). Everyone else, signed in or not, gets the bar without it. The coloured
-strip along the top of the header is not gated: it warns whoever is looking at the
-page that it is not production, and production has never had one.
+The environment badge next to the logo is shown only to users in the Entur
+organisation. When the app sends `app`, the badge becomes an environment switcher.
+A user is in the Entur organisation when their userinfo has the claim
+`https://entur.io/organisationID` set to `ENTUR_ORGANISATION_ID`
+(`src/auth/enturOrganisation.ts`). All other users, signed in or not, get the bar
+without the badge.
 
-The gate reads the token's profile, so a failed userinfo lookup renders the bar
-without the badge rather than with it.
+The coloured strip along the top of the header is shown to everyone. It tells the
+viewer that the page is not production. Production has no strip.
+
+The check uses the user's profile from the userinfo lookup. If the lookup fails, the
+bar is rendered without the badge.
 
 ## Contributing
 
-Maintained by Team Portal. Pull requests are accepted from Entur teams only —
-[CONTRIBUTING.md](./CONTRIBUTING.md) covers the setup, the checks CI runs, and the
-conventions for commits, changelogs and new query parameters. Issues are open to
-everyone. Security problems go to [SECURITY.md](./SECURITY.md), not to an issue.
+Team Portal maintains this repository. We accept pull requests from Entur teams
+only. [CONTRIBUTING.md](./CONTRIBUTING.md) describes the setup, the checks CI runs,
+and the rules for commits, changelogs and new query parameters. Anyone can open an
+issue. Report security problems as described in [SECURITY.md](./SECURITY.md), not in
+an issue.
 
 ## Licence
 

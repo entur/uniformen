@@ -4,17 +4,15 @@ import { renderComponentToString } from "../ssr/renderComponentToString";
 import type { Environment } from "../config";
 import type { Locale } from "../types";
 
-// The server resolves its environment once at startup, so the suite as a whole
-// only ever runs as one of them (dev, see test/authTestSetup). The menu takes the
-// environment as a prop so the other environments' links can be rendered here.
+// The test server always runs as dev (see test/authTestSetup). The menu takes the
+// environment as a prop, so these tests can render the other environments too.
 const ENVIRONMENTS: Environment[] = ["local", "dev", "staging", "production"];
 
-/** Hrefs in document order. */
+/** Returns the hrefs in document order. */
 const hrefs = (html: string): string[] =>
   [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] as string);
 
-// The way out is the consuming app's to name, so a menu with a row in it is a menu
-// that was given one. Rendered here with the path a consumer would send.
+// A typical logout path that a consuming app would pass in.
 const LOGOUT_URL = "/auth/logout";
 
 const render = (
@@ -55,7 +53,7 @@ describe("user menu rendering", () => {
 
   test("the account link points at Partner in the environment served", async () => {
     const expected: Record<Environment, string> = {
-      // Nobody can be sent to localhost, so a local header links to dev.
+      // A local header links to dev, because the user cannot be sent to localhost.
       local: "https://entur-partner.dev.entur.org/permission-admin/my-profile",
       dev: "https://entur-partner.dev.entur.org/permission-admin/my-profile",
       staging: "https://entur-partner.staging.entur.org/permission-admin/my-profile",
@@ -68,8 +66,6 @@ describe("user menu rendering", () => {
   });
 
   test("the way out points where logoutUrl says, in every environment", async () => {
-    // Unlike the account link, it is never ours or Partner's: the session belongs to
-    // the consuming app, so the path it sent is the path rendered.
     for (const env of ENVIRONMENTS) {
       const html = await render({ name: "Navn Navnesen" }, env, "nb-NO", "/oauth/end");
       expect(html).toContain('href="/oauth/end"');
@@ -88,7 +84,6 @@ describe("user menu rendering", () => {
   });
 
   test("a name long enough to break the layout is still rendered whole", async () => {
-    // The panel bounds its own width in CSS; nothing here truncates the name.
     const name = "Navnesen ".repeat(20).trim();
     const html = await render({ name });
     expect(html.match(/Navnesen/g)).toHaveLength(40);
@@ -134,8 +129,6 @@ describe("simple user menu", () => {
   });
 
   test("the panel is marked simple, so the iconless indent can be dropped", async () => {
-    // Nothing above the logout row carries an icon here, so the indent that lines
-    // it up with icon'd labels has nothing to line up with.
     const html = await renderSimple({ name: "Navn Navnesen" });
     expect(html).toContain("uniformen-user-menu__panel--simple");
     expect(

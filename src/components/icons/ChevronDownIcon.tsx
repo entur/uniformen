@@ -1,8 +1,8 @@
 /**
- * Downward chevron for the environment switcher's chip. Drawn in the same 20x20
- * frame as the top bar's other icons, but at 1rem so it reads as part of the
- * badge's text rather than as a control of its own. The open state rotates it in
- * CSS, so the glyph points down here and nowhere else.
+ * Down chevron shown next to a chip's text. It uses the same 20x20 frame as the
+ * other top bar icons, but is 1rem in size so it looks like part of the text and
+ * not like a separate control. CSS rotates it when the panel is open, so it always
+ * points down here.
  */
 export const ChevronDownIcon = () => (
   <svg

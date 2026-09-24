@@ -23,8 +23,8 @@ describe("portal application links per environment", () => {
   });
 
   test("no environment links to a host of another", () => {
-    // Catches the copy-paste miss: an entry left pointing at production (or at
-    // dev) in a list that belongs to a different environment.
+    // This catches an entry that was copied from another environment's list and
+    // still points at that environment's host.
     for (const env of ENVIRONMENTS) {
       const own = new Set(expectedUrls(env));
       for (const { url } of PORTAL_APPLICATIONS[env]) {
@@ -38,7 +38,7 @@ describe("portal application links per environment", () => {
       const urls = PORTAL_APPLICATIONS[env].map((app) => app.url);
       for (const url of urls) {
         expect(url.startsWith("https://")).toBe(true);
-        // A misspelled host field would compose into a live-looking URL.
+        // A misspelled host field would put `null` or `undefined` into the URL.
         expect(url).not.toMatch(/null|undefined/);
       }
       expect(new Set(urls).size).toBe(urls.length);
@@ -48,8 +48,6 @@ describe("portal application links per environment", () => {
   test("identity does not move with the environment", () => {
     const names = new Map(PORTAL_APPLICATIONS.production.map(({ id, appName }) => [id, appName]));
     for (const env of ENVIRONMENTS) {
-      // Every environment lists the same applications, in the same order, under
-      // the same names. Only the hosts differ.
       expect(PORTAL_APPLICATIONS[env].map((app) => app.id)).toEqual([...names.keys()]);
       for (const { id, appName } of PORTAL_APPLICATIONS[env]) {
         expect(appName).toBe(names.get(id) as string);
@@ -60,9 +58,6 @@ describe("portal application links per environment", () => {
 
 describe("application ids", () => {
   test("the accepted query values are the applications themselves", () => {
-    // The `app` param and the switcher entry it marks are the same string, so a
-    // new application is accepted as a query value by being listed — whether or
-    // not the switcher offers it.
     expect(PORTAL_APPLICATION_IDS).toEqual([
       "bedrift",
       "cleos",
@@ -101,7 +96,7 @@ describe("unlisted applications", () => {
   });
 
   test("an environment it is not deployed to hands out nothing to switch between", () => {
-    // Local rides dev, and there is no dev deploy.
+    // Local uses the dev hosts, and Skoleskyss has no dev deployment.
     for (const env of ["local", "dev"] as const) {
       expect(portalApplicationUrls("skoleskyss", env)).toBeUndefined();
     }
@@ -129,12 +124,10 @@ describe("portalApplicationUrls", () => {
 });
 
 describe("portalApplicationUrl", () => {
-  /** The ids the function accepts: the applications with a host in every environment. */
+  /** The ids portalApplicationUrl accepts. These apps have a host in every environment. */
   const FULLY_DEPLOYED = ["cleos", "nplan", "ops-center", "partner", "sorvis"] as const;
 
   test("agrees with the list the switcher renders, for every app in every environment", () => {
-    // Both read one host table, so this is what keeps a link to a page of an
-    // application pointing at the same host the switcher sends people to.
     for (const env of ENVIRONMENTS) {
       for (const id of FULLY_DEPLOYED) {
         const url = PORTAL_APPLICATIONS[env].find((app) => app.id === id)?.url;
@@ -178,7 +171,7 @@ describe("portalApplicationName", () => {
     expect(portalApplicationName("unknown")).toBeUndefined();
     expect(portalApplicationName("Partner")).toBeUndefined();
     expect(portalApplicationName("PARTNER")).toBeUndefined();
-    // Partner's host keeps the `entur-` prefix; the id it answers to does not.
+    // Partner's host has the `entur-` prefix, but its id does not.
     expect(portalApplicationName("entur-partner")).toBeUndefined();
   });
 });

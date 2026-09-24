@@ -23,23 +23,22 @@ const texts = {
   },
 } as const;
 
-/** The signed-in user, as the header labels them. */
+/** The signed-in user shown in the header. */
 export type UserMenuUser = { name: string; email?: string };
 
-/** The user's own permissions and profile, a page of Partner. */
+/** The Partner page where users see their own permissions and profile. */
 const MY_PROFILE_PATH = "/permission-admin/my-profile";
 
 /**
- * The signed-in user's menu: who you are, where to see what you have access to,
- * and the way out. Rendered only for an authenticated user — there is no anonymous
- * form of it, the login link is that.
+ * Renders the signed-in user's menu. It shows the user's name, a link to their
+ * access, and a logout link. It is only rendered for signed-in users.
  *
- * The account link is absolute and per environment, like the app switcher's:
- * a dev header hands its user dev Partner. The way out is the consuming app's to
- * name, like the way in — the session is theirs, not ours.
+ * The access link is an absolute URL in the current environment, so a dev header
+ * links to dev Partner. The consuming app gives the logout URL, because the session
+ * belongs to the app, not to Uniformen.
  *
- * The environment defaults to the one this instance serves; the prop exists so
- * every environment's links can be exercised from a test.
+ * `environment` defaults to the running environment. It is a prop so tests can
+ * check the links for every environment.
  */
 export function UserMenu({
   user,
@@ -52,25 +51,25 @@ export function UserMenu({
   user: UserMenuUser;
   environment?: Environment;
   /**
-   * Barebones menu: who you are and the way out, no links. Keeps the identity
-   * block — under the mobile breakpoint the chip is an icon alone, so the panel is
-   * the only place the user can read who they are signed in as.
+   * Renders a minimal menu with the user's name and the logout link, but without the
+   * access link. The name stays, because at mobile widths the button only shows an
+   * icon, and the panel is the only place to see who is signed in.
    */
   simple?: boolean;
   locale: Locale;
   /**
-   * The languages to offer, in this order. Empty or absent renders no switcher: an
-   * app that translates nothing must not offer to switch.
+   * The languages to offer, in this order. If it is empty or missing, no language
+   * switcher is shown, because an app without translations must not offer one.
    */
   availableLocales?: Locale[];
-  /** Where the logout row points. Absent renders no logout row. */
+  /** The URL of the logout link. If it is missing, no logout link is shown. */
   logoutUrl?: string;
 }) {
   const txt = texts[locale];
   return (
     <div class="uniformen-user-menu">
-      {/* No aria-label: the name is the accessible name, and it survives the
-          mobile breakpoint that hides it visually. */}
+      {/* No aria-label, because the name inside the button is its accessible name.
+          At mobile widths the name is only hidden visually, so screen readers still read it. */}
       <button
         type="button"
         class="uniformen-top-nav__user"
@@ -92,9 +91,8 @@ export function UserMenu({
         role="dialog"
         aria-label={txt.brukermeny}
       >
-        {/* Repeats the name the chip already shows: at mobile widths the chip is
-            an icon alone, and this is then the only place the user can read who
-            they are signed in as. */}
+        {/* This repeats the name from the button. At mobile widths the button only
+            shows an icon, so this is the only place to see who is signed in. */}
         <div class="uniformen-user-menu__identity">
           <span class="uniformen-user-menu__name">{user.name}</span>
           {user.email && <span class="uniformen-user-menu__email">{user.email}</span>}
@@ -112,14 +110,14 @@ export function UserMenu({
             </li>
           </ul>
         )}
-        {/* Not gated by `simple`, unlike the links above it: the barebones menu is
-            still a menu, and a language chip beside the chip that opens it would be
-            two controls where the bar has room for one. The standalone control is
-            for the bars with no menu at all — see `LocaleSwitcher`. */}
+        {/* The language options are shown in the `simple` menu too. Otherwise the bar
+            would need a separate language button next to the user menu. See
+            `LocaleSwitcher`. */}
         {availableLocales && availableLocales.length > 0 && (
           <LocaleMenu availableLocales={availableLocales} locale={locale} />
         )}
-        {/* Its own group, below a divider: leaving is not one more place to go. */}
+        {/* Logout is in its own group below a divider, because logging out is a
+            different kind of action from the items above. */}
         {logoutUrl && (
           <a class="uniformen-user-menu__item uniformen-user-menu__logout" href={logoutUrl}>
             {txt.loggUt}

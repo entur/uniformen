@@ -19,14 +19,14 @@ const texts = {
 } as const;
 
 /**
- * The switcher links to the environment the header is served from, never across
- * environments: a dev instance of an app hands its user dev instances of the
- * others. The environment defaults to the one this instance serves; the prop
- * exists so every environment's links can be exercised from a test.
+ * Renders the app switcher. It only links to applications in the same environment
+ * as the header, so a dev app links to the dev versions of the other apps.
+ * `environment` defaults to the running environment. It is a prop so tests can
+ * check the links for every environment.
  *
- * `activeAppId` is the application the header is being rendered for, marked as
- * the current page. Absent when the consumer sends no `app` query param, and
- * matching nothing when the named application is one the list leaves out here.
+ * `activeAppId` is the application the header is rendered for, and its link is
+ * marked as the current page. It is undefined when the app sends no `app` query
+ * param. If the application is not in the list, no link is marked.
  */
 export function AppSwitcher({
   activeAppId,

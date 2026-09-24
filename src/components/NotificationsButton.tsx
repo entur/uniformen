@@ -8,10 +8,10 @@ const texts = {
 } as const;
 
 /**
- * Notifications entry point. Visual only for now: there is no notifications API
- * to read an unread count from, so the button has no badge and no handler. It
- * ships in every bar regardless — deliberately, to keep the service knob-free
- * until there is something to wire it to.
+ * Renders the notifications button. It only shows an icon for now. There is no
+ * notifications API to get an unread count from, so the button has no badge and
+ * no click handler. It is shown in every bar on purpose, so the service needs no
+ * option for it until it does something.
  */
 // TODO wire up to a notifications source (unread count + panel).
 export function NotificationsButton({ locale }: { locale: Locale }) {

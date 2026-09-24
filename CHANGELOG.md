@@ -1,13 +1,12 @@
 # Changelog — Uniformen service
 
-What the running service renders: the header and footer markup, their styles and
-their behaviour.
+This file lists changes to what the running service renders: the header and footer
+markup, their styles and their behaviour.
 
-There is nothing to install and no way to stay behind. Every app fetching the layout
-gets these on its next request, whatever version of
-[`@entur/uniformen`](./packages/uniformen) it has, so entries are dated rather than
-versioned. Changes to the package's own API are in
-[its changelog](./packages/uniformen/CHANGELOG.md).
+Apps do not install these changes. Every app that fetches the layout gets them on its
+next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it uses.
+That is why entries have dates instead of version numbers. Changes to the package's
+API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
 ## 2026-09-23
 
