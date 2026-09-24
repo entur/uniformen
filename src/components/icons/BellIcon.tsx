@@ -1,7 +1,7 @@
 /**
- * Notification bell. Path is the Figma export verbatim; the translate moves the
- * artboard coordinates into the shared 20x20 icon frame, where the 17.5x17.5
- * glyph sits with a 1.25 inset on every side.
+ * Bell icon for notifications. The path is copied unchanged from the Figma export.
+ * The `translate` moves it from the Figma coordinates into the 20x20 frame, where
+ * the 17.5x17.5 shape is inset 1.25 on every side.
  */
 export const BellIcon = () => (
   <svg

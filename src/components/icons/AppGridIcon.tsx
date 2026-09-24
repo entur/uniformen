@@ -1,8 +1,7 @@
 /**
- * App switcher grid. The 3x3 field of squares is 15x15 in the design, centred
- * in the shared 20x20 icon frame — hence the 2.5 inset on every side. Every
- * icon in the top bar's labelled controls uses that frame, so they line up
- * whatever their glyph measures.
+ * Grid icon for the app switcher. The 3x3 squares are 15x15 in the design, so they
+ * are inset 2.5 on every side to be centred in the 20x20 frame. All top bar icons
+ * use this frame, so they line up even when their shapes have different sizes.
  */
 export const AppGridIcon = () => (
   <svg

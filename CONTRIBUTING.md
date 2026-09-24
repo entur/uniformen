@@ -1,33 +1,32 @@
 # Contributing
 
-Uniformen is maintained by Team Portal at Entur. The source is public so that the
-teams embedding the header and footer can read what they are embedding, and so the
-`@entur/uniformen` package can be built and inspected.
+Team Portal at Entur maintains Uniformen. The source is public so that teams who
+embed the header and footer can read the code, and so that anyone can build and
+inspect the `@entur/uniformen` package.
 
-**Pull requests are accepted from Entur teams only.** The header and footer render
-inside every Entur B2B application and carry Entur's branding, so what ships here is
-an internal editorial decision. Pull requests from outside Entur will be closed
-without review.
+**We accept pull requests from Entur teams only.** The header and footer are shown in
+every Entur B2B application and carry Entur's branding, so Entur decides what goes
+into them. We close pull requests from outside Entur without review.
 
-Outside Entur:
+If you are outside Entur:
 
-- **Found a bug, or something that looks wrong?** Open an issue. Issues are read.
-- **Found a security problem?** See [SECURITY.md](SECURITY.md) — not an issue, not a
-  pull request.
-- **Need different behaviour for your own use?** The EUPL-1.2 lets you fork and
-  modify. We do not take the change upstream.
+- **Found a bug, or something that looks wrong?** Open an issue. We read them.
+- **Found a security problem?** Follow [SECURITY.md](SECURITY.md). Do not open an
+  issue or a pull request.
+- **Need different behaviour for your own use?** The EUPL-1.2 lets you fork the
+  repository and change it. We will not merge that change here.
 
 The rest of this document is for Entur teams.
 
 ## Before you start
 
-For anything more than a small fix, open an issue or reach Team Portal first. A change
-here ships to every Entur B2B application at once, so it is worth agreeing on the shape
-of a change before it is written.
+For anything bigger than a small fix, open an issue or contact Team Portal first. A
+change here reaches every Entur B2B application at the same time, so agree on the
+change before you write it.
 
 ## Getting set up
 
-Requires Bun — the version is pinned in the Dockerfile and in CI.
+You need Bun. The Bun version is pinned in the Dockerfile and in CI.
 
 ```sh
 bun install
@@ -35,14 +34,14 @@ cp .env.example .env
 bun run dev
 ```
 
-The dev server listens on http://localhost:4123. The root path renders the header and
-footer in a page with a form for every query parameter, so changes can be looked at by
-hand — see the README for what each parameter does.
+The dev server listens on http://localhost:4123. The root path shows the header and
+footer on a page with a form for every query parameter, so you can check your changes
+in the browser. The README describes each parameter.
 
 ## Checks
 
-Run all of these before opening a pull request. CI runs the same set and fails on any
-of them:
+Run all of these before you open a pull request. CI runs the same checks and fails
+if any of them fails:
 
 | What | Command |
 |------|---------|
@@ -52,24 +51,24 @@ of them:
 | Tests | `bun run test` |
 | Dependency audit | `bun audit --audit-level=critical` |
 
-The client package in `packages/uniformen` has its own set of the same scripts; run
-them from that directory when you change it.
+The client package in `packages/uniformen` has the same scripts. When you change the
+package, run them from that directory.
 
 ## Commits and pull requests
 
-Commit subjects carry the Jira key where there is one, then a description in the
-imperative:
+Start the commit subject with the Jira key, if there is one. Then describe the change
+in the imperative:
 
 ```text
 ETU-76720 add new param loginUrl which renders the "Logg inn" button when specified
 ```
 
-Without a Jira key, the description alone is fine. Keep the subject on one line and
-say what the change does, not what file it touches.
+If there is no Jira key, write only the description. Keep the subject on one line.
+Say what the change does, not which files it changes.
 
-**A change under `packages/uniformen/` is different.** The package is released by
-release-please, which reads commit subjects to decide the next version, so those use
-[Conventional Commits](https://www.conventionalcommits.org/):
+**Changes under `packages/uniformen/` use a different format.** release-please
+releases the package and reads the commit subjects to decide the next version. These
+commits must use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```text
 feat(uniformen): add loginUrl to the render options
@@ -82,67 +81,70 @@ feat(uniformen): add loginUrl to the render options
 | `feat!`, or any type with a `BREAKING CHANGE:` footer | Major bump |
 | `chore`, `docs`, `refactor`, `test`, `build`, `ci` | No release |
 
-The Jira key goes in the commit body rather than the subject. The `Verify PR` check
-enforces this, but only on pull requests that touch `packages/uniformen/` — a pull
-request that leaves the package alone keeps the Jira-key style above.
+Put the Jira key in the commit body, not in the subject. The `Verify PR` check
+enforces this format, but only on pull requests that change `packages/uniformen/`.
+Pull requests that do not change the package use the Jira key format above.
 
-Pull requests need a review from [@entur/team-portal](CODEOWNERS). Keep a pull request
-to one change — it makes review and rollback simpler, and here it also keeps releases
-honest: a pull request spanning the service and the package lands under one subject,
-and that subject decides whether the package is released.
+Pull requests need a review from [@entur/team-portal](CODEOWNERS). Keep each pull
+request to one change. This makes review and rollback easier. It also matters for
+releases: a pull request that changes both the service and the package is merged
+with one subject, and that subject decides whether the package is released.
 
-Which subject lands on `main` depends on how the pull request is merged:
+The subject that ends up on `main` depends on how the pull request is merged:
 
-- **Squash with more than one commit** — the pull request title becomes the subject,
-  and every commit message is copied into the body. A stray `BREAKING CHANGE:` footer
-  in an intermediate commit therefore cuts a major release; drop it before merging.
-- **Squash with exactly one commit** — GitHub uses the *commit* subject, not the pull
-  request title. A single-commit pull request titled `feat(uniformen): add X` whose
-  commit reads `ETU-1234 add X` lands as `ETU-1234 add X`, and release-please cuts
-  nothing. `Verify PR` checks the commit subject in this case, so make the two match.
-- **Merge or rebase** — the individual commit subjects land as they are, so each
-  commit touching `packages/uniformen/` needs a Conventional Commits subject.
+- **Squash with more than one commit.** The pull request title becomes the subject,
+  and every commit message is copied into the body. If any of those commits has a
+  `BREAKING CHANGE:` footer, release-please makes a major release. Remove the footer
+  before you merge.
+- **Squash with exactly one commit.** GitHub uses the *commit* subject, not the pull
+  request title. For example, if the pull request is titled `feat(uniformen): add X`
+  and its only commit is `ETU-1234 add X`, the subject on `main` is `ETU-1234 add X`,
+  and release-please makes no release. `Verify PR` checks the commit subject in this
+  case, so make the title and the commit subject the same.
+- **Merge or rebase.** Each commit subject goes to `main` unchanged, so every commit
+  that changes `packages/uniformen/` needs a Conventional Commits subject.
 
 ## What a change should come with
 
-- **Tests.** The repository tests behaviour, not implementation: rendering, parameter
-  validation, and auth are covered by tests next to the code they exercise.
-- **A changelog entry for the service.** User-visible changes to what the service
-  renders go in [CHANGELOG.md](CHANGELOG.md), written by hand.
-- **Nothing for the package changelog.** [`packages/uniformen/CHANGELOG.md`](packages/uniformen/CHANGELOG.md)
-  is generated by release-please from commit subjects, so the `feat(uniformen):`
-  subject *is* the changelog entry. Do not edit the file, and do not bump `version`
-  in the package's `package.json` by hand either.
-- **Documentation.** A new or changed query parameter belongs in the README parameter
-  table and in the preview page's controls, alongside the handler change itself.
+- **Tests.** Test behaviour, not implementation. Rendering, parameter validation and
+  auth have tests next to the code they test.
+- **A changelog entry for the service.** Write user-visible changes to what the
+  service renders in [CHANGELOG.md](CHANGELOG.md) by hand.
+- **Nothing for the package changelog.** release-please generates
+  [`packages/uniformen/CHANGELOG.md`](packages/uniformen/CHANGELOG.md) from commit
+  subjects, so your `feat(uniformen):` subject becomes the changelog entry. Do not edit
+  the file, and do not change `version` in the package's `package.json` by hand.
+- **Documentation.** When you add or change a query parameter, update the handler, the
+  README parameter table and the preview page's controls.
 
 ## Adding an application to the app switcher
 
-Applications live in `src/components/portalApplications.ts`, one entry per app with
-its hosts per environment. Entries are declared in the order the switcher lists them:
-alphabetical by name in Norwegian collation. Leave out an environment the app is not
-deployed to.
+Applications are listed in `src/components/portalApplications.ts`, with one entry per
+app and its host in each environment. Put the entries in the order the switcher shows
+them, which is alphabetical by name in Norwegian collation. Leave out environments the
+app is not deployed to.
 
 ## Releasing the package
 
-Releases of `@entur/uniformen` are not cut by hand. On every push to `main`,
-release-please collects the commits touching `packages/uniformen/`, works out the
-next version from their types, and keeps a release pull request open carrying the
-bumped `package.json` and the generated changelog entries. Merging that pull request
-tags the release and publishes the package to npm.
+Nobody releases `@entur/uniformen` by hand. On every push to `main`, release-please
+finds the commits that change `packages/uniformen/` and uses their types to decide
+the next version. It keeps a release pull request open with the new version in
+`package.json` and the generated changelog entries. When that pull request is merged,
+the release is tagged and the package is published to npm.
 
-Nothing else is required of you — write the commit subject well and leave `version`
-and the package changelog alone.
+You only need to write a correct commit subject. Do not change `version` or the
+package changelog.
 
-The service is not released this way; it deploys from `main` on merge as before.
+The service is not released this way. It is deployed from `main` when a pull request
+is merged.
 
 ## Dependencies
 
-Dependencies are pinned exactly (`bunfig.toml` sets `exact = true`) and a package
-version must have been published at least three days earlier before it can be
-installed. Dependabot opens upgrade pull requests; prefer those over upgrading by hand.
+Dependencies are pinned to exact versions (`bunfig.toml` sets `exact = true`). A
+package version can only be installed when it was published at least three days ago.
+Dependabot opens pull requests for upgrades. Use those instead of upgrading by hand.
 
 ## Licence
 
-Contributions are licensed under the EUPL-1.2, the licence this repository is
-released under. See [LICENSE](LICENSE).
+Contributions are licensed under the EUPL-1.2, the same licence as this repository.
+See [LICENSE](LICENSE).

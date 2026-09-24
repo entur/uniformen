@@ -15,10 +15,9 @@ const texts = {
 } as const;
 
 /**
- * Badge labels per environment. One form at every width: the label is the chip's
- * only text, and — once the chip is a button — its accessible name, so it is
- * rendered rather than hidden even under the mobile breakpoint where the app name
- * gives way. The panel rows read the same values. Untranslated.
+ * Labels for the badge and the switcher rows. They are not translated. The label is
+ * the chip's only text and the button's accessible name, so it is shown at every
+ * screen width.
  */
 const ENV_LABELS: Record<Environment, string> = {
   local: "LOCAL",
@@ -28,20 +27,16 @@ const ENV_LABELS: Record<Environment, string> = {
 };
 
 /**
- * Environment chip next to the logo, tinted by the env palette. It reports which
- * environment the app is served from, and — when the consumer names its
- * application — doubles as a switcher to the same app in another environment.
- * The pointer is the tail of the coloured strip along the top of the header,
- * anchored to this element so it stays centred on the chip no matter how wide
- * the app name is. Production has no strip, so it gets no pointer either.
+ * Renders the chip next to the logo that shows which environment the app runs in.
+ * When `activeAppId` has URLs for this environment, the chip is a button that opens
+ * a list of links to the same app in the other environments. Otherwise it is a
+ * plain chip.
  *
- * The environment defaults to the one this instance serves; the prop exists so
- * every environment's rendering can be exercised from a test.
+ * The pointer is placed inside the chip so it stays centred on it, however wide the
+ * app name is. Production has no coloured strip, so it gets no pointer.
  *
- * `activeAppId` is the application the header is being rendered for. Without hosts
- * for it there is nothing to switch between, so the badge renders as the static
- * chip it was before — the app switcher's `app` query param is what turns it into
- * a control.
+ * `environment` defaults to the environment this instance runs in. Tests set it to
+ * render the other environments.
  */
 export function EnvironmentBadge({
   environment = runningEnvironment,
@@ -55,11 +50,9 @@ export function EnvironmentBadge({
   const urls = portalApplicationUrls(activeAppId, environment);
   const txt = texts[locale];
 
-  /* Fixed order, dev outwards: the rows sit in the same place whichever
-     environment the header is served from, so the list is a map rather than
-     something that reshuffles per instance. The one being served is marked, not
-     moved. A local instance has no row — nobody can be sent to localhost — so it
-     marks none of them. */
+  /* The rows are always in the same order, starting with dev, whichever
+     environment this is. The current environment is marked, not moved. There is
+     no row for local, because no user can be sent to localhost. */
   const rows: { env: SwitchableEnvironment; url: string }[] = [];
   for (const env of SWITCHABLE_ENVIRONMENTS) {
     const url = urls?.[env];
@@ -104,10 +97,9 @@ export function EnvironmentBadge({
         <ul class="uniformen-env-switcher__list">
           {rows.map(({ env, url }) => (
             <li key={env}>
-              {/* The href is the target environment's bare host: it is the
-                  no-script fallback, and the only landing page that is correct
-                  without knowing where the user currently is. With scripts, the
-                  handler rewrites it to the page they are on. */}
+              {/* The href is the front page of the target environment. It is
+                  used when scripts do not run. With scripts, `retargetEnvironmentLinks`
+                  changes it to the current page each time the panel opens. */}
               <a
                 href={url}
                 class={

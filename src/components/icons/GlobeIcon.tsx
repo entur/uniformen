@@ -1,8 +1,7 @@
 /**
- * Globe for the language switcher. Drawn in the same 20x20 frame as the top bar's
- * other labelled controls, so it lines up with them whatever its glyph measures:
- * a circle inset 2.5 on every side, an equator and the meridians that make it read
- * as a globe rather than as a clock.
+ * Globe icon for the language switcher. It uses the same 20x20 frame as the other
+ * top bar icons, so they line up. It is a circle inset 2.5 on every side, with an
+ * equator and meridians so it does not look like a clock.
  */
 export const GlobeIcon = () => (
   <svg

@@ -5,24 +5,16 @@ import { PreviewControls } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
 
-/**
- * The preview page is a dev tool, but its demo sidebar is also the worked example
- * of the sidebar contract, so keep it honest: collapsing has to happen through the
- * root attribute, and every inline block it renders has to be hashed in its own CSP
- * or the browser drops it.
- */
+/** Requests the preview page. `chrome` is the part of the HTML before `<main>`. */
 async function preview(query = "") {
   const res = await app.request(`/${query}`);
   const html = await res.text();
-  // The knobs echo the query they were set from, so anything counted rather than
-  // merely found has to be counted in the chrome alone.
+  // The controls in `<main>` repeat the query values. Tests that count matches use
+  // `chrome`, so the controls are not counted.
   return { res, html, chrome: html.slice(0, html.indexOf("<main")) };
 }
 
-/**
- * The bodies of the page's inline scripts,
- * which are the blocks a CSP hash has to cover.
- */
+/** Returns the contents of each inline script. These are the blocks the CSP hashes must cover. */
 async function scriptBlocks(html: string): Promise<string[]> {
   const blocks: string[] = [];
   let current = "";
@@ -52,17 +44,15 @@ describe("preview page debug user", () => {
     );
     expect(res.status).toBe(200);
     expect(html).toContain('id="uniformen-user-menu-panel"');
-    // The chip and the panel both name them.
+    // The name appears on the chip and in the panel.
     expect(chrome.match(/Navn Navnesen/g)).toHaveLength(2);
     expect(html).toContain("navn.navnesen@entur.org");
     expect(html).toContain('href="/auth/logout"');
-    // The handler that opens the panel has to be on the page, or the knob shows
-    // markup that does not respond to a click.
     expect((await scriptBlocks(html)).join("")).toContain("data-uniformen-user-menu-toggle");
   });
 
-  // The page inlines the stylesheet, so every one of these class names appears in
-  // it as a selector regardless. Absence is asserted on the markup form.
+  // The page inlines the stylesheet, so these class names always appear in it as
+  // selectors. The tests check for the `class="..."` attribute instead.
   test("debugEmail is optional", async () => {
     const { html } = await preview("?debugUser=Navne+Navnesen");
     expect(html).toContain('id="uniformen-user-menu-panel"');
@@ -77,8 +67,7 @@ describe("preview page debug user", () => {
   });
 
   test("the knob is the preview page's alone, never /ssr's", async () => {
-    // Being signed in is something a token establishes. If `/ssr` honoured this,
-    // any consumer could render a name of its choosing in the signed-in chrome.
+    // If `/ssr` used this param, any consumer could show any name in the signed-in bar.
     const res = await app.request("/ssr?debugUser=Spoofet+Bruker&debugEmail=spoof@entur.org");
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -88,8 +77,8 @@ describe("preview page debug user", () => {
   });
 
   test("production renders nobody, whatever the URL says", async () => {
-    // The preview page ships to every environment. The suite runs as dev (see
-    // test/authTestSetup), so the resolver takes the environment as an argument.
+    // The test server runs as dev (see test/authTestSetup), so this test calls
+    // previewUser with each environment directly.
     const query = { debugUser: "Navn Navnesen", debugEmail: "navn.navnesen@entur.org" };
     expect(previewUser(query, "production")).toBeUndefined();
     for (const env of ["local", "dev", "staging"] satisfies Environment[]) {
@@ -125,15 +114,14 @@ describe("preview page debug Entur user", () => {
   test("no param, or false, leaves the bar without one", async () => {
     for (const query of ["?app=nplan&debugUser=Navn", "?debugEnturUser=false&app=nplan"]) {
       const { html } = await preview(query);
-      // The page inlines the stylesheet, so the class names are in it as selectors
-      // regardless. Absence is asserted on the markup form.
+      // The page inlines the stylesheet, so these class names always appear in it as
+      // selectors. Check the attributes instead.
       expect(html).not.toContain('class="uniformen-env-badge');
       expect(html).not.toContain('data-uniformen-env-switcher-toggle="');
     }
   });
 
   test("the chip does not ride along with the debug user", async () => {
-    // Two knobs, two questions: who is signed in, and what organisation they are in.
     const { html } = await preview("?debugUser=Navn+Navnesen&app=nplan");
     expect(html).toContain("Navn Navnesen");
     expect(html).not.toContain('class="uniformen-env-badge');
@@ -147,8 +135,6 @@ describe("preview page debug Entur user", () => {
   });
 
   test("production renders no chip, whatever the URL says", async () => {
-    // Same rule as the debug user, and for the same reason: a prod URL handing out
-    // chrome the viewer's own organisation does not entitle them to.
     expect(previewIsEnturUser({ debugEnturUser: "true" }, "production")).toBe(false);
     for (const env of ["local", "dev", "staging"] satisfies Environment[]) {
       expect(previewIsEnturUser({ debugEnturUser: "true" }, env)).toBe(true);
@@ -175,8 +161,8 @@ describe("preview page demo sidebar", () => {
   test("no param leaves the page without one", async () => {
     const { html } = await preview();
     expect(html).not.toContain('class="preview-sidebar"');
-    // The rendered attribute, not the bare name: the page's own script names the
-    // same selector, and it ships whatever the page renders.
+    // Check the rendered attribute, not the bare name. The page's own script always
+    // contains the name.
     expect(html).not.toContain('data-preview-sidebar-close="');
   });
 
@@ -186,8 +172,6 @@ describe("preview page demo sidebar", () => {
   });
 
   test("collapsing hides it from the a11y tree, not just from the eye", async () => {
-    // Width alone leaves the links focusable and announced. The demo is the worked
-    // example apps copy, so it has to get this right.
     const { html } = await preview("?sidebar=true");
     const collapsed = html.match(
       /:root\[data-uniformen-sidebar="collapsed"\] \.preview-sidebar \{([^}]*)\}/,
@@ -202,7 +186,6 @@ describe("preview page demo sidebar", () => {
       block.includes("data-preview-sidebar-close"),
     );
     expect(closeHandler).toContain('setAttribute("data-uniformen-sidebar", "collapsed")');
-    // Not by reaching for a Uniformen API: there isn't one to reach for.
     expect(closeHandler).not.toContain("uniformen:sidebar");
   });
 
@@ -215,7 +198,6 @@ describe("preview page demo sidebar", () => {
   });
 
   test("the page is never stored", async () => {
-    // It renders whoever the URL names, and the environment the instance serves.
     const { res } = await preview("?debugUser=Navn+Navnesen");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
@@ -235,11 +217,9 @@ describe("preview page simple", () => {
   });
 
   test("simple wins over sidebar, so the demo sidebar goes with the control", async () => {
-    // The control is what the demo sidebar exists for: without a button to collapse
-    // it there is nothing to look at.
     const { html } = await preview("?simple=true&sidebar=true");
-    // The rendered attribute, not the bare name: the head script names the same
-    // selector, and it ships whatever the bar looks like.
+    // Check the rendered attribute, not the bare name. The head script always
+    // contains the name.
     expect(html).not.toContain('data-uniformen-sidebar-toggle="');
     expect(html).not.toContain('class="preview-sidebar"');
     expect(html).not.toContain('data-preview-sidebar-close="');
@@ -259,8 +239,8 @@ describe("preview page contrast", () => {
     expect(html).toContain('<body class="preview--contrast">');
   });
 
-  // On the class the header carries, not on the name anywhere in the page: the
-  // preview inlines the whole stylesheet, and the contrast rules are in it either way.
+  // Check the class attribute on the header, not the class name anywhere on the page.
+  // The page inlines the stylesheet, which always contains the contrast rules.
   test("without it the page and the bar are both light", async () => {
     const { html } = await preview();
     expect(html).toContain('class="uniformen-top-nav"');
@@ -275,8 +255,6 @@ describe("preview page contrast", () => {
 
 describe("preview page controls", () => {
   test("the parameters are on the page, as a form that sets them", async () => {
-    // The point of the box: the parameters are findable by opening the page, not
-    // only by knowing them already.
     const { html } = await preview();
     expect(html).toContain('<form class="preview-controls__form" method="get" action="/"');
     for (const param of [
@@ -290,7 +268,6 @@ describe("preview page controls", () => {
     ]) {
       expect(html).toContain(`name="${param}"`);
     }
-    // Named by the same ids the param takes, so the form is the list of valid values.
     expect(html).toContain('value="ops-center"');
     expect(html).toContain('value="nn-NO"');
   });
@@ -308,8 +285,6 @@ describe("preview page controls", () => {
   });
 
   test("an empty control is dropped rather than submitted as a rejected value", async () => {
-    // `?app=` and `?debugUser=` are 400s, and the form's own empty state would send
-    // both, so it disables them on the way out — which is how a form omits a field.
     const { html } = await preview();
     const handler = (await scriptBlocks(html)).find((block) =>
       block.includes("data-preview-controls"),
@@ -321,20 +296,15 @@ describe("preview page controls", () => {
   });
 
   test("the language being rendered is locked into availableLocales", async () => {
-    // The schema rejects a list that leaves it out, so the box that would produce one
-    // can't be unticked — and a hidden twin carries the value a disabled box won't.
     const { html } = await preview("?locale=nn-NO&availableLocales=nn-NO&availableLocales=en-GB");
     expect(html).toContain('<input type="checkbox" checked="" disabled=""/>');
     expect(html).toContain('<input type="hidden" name="availableLocales" value="nn-NO"');
     expect(html).not.toContain('name="availableLocales" value="nn-NO" checked=""');
-    // The rest are still ordinary boxes.
     expect(html).toContain('name="availableLocales" value="en-GB" checked=""');
     expect(html).toContain('name="availableLocales" value="nb-NO"/>');
   });
 
   test("picking a language adds it to the list rather than sending a 400", async () => {
-    // The locked entry is the language being left, so a list that has one has to gain the
-    // language being picked: the combination it would otherwise submit is a 400.
     expect((await preview("?locale=nn-NO&availableLocales=nb-NO")).res.status).toBe(400);
     const handler = (await scriptBlocks((await preview()).html)).find((block) =>
       block.includes("data-preview-controls"),
@@ -344,8 +314,6 @@ describe("preview page controls", () => {
   });
 
   test("the locked language alone is no list, and is dropped on the way out", async () => {
-    // Locked on whatever the query says, so it can't tell a list from none: the box
-    // reads as the rule, and the script omits the field when nothing else is ticked.
     const { html } = await preview();
     expect(html).toContain('<input type="checkbox" checked="" disabled=""/>');
     expect(html).not.toContain('aria-checked="true" lang="nb-NO"');
@@ -358,9 +326,6 @@ describe("preview page controls", () => {
   });
 
   test("a knob sits where in the bar it has its effect", async () => {
-    // The arrangement is the whole point of the box being a box: the sidebar button is
-    // at the far left of the bar, the user is at the right, and what is in neither end
-    // is below both.
     const { html } = await preview();
     const groups = html.split(/class="preview-controls__group preview-controls__group--/);
     const where = (param: string) =>
@@ -379,22 +344,17 @@ describe("preview page controls", () => {
   });
 
   test("a change applies itself, and the reload it costs keeps the focus", async () => {
-    // `change` is the event that gives both kinds of control the right moment: a box
-    // or a menu on the pick, a text field only once it is left.
     const handler = (await scriptBlocks((await preview()).html)).find((block) =>
       block.includes("data-preview-controls"),
     );
     expect(handler).toContain('addEventListener("change"');
     expect(handler).toContain("requestSubmit()");
-    // Applying navigates, so the control that did it is named across the reload.
     expect(handler).toContain("sessionStorage.setItem");
     expect(handler).toContain("sessionStorage.removeItem");
     expect(handler).toContain(".focus()");
   });
 
   test("the page prints the query it validated, not the URL it was asked for", async () => {
-    // Unknown params, a default said out loud and a repeated key all drop out, so
-    // what is printed is the spelling worth copying.
     const { html } = await preview("?sidebar=false&app=nplan&nonsense=1&locale=nb-NO");
     expect(html).toContain(">/?app=nplan&amp;locale=nb-NO<");
     expect(html).not.toContain("nonsense");
@@ -423,8 +383,6 @@ describe("preview page controls", () => {
   });
 
   test("production is given no knob it ignores", async () => {
-    // It renders nobody whatever the URL says, so a control claiming otherwise
-    // would only be a way to produce a misleading link.
     const query = { locale: "nb-NO", debugUser: "Navn", debugEnturUser: "true" } as const;
     const prod = await renderComponentToString(
       <PreviewControls query={query} environment="production" />,
@@ -462,8 +420,6 @@ describe("preview page locale", () => {
   });
 
   test("the page finishes a pick the way an app does: persist, then load a new document", async () => {
-    // Its URL is its persistence — an app writes a cookie its server reads — and the
-    // navigation is what actually changes the language. Nothing re-labels the bar.
     const { html } = await preview("?availableLocales=nb-NO&availableLocales=en-GB&debugUser=Navn");
     const handler = (await scriptBlocks(html)).find((block) =>
       block.includes('addEventListener("uniformen:locale"'),

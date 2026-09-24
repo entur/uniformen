@@ -9,22 +9,22 @@ common:
     internalPort: 4123
   container:
     image: <+artifacts.primary.image>
-    # Two everywhere, so a rollout always has somewhere else to send traffic.
-    # `maxReplicas` is also what turns the HPA on outside prd, where the chart enables
-    # it regardless; with it, `replicas` is the autoscaler's floor rather than a fixed
-    # count.
+    # Run at least two pods in every environment, so traffic can go to another pod
+    # during a rollout. Setting `maxReplicas` turns on the autoscaler (HPA) outside
+    # prd. In prd the chart always turns it on. With the autoscaler on, `replicas` is
+    # the minimum number of pods.
     replicas: 2
     maxReplicas: 6
     cpu: 0.2
     cpuLimit: 1
     memory: 150
     memoryLimit: 150
-    # Scrapes the service port's /actuator/prometheus, which is where the app already
-    # publishes its metrics.
+    # Prometheus scrapes /actuator/prometheus on the service port. The app serves its
+    # metrics there.
     prometheus:
       enabled: true
-    # The defaults are /actuator/health/liveness and /actuator/health/readiness — the
-    # paths the app serves.
+    # The default probe paths are /actuator/health/liveness and
+    # /actuator/health/readiness. The app serves both.
     probes:
       enabled: true
   configmap:

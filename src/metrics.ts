@@ -10,7 +10,8 @@ const { printMetrics, registerMetrics } = prometheus({
   collectDefaultMetrics: true,
   metricOptions: {
     requestDuration: {
-      // Rename 'http_request_duration_seconds' per entur/ai observability.md
+      // Use this name instead of 'http_request_duration_seconds', as described in
+      // entur/ai observability.md.
       name: "http_server_requests_seconds",
       customLabels: { uri: (c) => routePath(c) },
     },
@@ -19,7 +20,7 @@ const { printMetrics, registerMetrics } = prometheus({
 });
 
 const metricsRoute = createMiddleware((c, next) =>
-  // Don't include metrics endpoints in stats
+  // Do not count requests to the /actuator endpoints.
   c.req.path.startsWith("/actuator") ? next() : registerMetrics(c, next),
 );
 

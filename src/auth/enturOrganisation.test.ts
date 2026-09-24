@@ -6,7 +6,7 @@ import {
 } from "./enturOrganisation";
 import type { UserInfo } from "./userInfo";
 
-/** A profile carrying whatever the identity provider put in the claim. */
+/** Returns a profile with the given value in the organisation claim. */
 const withClaim = (value: unknown): UserInfo =>
   ({ sub: "auth0|abc123", [ORGANISATION_ID_CLAIM]: value }) as UserInfo;
 
@@ -21,8 +21,8 @@ describe("isEnturOrganisation", () => {
   });
 
   test("a claim of another shape is not read as the id", () => {
-    // A string spelling, a wrapped value, or a nulled one: each is an upstream whose
-    // claim we no longer recognise, and reading one as Entur is the costly direction.
+    // Wrongly treating a user as Entur is worse than missing one, so every claim
+    // shape the code does not recognise must return false.
     for (const value of [
       String(ENTUR_ORGANISATION_ID),
       ` ${ENTUR_ORGANISATION_ID} `,

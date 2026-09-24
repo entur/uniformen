@@ -1,29 +1,26 @@
 import { LOCALE_NAMES, type Locale } from "../types";
 
 /**
- * The languages on offer, as a group of radio items — the same list whether it is a
- * section of the user menu or the standalone switcher's panel, so the two can't
- * drift in what they offer or how they announce it.
+ * Renders the available languages as a group of radio menu items. The user menu and
+ * the standalone switcher both use it, so they always offer the same options.
  *
- * `locale` is checked, server-rendered: no client state, and no flash of the wrong
- * language. A pick only announces itself — `localeHandlers` dispatches
- * `uniformen:locale` and the app does the rest — so nothing here re-labels or
- * re-checks anything.
+ * The server renders the option for `locale` as checked. There is no client state,
+ * and the wrong language is never shown. Clicks are handled in `localeHandlers`.
  *
- * `lang` on each option is what makes a screen reader pronounce "English" as English
- * inside a Norwegian document, and it is why the labels are not translated.
+ * `lang` on each option makes a screen reader pronounce "English" as English inside
+ * a Norwegian page. That is also why the language names are not translated.
  *
- * The group is one tab stop, not one per option — what `role="menu"` promises — so
- * exactly one option carries `tabindex="0"`: the checked one. Rendered rather than
- * scripted, so the arrows work from the first keypress, and an app hydrating this
- * markup into its own tree finds the attributes it rendered.
+ * A `role="menu"` group is one tab stop, so only the checked option has
+ * `tabindex="0"`. It is set in the markup, not by script, so the tab stop is correct
+ * before any script runs, and an app that hydrates this markup gets the same
+ * attributes.
  */
 export function LocaleOptions({
   availableLocales,
   locale,
-  /** The heading naming this group, when the surrounding markup renders one. */
+  /** The id of the heading that names this group, if there is one. */
   labelledBy,
-  /** The group's name where there is no heading to point at. */
+  /** The name of the group, used when there is no heading. */
   label,
 }: {
   availableLocales: Locale[];
@@ -44,8 +41,8 @@ export function LocaleOptions({
           data-uniformen-locale={option}
           tabindex={option === locale ? 0 : -1}
         >
-          {/* The dot is drawn in CSS off `aria-checked`, so the state a reader
-              announces and the state an eye sees are the same attribute. */}
+          {/* CSS draws the dot from `aria-checked`, so screen readers and the
+              screen always show the same state. */}
           <span class="uniformen-locale-menu__marker" aria-hidden="true"></span>
           {LOCALE_NAMES[option]}
         </button>

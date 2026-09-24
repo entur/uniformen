@@ -3,15 +3,14 @@ import panelToggle from "./panelToggle";
 import retargetEnvironmentLinks from "./retargetEnvironmentLinks";
 
 /**
- * The handler ships as serialized source to the browser, so it only touches
- * `document`, `window.location` and the handful of DOM interfaces below. Rather
- * than pull in a full DOM implementation, install the slice it uses and run the
- * real handler against it — the same approach `sidebarHandlers.test` takes.
+ * The handler is sent to the browser as source text, so it only uses browser globals.
+ * These fakes provide the parts of `document`, `window.location` and the DOM classes
+ * that it uses, and the tests run the real handler against them.
  */
 class FakeElement {
   private readonly attributes = new Map<string, string>();
   focused = 0;
-  /** Set by whatever focuses it, so `document.activeElement` has an answer. */
+  /** Called when the element gets focus. The setup uses it to set `document.activeElement`. */
   onFocus?: (element: FakeElement) => void;
 
   getAttribute(name: string): string | null {
@@ -33,7 +32,7 @@ class FakeElement {
   }
 }
 
-/** A row in a panel: a link, or one of the language options. */
+/** A row in a panel. It can be a link or one of the language options. */
 class FakeItem extends FakeElement {
   constructor(
     readonly name: string,
@@ -66,8 +65,8 @@ class FakeAnchor {
 }
 
 /**
- * The group the language options sit in. Only a panel that has one renders it, so
- * `querySelector('[role="menu"]')` answering `null` is the ordinary case.
+ * The group that holds the language options. A panel without language options has
+ * no group, so `querySelector('[role="menu"]')` returns null for it.
  */
 class FakeGroup extends FakeElement {
   private readonly listeners: ((event: unknown) => void)[] = [];
@@ -133,9 +132,9 @@ class FakePanel extends FakeElement {
 
 class FakeDocument {
   private readonly listeners = new Map<string, ((event: unknown) => void)[]>();
-  /** What the handler went looking for, so a caller's selectors can be checked. */
+  /** Records the selector and id the handler asked for, so a test can check them. */
   readonly asked: { selector?: string; id?: string } = {};
-  /** Whatever was focused last, which is all `document.activeElement` is here. */
+  /** The element that was focused last. This is the fake `document.activeElement`. */
   activeElement: unknown = null;
 
   constructor(
@@ -173,7 +172,7 @@ const saved = {
   window: globals["window"],
 };
 
-/** What the server renders: the target environments' bare hosts. */
+/** The bare hosts of the target environments, as the server renders them in the links. */
 const HOSTS = [
   "https://cleos-client.staging.entur.io",
   "https://cleos-client.dev.entur.io",
@@ -192,11 +191,12 @@ function install({
   toggle?: boolean;
   panel?: boolean;
   /**
-   * What the panel holds: a plain list (the app switcher), a radio group among other
-   * rows (the user menu), or nothing but the group (the bar's language chip).
+   * What the panel contains. `none` is a plain list, like the app switcher. `section`
+   * is a radio group between other rows, like the user menu. `only` is just the radio
+   * group, like the language chip in the bar.
    */
   group?: "none" | "section" | "only";
-  /** The group as the server renders it: the stop already on the checked option. */
+  /** Sets tabindex 0 on the checked option and -1 on the others, as the server renders them. */
   roved?: boolean;
   beforeOpen?: (panel: HTMLElement) => void;
 } = {}) {
@@ -214,7 +214,7 @@ function install({
         ];
   const items =
     withGroup === "section"
-      ? // The user menu's shape: a link, the languages, the way out.
+      ? // The same shape as the user menu: a link, the languages, then logout.
         [new FakeItem("account"), ...options, new FakeItem("logout")]
       : withGroup === "only"
         ? options
@@ -225,8 +225,8 @@ function install({
   const group = withGroup === "none" ? null : new FakeGroup(options);
   const panel = withPanel ? new FakePanel(links, items, group) : null;
   const doc = new FakeDocument(toggle, panel);
-  // Focus landing on an option bubbles to the group as `focusin`, whatever moved it
-  // there: the open, the arrows, a click.
+  // When an option gets focus, fire `focusin` on the group, as the browser does when
+  // the event bubbles. This happens however the focus moved there.
   for (const item of items)
     item.onFocus = (element) => {
       doc.activeElement = element;
@@ -251,9 +251,9 @@ function install({
     hrefs: () => links.map((link) => link.href),
     aria: () => toggle?.getAttribute("aria-expanded"),
     focused: () => toggle?.focused ?? 0,
-    /** The item holding focus, by name. */
+    /** Returns the name of the focused item. */
     active: () => (doc.activeElement instanceof FakeItem ? doc.activeElement.name : null),
-    /** The group's tab stops, in order: which option Tab would reach. */
+    /** Returns the tabindex of each option in order. */
     tabstops: () => options.map((option) => option.tabindex),
     toggleClick: () => toggle?.click(),
     clickOutside: () => doc.fire("click", { target: new FakeElement() }),
@@ -261,10 +261,10 @@ function install({
     escape: () => doc.fire("keydown", { key: "Escape" }),
     tab: () => doc.fire("keydown", { key: "Tab" }),
     press,
-    /** Focus leaving the panel for `to`, which is nothing at all by default. */
+    /** Fires `focusout` on the panel with `to` as the new focus target, or no target. */
     focusOut: (to: unknown = null) => panel?.fire("focusout", { relatedTarget: to }),
     firstItem: () => items[0],
-    /** What a mouse does to an option: focus lands on it, no key involved. */
+    /** Focuses an option the way a mouse click does, without a key press. */
     clickOption: (name: string) => options.filter((option) => option.name === name)[0]?.focus(),
   };
 }
@@ -343,14 +343,12 @@ describe("panelToggle keyboard model", () => {
   });
 
   test("a panel that is nothing but the languages opens on the checked one", () => {
-    // The bar's language chip: you start where you already are.
     const dom = install({ group: "only" });
     dom.toggleClick();
     expect(dom.active()).toBe("nn-NO");
   });
 
   test("a menu that merely contains them opens at the top, not on the language", () => {
-    // Someone reaching for the user menu is not reaching for the language.
     const dom = install({ group: "section" });
     dom.toggleClick();
     expect(dom.active()).toBe("account");
@@ -363,8 +361,6 @@ describe("panelToggle keyboard model", () => {
     expect(dom.active()).toBe("second");
     dom.press("ArrowDown");
     dom.press("ArrowDown");
-    // Past the end is back to the top, which is what makes a short list navigable
-    // without counting.
     expect(dom.active()).toBe("first");
     dom.press("ArrowUp");
     expect(dom.active()).toBe("third");
@@ -380,8 +376,6 @@ describe("panelToggle keyboard model", () => {
   });
 
   test("the arrows cross the whole panel, group or no group", () => {
-    // The panel is one list to the user: the languages are rows in it, not a
-    // detour that arrow keys get stuck inside.
     const dom = install({ group: "section" });
     dom.toggleClick();
     expect(dom.active()).toBe("account");
@@ -389,7 +383,7 @@ describe("panelToggle keyboard model", () => {
     expect(dom.active()).toBe("nb-NO");
     dom.press("ArrowUp");
     expect(dom.active()).toBe("account");
-    // And out the other side of the group, to the way out.
+    // ArrowUp on the first row wraps around to the last row.
     dom.press("ArrowUp");
     expect(dom.active()).toBe("logout");
   });
@@ -398,7 +392,6 @@ describe("panelToggle keyboard model", () => {
     const dom = install();
     dom.toggleClick();
     expect(dom.press("ArrowDown")).toBe(1);
-    // Typing, shortcuts, and the browser's own scrolling are none of our business.
     expect(dom.press("PageDown")).toBe(0);
     expect(dom.press("k")).toBe(0);
   });
@@ -418,9 +411,8 @@ describe("panelToggle keyboard model", () => {
   });
 
   test("focus going nowhere is not leaving either: the panel outlives a click on itself", () => {
-    // Clicking the panel's own heading, its padding, or another window drops focus
-    // with nowhere to name. Closing on that would take the panel out from under the
-    // click that is still on its way to a row.
+    // `relatedTarget` is null, as it is when the user clicks the panel's heading or
+    // padding.
     const dom = install();
     dom.toggleClick();
     dom.focusOut();
@@ -430,8 +422,6 @@ describe("panelToggle keyboard model", () => {
 
 describe("panelToggle roving tabindex", () => {
   test("the radio group is one tab stop, on the checked option", () => {
-    // Three languages behind three tab presses is three stops for one choice, which
-    // is what `role=menu` promises not to do.
     const dom = install({ group: "section" });
     expect(dom.tabstops()).toEqual(["-1", "0", "-1"]);
   });
@@ -462,8 +452,6 @@ describe("panelToggle roving tabindex", () => {
   });
 
   test("opening on an option puts the stop there, so the two never disagree", () => {
-    // The language chip opens on the checked option after arrows have moved the stop
-    // elsewhere: whichever option has focus is the one Tab must come back to.
     const dom = install({ group: "only" });
     dom.toggleClick();
     dom.press("ArrowDown");
@@ -475,7 +463,6 @@ describe("panelToggle roving tabindex", () => {
   });
 
   test("a group that arrives roved is left holding the values it came with", () => {
-    // Markup an app may be hydrating: a value rewritten here is one its tree lacks.
     const dom = install({ group: "section", roved: true });
     expect(dom.tabstops()).toEqual(["-1", "0", "-1"]);
   });
@@ -492,8 +479,6 @@ describe("panelToggle beforeOpen", () => {
   test("runs on the way up, with the panel, and not on the way down", () => {
     const seen: unknown[] = [];
     const dom = install({ beforeOpen: (panel) => seen.push(panel) });
-    // Nothing before the first click: a link must never be rewritten while the
-    // panel it is in is still hidden.
     expect(seen).toHaveLength(0);
     dom.toggleClick();
     expect(seen).toEqual([expect.any(FakePanel)]);
@@ -542,8 +527,7 @@ describe("retargetEnvironmentLinks", () => {
     const dom = installEnv(location);
     dom.toggleClick();
     dom.toggleClick();
-    // A client-side route change between the two opens: the second open must
-    // replace the first target, not append to it.
+    // Simulate a client-side route change between the two opens.
     location.pathname = "/invoices";
     dom.toggleClick();
     expect(dom.hrefs()).toEqual([

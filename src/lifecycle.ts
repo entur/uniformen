@@ -1,22 +1,16 @@
-/**
- * Whether this instance should be sent traffic.
- *
- * Its own module so the readiness route and the signal handler that flips it don't
- * have to know about each other — the route reads, the handler writes, and neither
- * imports the other.
- */
+/** Whether this instance should get traffic. */
 let ready = true;
 
-/** What the readiness probe answers. False from the moment a shutdown begins. */
+/** Returns whether the instance is ready. It returns false after shutdown has started. */
 export const isReady = (): boolean => ready;
 
 /**
- * Start failing readiness. One-way: a draining pod is on its way out, and nothing
- * brings it back. Returns false if a shutdown was already under way, so a second
- * signal doesn't start a second drain.
+ * Marks the instance as not ready. It cannot be made ready again. Returns false
+ * if shutdown had already started, so a second signal does not start a second
+ * shutdown.
  *
- * One-way in tests too — `bun test` shares one module registry across files, so
- * this stays flipped for the rest of the run. Assert readiness before calling it.
+ * In tests this also lasts for the rest of the run, because `bun test` shares
+ * modules between test files. Check readiness before you call it.
  */
 export const beginShutdown = (): boolean => {
   if (!ready) return false;

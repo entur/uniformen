@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import localeHandlers from "./localeHandlers";
 
 /**
- * The handler ships as serialized source to the browser, so it only touches
- * `document`, `window`, `Element` and the two DOM calls below. Install that slice
- * and run the real handler against it, as `sidebarHandlers.test` does.
+ * The handler is sent to the browser as source text, so it only uses browser globals.
+ * These fakes provide the parts of `document`, `window` and `Element` that it uses,
+ * and the tests run the real handler against them.
  */
 class FakeElement {
   constructor(private readonly attributes: Record<string, string> = {}) {}
@@ -20,7 +20,7 @@ class FakeElement {
   }
 }
 
-/** A click landing on something inside an option — the marker, say. */
+/** Fakes an element inside an option, such as the marker. */
 class FakeChild extends FakeElement {
   constructor(private readonly parent: FakeElement | null) {
     super();
@@ -75,11 +75,11 @@ function install() {
     });
   return {
     announced: win.announced,
-    /** The languages announced, in the order they were picked. */
+    /** Returns the announced languages in the order they were picked. */
     locales: () => win.announced.map((event) => event.detail.locale),
     pick: (locale: string) => doc.fire(option(locale, false)),
     pickCurrent: (locale: string) => doc.fire(option(locale, true)),
-    /** A click on the radio marker inside the option, which is where clicks land. */
+    /** Clicks the radio marker inside the option, because that is where most clicks land. */
     pickMarker: (locale: string) => doc.fire(new FakeChild(option(locale, false))),
     clickElsewhere: () => doc.fire(new FakeElement({ class: "my-app" })),
   };
@@ -119,14 +119,11 @@ describe("localeHandlers", () => {
   });
 
   test("nothing is persisted or navigated: the app owns both", () => {
-    // The handler is the whole client half of the feature, and it has no reference
-    // to storage, cookies or location to persist or reload with.
     const source = localeHandlers.toString();
     expect(source).not.toContain("localStorage");
     expect(source).not.toContain("cookie");
     expect(source).not.toContain("location");
     expect(source).not.toContain("reload");
-    // Nor does it re-label the bar it sits in: only a new document does that.
     expect(source).not.toContain("setAttribute");
   });
 });

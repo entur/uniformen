@@ -1,8 +1,8 @@
 import { config, type AuthTenant } from "../config";
 
 /**
- * Auth0 userinfo response: standard OIDC profile claims plus any custom,
- * namespaced claims (e.g. `https://entur.io/organisationID`).
+ * The Auth0 userinfo response. It has the standard OIDC profile claims and custom
+ * claims such as `https://entur.io/organisationID`.
  */
 export type UserInfo = {
   sub: string;
@@ -20,9 +20,9 @@ export type UserInfo = {
 
 export type UserInfoService = {
   /**
-   * Resolves the user's full userinfo via the tenant's userinfo endpoint.
-   * Returns `undefined` on any failure — never throws, so callers can render
-   * anonymously without try/catch.
+   * Fetches the user's profile from the tenant's userinfo endpoint. Returns
+   * `undefined` on any failure and never throws, so callers can render the page
+   * as anonymous without a try/catch.
    */
   getUserInfo(
     tenantName: AuthTenant["name"],
@@ -36,25 +36,25 @@ export type UserInfoServiceOptions = {
   positiveTtlMs?: number;
   /** How long a failed lookup is cached. Default 60 seconds. */
   negativeTtlMs?: number;
-  /** Upstream fetch timeout. Default 5 seconds (matches jose's JWKS timeout). */
+  /** Timeout for the userinfo request. Default 5 seconds, the same as jose's JWKS timeout. */
   timeoutMs?: number;
-  /** Cache size bound; oldest entry is evicted on overflow. Default 5000. */
+  /** Maximum number of cached users. When the cache is full, the oldest entry is removed. Default 5000. */
   maxEntries?: number;
 };
 
 type CacheEntry = {
-  /** Fetched userinfo, or `null` for a negative (failed) result. */
+  /** The fetched userinfo, or `null` if the lookup failed. */
   value: UserInfo | null;
   expiresAt: number;
 };
 
 /**
- * Userinfo service with a per-process cache.
+ * Fetches userinfo and caches it in memory.
  *
- * Results are cached by `tenant|sub` — the token is verified before this
- * service is called, so `sub` is trustworthy, and keying on it (rather than
- * the token) keeps the cache warm across token refreshes. Concurrent lookups
- * for the same user share one in-flight fetch.
+ * The cache key is `tenant|sub`. The token is verified before this service is
+ * called, so `sub` can be trusted. Using `sub` instead of the token means the
+ * cache still works after the user gets a new token. Parallel lookups for the
+ * same user share one request.
  */
 export class UserInfoServiceImpl implements UserInfoService {
   private readonly positiveTtlMs: number;
@@ -101,7 +101,7 @@ export class UserInfoServiceImpl implements UserInfoService {
   }
 
   private store(key: string, value: UserInfo | null): void {
-    // `Map` iterates in insertion order, so dropping the first key is FIFO.
+    // `Map` keeps keys in insertion order, so the first key is the oldest entry.
     if (this.cache.size >= this.maxEntries && !this.cache.has(key)) {
       const oldest = this.cache.keys().next().value;
       if (oldest !== undefined) this.cache.delete(oldest);
@@ -133,7 +133,7 @@ export class UserInfoServiceImpl implements UserInfoService {
       }
       return body as UserInfo;
     } catch (error) {
-      // Timeout, network failure, or invalid JSON — degrade to anonymous.
+      // Timeout, network error or invalid JSON. The caller treats the user as anonymous.
       console.warn(`userinfo fetch failed for tenant "${tenantName}":`, error);
       return undefined;
     }
@@ -141,8 +141,8 @@ export class UserInfoServiceImpl implements UserInfoService {
 }
 
 /**
- * Userinfo service for the configured Auth0 tenants. Call
- * `getUserInfo(tenant, token, sub)` with values set by `validateJwt`
- * (`authTenant`, `authToken`, `jwtPayload.sub`).
+ * The userinfo service for the configured Auth0 tenants. Call
+ * `getUserInfo(tenant, token, sub)` with the values that `validateJwt` sets on the
+ * context: `authTenant`, `authToken` and `jwtPayload.sub`.
  */
 export const userInfoService: UserInfoService = new UserInfoServiceImpl(config.tenants);

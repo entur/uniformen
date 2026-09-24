@@ -1,10 +1,10 @@
 [install]
 exact = true
 ignoreScripts = true
-# Only install package versions published at least 3 days ago
+# Only install package versions that were published at least 3 days ago.
 minimumReleaseAge = 259200
 
 [test]
-# Sets the Auth0 env vars config.ts requires, before any test module loads.
+# Sets the Auth0 env vars that config.ts needs, before any test module loads.
 preload = ["./src/test/authTestSetup.ts"]
 

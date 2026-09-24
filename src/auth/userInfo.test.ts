@@ -10,11 +10,11 @@ function bearer(token: string): { Authorization: string } {
 }
 
 beforeEach(() => userInfoMock.reset());
-// TTL tests below fake the clock instead of sleeping; restore it after each test.
+// The TTL tests fake the clock instead of sleeping. Reset the clock after each test.
 afterEach(() => setSystemTime());
 
-// NOTE: the app-level service caches by `tenant|sub` for the whole test run,
-// so every end-to-end test below uses a distinct sub to avoid cache bleed.
+// NOTE: the app's service caches userinfo by `tenant|sub` for the whole test run.
+// Each end-to-end test uses its own sub so it does not get another test's profile.
 
 describe("userinfo via /ssr (end-to-end)", () => {
   test("nickname is not used as a display name", async () => {
@@ -52,8 +52,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
 
   test("concurrent requests for the same user share one in-flight fetch", async () => {
     userInfoMock.respond = async () => {
-      // Just long enough that both requests (fired in the same tick) overlap
-      // the in-flight window.
+      // Wait a little, so both requests start while this fetch is still running.
       await Bun.sleep(10);
       return Response.json({ name: "Slow Ada" });
     };
@@ -112,7 +111,7 @@ describe("UserInfoServiceImpl (unit)", () => {
     const token = await signInternalToken();
     const info = await service.getUserInfo("internal", token, "ttl|positive");
     expect(info?.name).toBe("Hallstein Bronskimlet");
-    setSystemTime(new Date(Date.now() + 11)); // jump past the TTL, no sleep
+    setSystemTime(new Date(Date.now() + 11)); // move the clock past the TTL
     await service.getUserInfo("internal", token, "ttl|positive");
     expect(userInfoMock.calls).toBe(2);
   });
@@ -123,8 +122,8 @@ describe("UserInfoServiceImpl (unit)", () => {
     const token = await signInternalToken();
     expect(await service.getUserInfo("internal", token, "ttl|negative")).toBeUndefined();
     expect(await service.getUserInfo("internal", token, "ttl|negative")).toBeUndefined();
-    expect(userInfoMock.calls).toBe(1); // within negative TTL: cached
-    setSystemTime(new Date(Date.now() + 11)); // jump past the TTL, no sleep
+    expect(userInfoMock.calls).toBe(1);
+    setSystemTime(new Date(Date.now() + 11)); // move the clock past the TTL
     await service.getUserInfo("internal", token, "ttl|negative");
     expect(userInfoMock.calls).toBe(2);
   });
@@ -148,7 +147,7 @@ describe("UserInfoServiceImpl (unit)", () => {
     expect(userInfoMock.calls).toBe(3);
     await service.getUserInfo("internal", token, "evict|2"); // still cached
     expect(userInfoMock.calls).toBe(3);
-    await service.getUserInfo("internal", token, "evict|1"); // evicted: re-fetch
+    await service.getUserInfo("internal", token, "evict|1"); // evicted, so this fetches again
     expect(userInfoMock.calls).toBe(4);
   });
 
