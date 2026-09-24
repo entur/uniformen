@@ -107,16 +107,16 @@ export const PORTAL_APPLICATION_IDS = APPLICATIONS.map(({ id }) => id);
 
 export type PortalApplicationId = (typeof APPLICATIONS)[number]["id"];
 
-// Adds `path` as an optional field to the entries that do not set it, so the code
-// below can read `app.path` without checking first.
+// Most entries have no `path` field, so TypeScript rejects `app.path` on the union.
+// This type adds `path` as an optional field to every entry.
 type ApplicationEntry = (typeof APPLICATIONS)[number] & { path?: `/${string}` };
 
 /** One application's URL in each environment it is deployed to. */
 export type ApplicationUrls = Readonly<Partial<Record<SwitchableEnvironment, string>>>;
 
 /**
- * Turns an application's hosts into `https://` URLs, keyed by environment. This is
- * the only place a host becomes a URL, so all links use the same scheme.
+ * Turns an application's hosts and path into `https://` URLs, keyed by environment.
+ * This is the only place a host becomes a URL, so all links use the same scheme.
  */
 const urlsFor = (hosts: Hosts, path: string): ApplicationUrls =>
   Object.fromEntries(
@@ -130,13 +130,16 @@ const urlsFor = (hosts: Hosts, path: string): ApplicationUrls =>
  * All applications with their URLs, computed once when the module loads. Both
  * tables below are built from this list.
  */
-const APPLICATIONS_WITH_URLS = APPLICATIONS.map((app: ApplicationEntry) => ({
-  id: app.id,
-  appName: app.appName,
-  path: app.path ?? "/",
-  urls: urlsFor(app.hosts, app.path ?? ""),
-  unlisted: "unlisted" in app,
-}));
+const APPLICATIONS_WITH_URLS = APPLICATIONS.map((app: ApplicationEntry) => {
+  const path = app.path ?? "";
+  return {
+    id: app.id,
+    appName: app.appName,
+    path,
+    urls: urlsFor(app.hosts, path),
+    unlisted: "unlisted" in app,
+  };
+});
 
 /** Returns the listed applications that are deployed in one environment. */
 const resolve = (key: SwitchableEnvironment): PortalApplication[] =>
@@ -240,7 +243,12 @@ export function portalApplicationName(id?: string): string | undefined {
   return id === undefined ? undefined : APP_NAMES.get(id);
 }
 
-/** Returns the path the logo links to. It is "/" for an unknown or missing id. */
+const APP_PATHS = new Map<string, string>(APPLICATIONS_WITH_URLS.map(({ id, path }) => [id, path]));
+
+/**
+ * Returns the path the application is served at on its host. Returns "/" for an
+ * application served at the root, and for an unknown or missing id.
+ */
 export function portalApplicationPath(id?: string): string {
-  return APPLICATIONS_WITH_URLS.find((app) => app.id === id)?.path ?? "/";
+  return (id !== undefined && APP_PATHS.get(id)) || "/";
 }

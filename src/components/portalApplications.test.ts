@@ -122,6 +122,13 @@ describe("portalApplicationUrls", () => {
       expect(portalApplicationUrls("Skoleskyss", env)).toBeUndefined();
     }
   });
+
+  test("Bedrift's URLs include its path", () => {
+    expect(portalApplicationUrls("bedrift", "production")).toEqual({
+      staging: "https://skoleskyss.staging.entur.no/bedrift",
+      production: "https://skoleskyss.entur.no/bedrift",
+    });
+  });
 });
 
 describe("portalApplicationUrl", () => {
@@ -178,18 +185,11 @@ describe("portalApplicationName", () => {
 });
 
 describe("portalApplicationPath", () => {
-  test("an app served below its host's root links there", () => {
+  test("returns the path of an app served below the root of its host", () => {
     expect(portalApplicationPath("bedrift")).toBe("/bedrift");
   });
 
-  test("its urls carry the path", () => {
-    expect(portalApplicationUrls("bedrift", "production")).toEqual({
-      staging: "https://skoleskyss.staging.entur.no/bedrift",
-      production: "https://skoleskyss.entur.no/bedrift",
-    });
-  });
-
-  test("every other app, and no app, links to the root", () => {
+  test("returns / for every other app, for a missing id and for an unknown id", () => {
     for (const id of PORTAL_APPLICATION_IDS.filter((id) => id !== "bedrift")) {
       expect(portalApplicationPath(id)).toBe("/");
     }

@@ -393,7 +393,7 @@ describe("/ssr app query param", () => {
     expect(body.headerHtml).toContain('class="uniformen-env-badge"');
   });
 
-  test("the logo links to the app's own root", async () => {
+  test("the logo links to the app's own start page", async () => {
     const bedrift = await (await ssr("?app=bedrift")).json();
     expect(bedrift.headerHtml).toContain('<a class="uniformen-logo" href="/bedrift">');
     const partner = await (await ssr("?app=partner")).json();

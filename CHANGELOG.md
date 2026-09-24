@@ -12,7 +12,7 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
 ### Fixed
 
-- `app=bedrift` points the logo at `/bedrift` rather than the root of its host.
+- With `app=bedrift`, the logo links to `/bedrift` instead of `/`.
 
 ## 2026-09-23
 
