@@ -34,8 +34,8 @@ const EnturBaseLogo = () => (
   </svg>
 );
 
-export const NavigationLogo = (props: { appName?: string }) => (
-  <a class="uniformen-logo" href="/">
+export const NavigationLogo = (props: { appName?: string; href: string }) => (
+  <a class="uniformen-logo" href={props.href}>
     <EnturBaseLogo />
     {props.appName && <span class="uniformen-logo__app">{props.appName}</span>}
   </a>
