@@ -2,9 +2,9 @@ import { describe, it, expect, jest, afterEach } from "bun:test";
 import { fetchUniformenLayout, type FetchUniformenParams } from "./index";
 
 /**
- * Type-level, checked by `bun run tsc` rather than at runtime: an untyped event map
- * makes `detail` `any`, which is exactly what would let the `@ts-expect-error` lines
- * below compile and fail the build.
+ * These tests are checked by `bun run tsc`, not at runtime. If the event map had no
+ * types, `detail` would be `any`, the `@ts-expect-error` lines below would have no
+ * error to expect, and the type check would fail.
  */
 describe("window event types", () => {
   it("types the detail of each event the top bar dispatches", () => {
@@ -36,9 +36,8 @@ function suppressConsoleError() {
 }
 
 /**
- * A service that accepts the connection and then says nothing — the shape a plain
- * `fetch` waits out forever. It answers only the abort, so the request ends when
- * something ends it.
+ * Mocks a service that accepts the connection and never answers. The request only
+ * ends when its signal aborts.
  */
 function mockSilentFetch() {
   const silent = (_url: unknown, init?: { signal?: AbortSignal }) =>
@@ -208,7 +207,6 @@ describe("fetchUniformenLayout", () => {
     });
 
     it("sends no key at all for an empty list of languages", async () => {
-      // Which is what renders no switcher, rather than a switcher with nothing in it.
       mockFetch(emptyLayout);
       await fetchUniformenLayout({ params: { app: "partner", availableLocales: [] } });
       expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -273,8 +271,8 @@ describe("fetchUniformenLayout", () => {
 
     it("url-encodes param values", async () => {
       mockFetch(emptyLayout);
-      // Cast: `app` is a closed enum, but the query builder must escape whatever
-      // value it is handed so a future free-form param can't break the URL.
+      // The cast is needed because `app` only accepts known values. The query string
+      // must still escape any value, so that a future free-text param cannot break the URL.
       await fetchUniformenLayout({
         params: { app: "a b&c=d" as unknown as "partner" },
       });
@@ -284,9 +282,8 @@ describe("fetchUniformenLayout", () => {
       );
     });
 
-    // `FetchUniformenParams` has no list-valued member yet, so these cast a
-    // future one in. They pin the serialisation contract so adding e.g.
-    // `list?: string[]` to the type needs no change here.
+    // `FetchUniformenParams` has no list param yet, so these tests cast one in.
+    // When a list param such as `list?: string[]` is added, these tests need no change.
     const listParams = (value: unknown) => ({ list: value }) as FetchUniformenParams;
 
     it("repeats the key for a list param", async () => {
@@ -346,12 +343,6 @@ describe("fetchUniformenLayout", () => {
     });
   });
 
-  /**
-   * The layout is fetched on the critical path of a page render, so a service that
-   * never answers must not become an app that never answers. Giving up returns the
-   * same `null` every other failure does: the page renders without the shared
-   * chrome rather than not at all.
-   */
   describe("timeout", () => {
     it("gives up and returns null rather than hanging the render", async () => {
       suppressConsoleError();
