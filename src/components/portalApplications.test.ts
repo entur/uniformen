@@ -3,6 +3,7 @@ import {
   PORTAL_APPLICATION_IDS,
   PORTAL_APPLICATIONS,
   portalApplicationName,
+  portalApplicationPath,
   portalApplicationUrl,
   portalApplicationUrls,
 } from "./portalApplications";
@@ -121,6 +122,13 @@ describe("portalApplicationUrls", () => {
       expect(portalApplicationUrls("Skoleskyss", env)).toBeUndefined();
     }
   });
+
+  test("Bedrift's URLs include its path", () => {
+    expect(portalApplicationUrls("bedrift", "production")).toEqual({
+      staging: "https://skoleskyss.staging.entur.no/bedrift",
+      production: "https://skoleskyss.entur.no/bedrift",
+    });
+  });
 });
 
 describe("portalApplicationUrl", () => {
@@ -173,5 +181,19 @@ describe("portalApplicationName", () => {
     expect(portalApplicationName("PARTNER")).toBeUndefined();
     // Partner's host has the `entur-` prefix, but its id does not.
     expect(portalApplicationName("entur-partner")).toBeUndefined();
+  });
+});
+
+describe("portalApplicationPath", () => {
+  test("returns the path of an app served below the root of its host", () => {
+    expect(portalApplicationPath("bedrift")).toBe("/bedrift");
+  });
+
+  test("returns / for every other app, for a missing id and for an unknown id", () => {
+    for (const id of PORTAL_APPLICATION_IDS.filter((id) => id !== "bedrift")) {
+      expect(portalApplicationPath(id)).toBe("/");
+    }
+    expect(portalApplicationPath()).toBe("/");
+    expect(portalApplicationPath("unknown")).toBe("/");
   });
 });

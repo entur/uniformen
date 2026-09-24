@@ -94,7 +94,7 @@ The pull request adds one entry to `APPLICATIONS` in `src/components/portalAppli
 },
 ```
 
-Put the entry in the order the switcher shows them. The order is alphabetical by `appName` in Norwegian collation, with Ø last. Add `unlisted: true` for an app that uses the header and footer but should not appear in the app switcher.
+Put the entry in the order the switcher shows them. The order is alphabetical by `appName` in Norwegian collation, with Ø last. Add `unlisted: true` for an app that uses the header and footer but should not appear in the app switcher. Add `path` for an app that is served below the root of its host, such as `path: "/my-app"`. Do not put the path in `hosts`. The logo, the app switcher and the environment switcher then link to that path.
 
 Then add the same id to the `app` union of `FetchUniformenParams` in `packages/uniformen/src/types.ts`. Apps can use it after the next release of the package. If you are not sure where the app belongs in the portal, ask in **#work-micro-frontend**.
 

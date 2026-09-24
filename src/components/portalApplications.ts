@@ -22,7 +22,9 @@ type Hosts = Partial<Record<SwitchableEnvironment, string>>;
 /**
  * All B2B applications in the portal. `id` is the value apps send in the `app`
  * query param. `appName` is shown in the app switcher and next to the logo.
- * `unlisted` hides the application from the app switcher.
+ * `unlisted` hides the application from the app switcher. `path` is set for an
+ * application that is served below the root of its host. It is the same in every
+ * environment.
  *
  * The app switcher uses the order of this list. Keep it sorted by name in
  * Norwegian alphabetical order, where Ø comes after Z.
@@ -32,9 +34,10 @@ const APPLICATIONS = [
     id: "bedrift",
     appName: "Bedrift",
     unlisted: true,
+    path: "/bedrift",
     hosts: {
-      staging: "skoleskyss.staging.entur.no/bedrift",
-      production: "skoleskyss.entur.no/bedrift",
+      staging: "skoleskyss.staging.entur.no",
+      production: "skoleskyss.entur.no",
     },
   },
   {
@@ -91,25 +94,35 @@ const APPLICATIONS = [
       production: "sorvis.entur.io",
     },
   },
-] as const satisfies readonly { id: string; appName: string; hosts: Hosts; unlisted?: true }[];
+] as const satisfies readonly {
+  id: string;
+  appName: string;
+  hosts: Hosts;
+  path?: `/${string}`;
+  unlisted?: true;
+}[];
 
 /** All ids the `app` param accepts, including unlisted ones. */
 export const PORTAL_APPLICATION_IDS = APPLICATIONS.map(({ id }) => id);
 
 export type PortalApplicationId = (typeof APPLICATIONS)[number]["id"];
 
+// Most entries have no `path` field, so TypeScript rejects `app.path` on the union.
+// This type adds `path` as an optional field to every entry.
+type ApplicationEntry = (typeof APPLICATIONS)[number] & { path?: `/${string}` };
+
 /** One application's URL in each environment it is deployed to. */
 export type ApplicationUrls = Readonly<Partial<Record<SwitchableEnvironment, string>>>;
 
 /**
- * Turns an application's hosts into `https://` URLs, keyed by environment. This is
- * the only place a host becomes a URL, so all links use the same scheme.
+ * Turns an application's hosts and path into `https://` URLs, keyed by environment.
+ * This is the only place a host becomes a URL, so all links use the same scheme.
  */
-const urlsFor = (hosts: Hosts): ApplicationUrls =>
+const urlsFor = (hosts: Hosts, path: string): ApplicationUrls =>
   Object.fromEntries(
     SWITCHABLE_ENVIRONMENTS.filter((env) => hosts[env] !== undefined).map((env) => [
       env,
-      `https://${hosts[env]}`,
+      `https://${hosts[env]}${path}`,
     ]),
   );
 
@@ -117,12 +130,16 @@ const urlsFor = (hosts: Hosts): ApplicationUrls =>
  * All applications with their URLs, computed once when the module loads. Both
  * tables below are built from this list.
  */
-const APPLICATIONS_WITH_URLS = APPLICATIONS.map((app) => ({
-  id: app.id,
-  appName: app.appName,
-  urls: urlsFor(app.hosts),
-  unlisted: "unlisted" in app,
-}));
+const APPLICATIONS_WITH_URLS = APPLICATIONS.map((app: ApplicationEntry) => {
+  const path = app.path ?? "";
+  return {
+    id: app.id,
+    appName: app.appName,
+    path,
+    urls: urlsFor(app.hosts, path),
+    unlisted: "unlisted" in app,
+  };
+});
 
 /** Returns the listed applications that are deployed in one environment. */
 const resolve = (key: SwitchableEnvironment): PortalApplication[] =>
@@ -224,4 +241,14 @@ const APP_NAMES = new Map<string, string>(APPLICATIONS.map(({ id, appName }) => 
 /** Returns the application name shown next to the logo, or undefined for an unknown id. */
 export function portalApplicationName(id?: string): string | undefined {
   return id === undefined ? undefined : APP_NAMES.get(id);
+}
+
+const APP_PATHS = new Map<string, string>(APPLICATIONS_WITH_URLS.map(({ id, path }) => [id, path]));
+
+/**
+ * Returns the path the application is served at on its host. Returns "/" for an
+ * application served at the root, and for an unknown or missing id.
+ */
+export function portalApplicationPath(id?: string): string {
+  return (id !== undefined && APP_PATHS.get(id)) || "/";
 }
