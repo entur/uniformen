@@ -1,5 +1,5 @@
 import { AppSwitcher } from "../components/AppSwitcher";
-import type { PortalApplicationId } from "../components/portalApplications";
+import { portalApplicationPath, type PortalApplicationId } from "../components/portalApplications";
 import type { Locale } from "../types";
 import { NotificationsButton } from "../components/NotificationsButton";
 import { SidebarToggle } from "../components/SidebarToggle";
@@ -92,7 +92,7 @@ export function TopNavigation({
       <nav class="uniformen-top-nav__nav" aria-label={txt.toppnavigasjon}>
         <div class="uniformen-top-nav__left">
           {sidebar && <SidebarToggle locale={locale} />}
-          <NavigationLogo appName={appName} />
+          <NavigationLogo appName={appName} href={portalApplicationPath(activeAppId)} />
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
