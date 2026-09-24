@@ -1,22 +1,22 @@
 # @entur/uniformen
 
-Client library for consuming the Uniformen layout service. Fetches the shared header, footer, and head assets from Uniformen and provides ready-to-use React components for rendering them in your app.
+Client library for the Uniformen layout service. It fetches the shared header, footer and head assets from Uniformen, and it provides React components that render them in your app.
 
-Because the layout is rendered by the service, changes to the header and footer
-reach your app without a release of this package. They are changelogged separately,
-in [the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
+The service renders the layout, so changes to the header and footer reach your app
+without a new release of this package. These changes are listed in
+[the service changelog](https://github.com/entur/uniformen/blob/main/CHANGELOG.md).
 
 ## What it does
 
-Uniformen is Entur's shared navigation shell. This package fetches the SSR layout from the Uniformen service and gives you typed data and React components to embed it in your application.
+Uniformen is the shared header and footer for Entur's portal applications. This package fetches the SSR layout from the Uniformen service and gives you typed data and React components to add it to your application.
 
 The fetched layout contains:
 
 - **`headerHtml`** — rendered HTML for the top navigation
 - **`footerHtml`** — rendered HTML for the footer
-- **`headAssets`** — raw HTML (`<link>`/`<style>` tags) to inject into `<head>`
-- **`scripts`** — raw `<script>` HTML to inject before `</body>`
-- **`csp`** — per-directive CSP sources (e.g. `{ "style-src": [...], "script-src": [...] }`) to union into your page's Content-Security-Policy header
+- **`headAssets`** — raw HTML (`<link>`/`<style>` tags) to add to `<head>`
+- **`scripts`** — raw `<script>` HTML to add before `</body>`
+- **`csp`** — CSP sources per directive (for example `{ "style-src": [...], "script-src": [...] }`) to merge into the Content-Security-Policy header of your page
 
 ## Installation
 
@@ -26,7 +26,7 @@ npm install @entur/uniformen
 bun add @entur/uniformen
 ```
 
-React 18 or later is required as a peer dependency.
+The package needs React 18 or later as a peer dependency.
 
 ## Usage
 
@@ -64,7 +64,7 @@ export default function app() {
 `;
 ```
 
-The options are passed as a single object:
+Pass the options as one object:
 
 ```ts
 const layout = await fetchUniformenLayout({
@@ -75,53 +75,60 @@ const layout = await fetchUniformenLayout({
 });
 ```
 
-`timeoutMs` bounds the wait. The layout is fetched on the critical path of a page
-render, so a service that goes quiet must not become an app that goes quiet: when the
-timeout is reached the call returns `null` — the same answer every other failure
-gives — and your page renders without the shared chrome rather than not at all.
+`timeoutMs` (`number`, default `5000`) is how many milliseconds to wait for the
+service. When the timeout is reached, the call returns `null`, like it does for every
+other failure. Your page can then render without the header and footer instead of
+waiting for them.
 
 `params.app` (`"bedrift" | "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis"`)
-names the portal application asking for the layout: it renders the app name next to
-the Entur logo, and marks that application as the current page in the app switcher if not marked as unlisted.
+is the portal application that asks for the layout. The top bar shows the app name
+next to the Entur logo. The app switcher marks this application as the current one,
+unless the application is unlisted. An unknown value makes the service answer `400`,
+and the call returns `null`.
 
-Params with an `undefined` value are omitted from the query string, and array-valued
-params serialise as a repeated key (`?key=a&key=b`). An unknown `app` value is
-rejected by the service with `400`, so the call returns `null`.
+Params with an `undefined` value are left out of the query string. Array params are
+sent as a repeated key (`?key=a&key=b`).
 
-The app switcher renders for signed-in users only. It links to the environment you
-fetched the layout from — a `dev` layout hands your users the dev instances of the
-other portal applications, never production.
+The app switcher is only shown to signed-in users. It links to the other portal
+applications in the environment you fetched the layout from. For example, a `dev`
+layout links to the dev instances, never to production.
 
-The environment badge beside the logo, and the switcher `app` turns it into, render
-only for users in the Entur organisation. Nothing to send: the service reads it off
-the token you pass. Your other users get the bar without it, and keep the coloured
-strip along the top that says the page is not production. The switcher offers the
-environments your application is deployed to, and none of them is the badge staying
-static.
+The environment badge next to the logo is only shown to users in the Entur
+organisation. You do not need to send anything for this, because the service reads
+it from the token you pass. Other users see the top bar without the badge, but they
+still see the colored strip along the top that shows the page is not production.
+When `app` is set and your application is deployed in the environment the layout
+comes from, the badge is a button. It opens a list of links to your application in
+each environment it is deployed to. Otherwise the badge is a plain label.
 
-`params.sidebar` (`boolean`) renders a collapse control at the far left of the top
-bar. Set it only if your app has a side navigation to collapse. Uniformen renders
-the button; you render the sidebar. See [Sidebar](#sidebar) for the contract.
+`params.sidebar` (`boolean`, default `false`) shows a collapse button at the far
+left of the top bar. Only set it if your app has a side navigation. Uniformen renders
+the button, and your app renders the sidebar. See [Sidebar](#sidebar) for details.
 
-`params.simple` (`boolean`) hides the app switcher, notifications, the sidebar toggle
-and "Mine tilganger", leaving logo, app name and the login link `params.loginUrl` asks
-for — or the user's name over a menu of the `params.logoutUrl` row alone. Overrides
-`params.sidebar`. Footer unchanged.
+`params.simple` (`boolean`, default `false`) hides the app switcher, notifications,
+the sidebar button and "Mine tilganger". The top bar then shows the logo, the app
+name and the login link from `params.loginUrl`, or the user's name with a menu that
+only has the `params.logoutUrl` row. It overrides `params.sidebar`. The footer does
+not change.
 
-`params.loginUrl` (`string`) is where the top bar's "Logg inn" link points on a
-render with no `token`. Omitted renders no login link. Must be a path on your own origin.
+`params.loginUrl` (`string`) is the path the "Logg inn" link in the top bar points
+to when no `token` is passed. If you leave it out, no login link is shown. It must be
+a path on your own origin. An absolute URL, `//host` or `javascript:` makes the
+service answer `400`, and the call returns `null`.
 
-`params.logoutUrl` (`string`) is where the user menu's "Logg ut" row points, on a
-render with a `token`. Omitted renders no logout row. Must be a path on your own origin.
+`params.logoutUrl` (`string`) is the path the "Logg ut" row in the user menu points
+to when a `token` is passed. If you leave it out, no logout row is shown. It must be
+a path on your own origin. An absolute URL, `//host` or `javascript:` makes the
+service answer `400`, and the call returns `null`.
 
 `params.locale` (BCP 47: `"nb-NO" | "nn-NO" | "en-GB"`, default `"nb-NO"`) is the
-language of the header and footer. App names and environment labels are untranslated.
-Tags match exactly — `"nb"` is a `400`, not an alias. Set `<html lang>` to match.
+language of the header and footer. App names and environment labels are not
+translated. The tag must match exactly. For example, `"nb"` makes the service answer
+`400`. Set `<html lang>` to the same value.
 
-`params.availableLocales` (`Locale[]`) renders a language switcher offering exactly
-these tags in this order — in the user menu, or as a control of its own where there
-is no menu. Omitted or empty renders none. See [Language](#language) for the
-contract.
+`params.availableLocales` (`Locale[]`) shows a language switcher with exactly these
+tags, in this order. If you leave it out or pass an empty list, no switcher is shown.
+See [Language](#language) for where it is shown and which values are accepted.
 
 The same options apply to `fetchUniformenComponents` below.
 
@@ -157,9 +164,9 @@ If the layout fetch fails, all components render nothing and `csp` is `{}`.
 
 The adapter parses the layout HTML into real React elements.
 
-`csp` is the same `Record<string, string[]>` `fetchUniformenLayout` returns, handed back
-here too so an app that sets a `Content-Security-Policy` header has it from the one
-fetch. Union those sources into your own directives.
+`csp` is the same `Record<string, string[]>` that `fetchUniformenLayout` returns, so
+you only need one fetch to set a `Content-Security-Policy` header. Merge these
+sources into your own directives.
 
 - Place `<HeadAssets />` inside `<head>`.
 - Place `<Header />` inside `<body>` before `<main>`.
@@ -168,15 +175,15 @@ fetch. Union those sources into your own directives.
 
 ### Using with Next.js
 
-When loading Uniformen with Next.js, pass `Script` as a `loader` prop to `<HeadAssets>` and `<Scripts>`.
-Otherwise Next.js can change the execution order, causing scripts and components to get loaded in the wrong order.
+With Next.js, pass `Script` as the `loader` prop to `<HeadAssets>` and `<Scripts>`.
+Otherwise Next.js can change the order in which scripts run, so scripts and components load in the wrong order.
 
 ```tsx
 import Script from "next/script";
 
-// The head script restores the sidebar before the first paint, so it has to be in
-// the initial HTML. Next's default strategy injects after hydration, which is a
-// visible jump.
+// The head script sets the sidebar state before the first paint, so it must be in
+// the initial HTML. The default Next.js strategy adds scripts after hydration, and
+// the user would see the sidebar jump.
 const BeforeInteractiveScript: typeof Script = (props) => <Script {...props} strategy="beforeInteractive" />;
 
 <head>
@@ -191,60 +198,59 @@ const BeforeInteractiveScript: typeof Script = (props) => <Script {...props} str
 
 ## Sidebar
 
-Pass `params.sidebar: true` and the top bar renders a collapse control at its far
-left. Uniformen never renders a sidebar.
+Pass `params.sidebar: true` to show a collapse button at the far left of the top
+bar. Uniformen does not render the sidebar itself.
 
-The state is one attribute on the root element, and that is the only place it
-lives:
+The state is stored only in this attribute on the root element:
 
 ```html
 <html data-uniformen-sidebar="expanded | collapsed"></html>
 ```
 
-The whole sidebar ships in `headAssets`, so `<HeadAssets />` has to be in `<head>`.
-It restores the stored state before the first paint — a collapsed sidebar paints
-collapsed rather than jumping — and it starts watching the attribute before your own
-scripts run, so a write from anywhere is picked up, however early.
+The sidebar code is in `headAssets`, so `<HeadAssets />` must be in `<head>`. It
+sets the stored state before the first paint, so a collapsed sidebar does not jump.
+It also starts watching the attribute before your own scripts run, so it sees every
+write to the attribute, even early ones.
 
-**Style your sidebar off the attribute.** No JavaScript state, nothing to keep in
-sync, and it is correct on the first frame — including in a server-rendered app,
-whose server can't know the preference:
+**Style your sidebar based on the attribute.** Then you need no JavaScript state,
+and the sidebar is correct on the first frame. This also works in a server-rendered
+app, where the server does not know the user's preference:
 
 ```css
 :root[data-uniformen-sidebar="collapsed"] .my-sidebar {
   width: 0;
-  /* Hide it from the a11y tree and the tab order too. Width alone only hides it
-     from the eye: the links stay focusable and announced, so a collapsed sidebar
-     becomes a run of invisible tab stops. */
+  /* Also hide it from screen readers and the tab order. With only width: 0, the
+     links can still get focus and screen readers still read them. */
   visibility: hidden;
 }
 ```
 
-If the collapse animates, transition `visibility` alongside the width
-(`transition: width 150ms ease, visibility 150ms ease`) so the content stays visible
-until the animation has finished.
+If the collapse is animated, add a transition on `visibility` together with the
+width (`transition: width 150ms ease, visibility 150ms ease`). Then the content stays
+visible until the animation has finished.
 
-**To pick a different default**, server-render `<html data-uniformen-sidebar="collapsed">`.
-Uniformen only writes the attribute itself when the user has a stored preference, or
-when nothing has set it at all, so the value you rendered survives.
+**To use a different default**, render `<html data-uniformen-sidebar="collapsed">` on
+the server. Uniformen only writes the attribute when the user has a stored
+preference or when the attribute is not set, so your value is kept.
 
-A value you rendered is treated as the state the page starts in, not as a change: it
-is not copied into `localStorage`, and no `uniformen:sidebar` event fires for it. The
-first time the user collapses or expands the sidebar themselves, that choice _is_
-stored — and from then on it wins over the default you render. An app that keeps the
-preference server-side and wants to stay authoritative should clear the
-`uniformen:sidebar` key when it writes its own copy.
+Uniformen treats the value you render as the start state, not as a change. It is
+not saved to `localStorage`, and no `uniformen:sidebar` event fires for it. When the
+user collapses or expands the sidebar for the first time, that choice _is_ saved,
+and from then on it is used instead of the default you render. If your app stores
+the preference on the server and wants its own value to be used, clear the
+`uniformen:sidebar` key when it saves its own copy.
 
-**Collapse it from anywhere** — a close button inside the sidebar, a keyboard
-shortcut, a route change — by writing the same attribute. That is the whole API;
-the top bar button does exactly this:
+**To collapse it from other places**, for example a close button in the sidebar, a
+keyboard shortcut or a route change, write the same attribute. The top bar button
+does the same:
 
 ```ts
 document.documentElement.dataset.uniformenSidebar = "collapsed";
 ```
 
-**React in script** if you need to, though prefer the CSS above. The event fires
-for every change, whoever made it, and carries the new state:
+**To react to changes in script**, listen for the event. Use the CSS above when you
+can. The event fires for every change, from the button or from your app, and has the
+new state:
 
 ```ts
 window.addEventListener("uniformen:sidebar", (event) => {
@@ -252,18 +258,18 @@ window.addEventListener("uniformen:sidebar", (event) => {
 });
 ```
 
-`event.detail` is typed — both this event and `uniformen:locale` are declared on
-`WindowEventMap`, so any file in a project that imports from the package gets them
-checked without an import or a cast of its own.
+`event.detail` is typed. This event and `uniformen:locale` are declared on
+`WindowEventMap`, so in a project that imports from the package, every file gets
+them typed without an extra import or a cast.
 
-Uniformen derives the rest from the attribute: the button's chevron direction (in
-CSS, so it differs open and closed with no work from you), its `aria-expanded`, and
-persisting the preference to `localStorage` under `uniformen:sidebar`.
+Uniformen updates the rest from the attribute: the direction of the arrow on the
+button, its `aria-expanded`, and the preference it saves to `localStorage` under
+`uniformen:sidebar`.
 
 ## Language
 
-`params.locale` is the language everything the service renders is rendered in.
-`params.availableLocales` adds the control the user changes it with:
+`params.locale` is the language of everything the service renders.
+`params.availableLocales` adds a control where the user can change the language:
 
 ```ts
 const layout = await fetchUniformenLayout({
@@ -272,29 +278,29 @@ const layout = await fetchUniformenLayout({
 });
 ```
 
-The languages are a group of radio items, with `locale` checked as rendered by the
-server — no client state and no flash of the wrong label. Each language is named in
-itself ("Norsk bokmål", "English"), and the control itself is labelled in both
-("Språk / Language") whatever `locale` says — a label you can't read is one you can't
-pick your way out of.
+The languages are a group of radio items. The server renders `locale` as the
+selected one, so there is no client state and the label is right from the start.
+Each language is named in its own language ("Norsk bokmål", "English"). The control
+is always labelled "Språk / Language", whatever `locale` is, so users can find it
+even if they cannot read the current language.
 
-**Where the control sits follows the bar**, and it is never in two places at once:
+**Where the control is shown depends on the top bar.** It is only shown in one
+place:
 
-- a signed-in bar has it as a "Språk / Language" section of the user menu, above
-  the way out. `params.simple` keeps it there, unlike the links it drops;
-- the anonymous bar, which has no menu to hold it, has it as a control of its own,
-  left of the login link where there is one, naming the current language beside a
-  globe. Under the mobile breakpoint the label goes and the globe keeps an
-  `aria-label` naming the language, like the bar's other controls.
+- When a user is signed in, it is a "Språk / Language" section in the user menu,
+  above the logout row. It stays there when `params.simple` is set.
+- On the anonymous top bar, which has no menu, it is a separate control to the left
+  of the login link. It shows a globe and the current language. On small screens
+  the text is hidden, and the globe has an `aria-label` with the language name.
 
-List only the tags your own app translates: Uniformen renders three, and offering a
-language your pages don't have is worse than not offering it. Order is yours. A
-repeat, an unknown tag, or a list that doesn't contain `locale` is a `400`, so the
-call returns `null`.
+Only list the tags your own app is translated into. Uniformen supports three, but
+offering a language your pages do not have is worse than not offering it. You choose
+the order. If the list has a repeated tag, an unknown tag or does not contain
+`locale`, the service answers `400` and the call returns `null`.
 
-**Uniformen owns the control; you own the choice.** A pick dispatches one event and
-does nothing else — no cookie, no `localStorage`, no reload, no re-labelling of the
-bar:
+**Your app must handle the choice.** When the user picks a language, the top bar
+dispatches one event and does nothing else. It does not set a cookie, write to
+`localStorage`, reload or change the labels in the bar:
 
 ```ts
 window.addEventListener("uniformen:locale", (event) => {
@@ -304,17 +310,16 @@ window.addEventListener("uniformen:locale", (event) => {
 });
 ```
 
-The reload is what completes the change, and it is why nothing is applied
-optimistically: the header is rendered in one language on the server and your own
-texts are resolved when your modules load, so a switched bar over an unswitched page
-is the only thing in-place re-labelling could produce.
+The reload changes the language. The server renders the header in one language,
+and your own texts are loaded when your modules load. If the top bar changed its
+labels without a reload, the rest of the page would still be in the old language.
 
-On the next render, send the stored choice back as `params.locale` and set
-`<html lang>` to match. That is the whole loop — a cookie your server reads, `locale`
-out of it, one event listener back in.
+On the next render, send the stored choice as `params.locale` and set `<html lang>`
+to the same value. For example, your server reads a cookie, sends its value as
+`locale`, and one event listener writes the cookie.
 
-Picking the language already rendered dispatches nothing, so the page does not reload
-for nothing.
+If the user picks the language that is already shown, no event is dispatched, so the
+page does not reload.
 
 ## Project structure
 
@@ -341,17 +346,17 @@ bun run build
 
 ## Publishing
 
-Releases are cut by release-please, never by hand — do not run `bun publish` or
-`npm publish` locally, and do not edit `version` in `package.json` or
-[CHANGELOG.md](CHANGELOG.md).
+release-please creates all releases. Do not release by hand: do not run
+`bun publish` or `npm publish` locally, and do not edit `version` in `package.json`
+or [CHANGELOG.md](CHANGELOG.md).
 
-On every push to `main`, release-please collects the commits touching
-`packages/uniformen/` and keeps a release pull request open with the next version and
-the generated changelog. Merging it tags the release and the
+On every push to `main`, release-please collects the commits that change
+`packages/uniformen/`. It keeps a release pull request open with the next version and
+the generated changelog. When you merge it, the release is tagged, and the
 [Release workflow](../../.github/workflows/release.yml) builds, tests and publishes
 `@entur/uniformen` to npm.
 
-The version comes from the commit subjects, so they use
+The version is based on the commit subjects, so they must use
 [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```text

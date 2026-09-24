@@ -1,6 +1,6 @@
 export type Environment = "local" | "dev" | "staging" | "production";
 
-/** BCP 47 tags: bokmål, nynorsk, English. */
+/** A BCP 47 language tag: `nb-NO` is Norwegian bokmål, `nn-NO` is Norwegian nynorsk and `en-GB` is English. */
 export type Locale = "nb-NO" | "nn-NO" | "en-GB";
 
 /**
@@ -8,30 +8,34 @@ export type Locale = "nb-NO" | "nn-NO" | "en-GB";
  */
 export type FetchUniformenParams = {
   /**
-   * The portal application asking for the layout. It gets its name beside the
-   * Entur logo.
+   * The portal application that asks for the layout. The top bar shows its name
+   * next to the Entur logo. An unknown value makes the service answer `400`, and the
+   * call returns `null`.
    */
   app?: "bedrift" | "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis";
 
-  /** Language of the header and footer, default `nb-NO`. App names and env labels are untranslated. */
+  /**
+   * The language of the header and footer. The default is `nb-NO`. App names and
+   * environment labels are not translated.
+   */
   locale?: Locale;
 
   /**
-   * Languages to offer in the top bar's language switcher, in this order. Omitted
-   * or empty renders no switcher — set it only to the tags your own app translates,
-   * not to everything the service supports.
+   * The languages to offer in the language switcher in the top bar, in this order.
+   * If you leave it out or pass an empty list, no switcher is shown. Only list the
+   * languages your own app is translated into.
    *
-   * A group of radio items, never in two places at once: a section of the signed-in
-   * user's menu wherever there is one, `simple` included, and a control of its own —
-   * globe plus the current language, left of the login link — on the anonymous bar,
-   * which has none. `locale` is the option rendered as current, and must be one of
-   * `availableLocales`: a repeat, an unknown tag, or a list without `locale` is
-   * rejected by the service with `400`, so the call returns `null`.
+   * The switcher is a group of radio items. If a user is signed in, it is a section
+   * of the user menu, also when `simple` is set. On the anonymous top bar it is a
+   * separate control to the left of the login link, with a globe and the current
+   * language. `locale` is shown as the selected option and must be in the list. If
+   * the list has a repeated tag, an unknown tag or does not contain `locale`, the
+   * service answers `400` and the call returns `null`.
    *
-   * A pick dispatches `uniformen:locale` on `window` and does nothing else — no
-   * cookie, no storage, no reload, no re-labelling of the bar. Persisting the choice
-   * and reloading are yours, because only a new document can change the language of
-   * a server-rendered header and of your own texts:
+   * When the user picks a language, the top bar dispatches `uniformen:locale` on
+   * `window` and does nothing else. It does not set a cookie, store anything, reload
+   * or change the labels in the bar. Your app must store the choice and reload the
+   * page, because the header is rendered on the server:
    *
    *   window.addEventListener("uniformen:locale", (event) => {
    *     const { locale } = event.detail;
@@ -39,59 +43,61 @@ export type FetchUniformenParams = {
    *     window.location.reload();
    *   });
    *
-   * Send the stored choice back as `locale` on the next render, and set `<html lang>`
-   * to match.
+   * On the next render, send the stored choice as `locale` and set `<html lang>` to
+   * the same value.
    */
   availableLocales?: Locale[];
 
   /**
-   * Render the side navigation collapse control in the top bar. Set it only if the
-   * app has a sidebar to collapse.
+   * Shows a button in the top bar that collapses and expands the side navigation.
+   * The default is `false`. Only set it if your app has a sidebar.
    *
-   * The sidebar's state is `data-uniformen-sidebar` on `<html>`
-   * (`"expanded" | "collapsed"`), restored from the user's stored preference before
-   * first paint. Style your sidebar off that attribute and it needs no JavaScript
-   * state at all:
+   * The state is stored in the `data-uniformen-sidebar` attribute on `<html>`, with
+   * the value `"expanded"` or `"collapsed"`. The user's stored preference is set on
+   * the attribute before the first paint. Style your sidebar based on the attribute,
+   * so you need no JavaScript state:
    *
    *   :root[data-uniformen-sidebar="collapsed"] .my-sidebar {
    *     width: 0;
    *     visibility: hidden; // else the collapsed links stay focusable
    *   }
    *
-   * Write the attribute to collapse from elsewhere in the app, and listen for
-   * `uniformen:sidebar` on `window` if you need to react in script. Server-render the
-   * attribute to pick a different default: it is only written for you when the user
-   * has a stored preference, or when nothing has set it at all.
+   * To collapse the sidebar from other places in your app, write the attribute. To
+   * react to changes in script, listen for `uniformen:sidebar` on `window`. To use a
+   * different default, render the attribute on the server. Uniformen only writes the
+   * attribute when the user has a stored preference or when the attribute is not set.
    */
   sidebar?: boolean;
 
   /**
-   * Where the top bar's "Logg inn" link points, on a render with no `token`. Omitted
-   * renders no login link — logging in is your route, and the service does not guess
-   * it. A path on your own origin: an absolute URL, `//host` or `javascript:` is a
-   * `400`, so the call returns `null`.
+   * The path that the "Logg inn" link in the top bar points to. The link is only
+   * shown when no `token` is passed. If you leave it out, no login link is shown. It
+   * must be a path on your own origin. An absolute URL, `//host` or `javascript:`
+   * makes the service answer `400`, and the call returns `null`.
    */
   loginUrl?: string;
 
   /**
-   * Where the top bar's "Logg ut" row points, in the user menu a `token` renders.
-   * Omitted renders no logout row — signing out ends your session, not ours, so the
-   * route is yours to name. A path on your own origin: an absolute URL, `//host` or
-   * `javascript:` is a `400`, so the call returns `null`.
+   * The path that the "Logg ut" row in the user menu points to. The user menu is
+   * only shown when a `token` is passed. If you leave it out, no logout row is shown.
+   * It must be a path on your own origin. An absolute URL, `//host` or `javascript:`
+   * makes the service answer `400`, and the call returns `null`.
    */
   logoutUrl?: string;
 
   /**
-   * Paint the top bar in a dark blue contrast palette.
+   * Shows the top bar in a dark blue contrast color scheme. The default is `false`.
    */
   contrast?: boolean;
 
   /**
-   * Barebones top bar: hides the app switcher, notifications, the sidebar toggle
-   * (whatever `sidebar` says) and "Mine tilganger". Left: logo and app name, plus the
-   * environment badge for the users who get one at all; right: the `loginUrl` login
-   * link, or the user's name over a menu of the `logoutUrl` row alone. For login,
-   * error and terms pages. Per page, not per app.
+   * Shows a minimal top bar. The default is `false`. It hides the app switcher,
+   * notifications, the sidebar button (even if `sidebar` is set) and "Mine
+   * tilganger". The left side shows the logo, the app name and, for users who get
+   * one, the environment badge. The right side shows the login link from `loginUrl`,
+   * or the user's name with a menu that only has the `logoutUrl` row.
+   *
+   * Use it on login, error and terms pages. Set it per page, not for the whole app.
    */
   simple?: boolean;
 };
@@ -101,27 +107,25 @@ export type UniformenLayout = {
   footerHtml: string;
   headAssets: string;
   scripts: string;
-  // Per-directive CSP sources to union into the consumer's page CSP header.
+  // CSP sources per directive. Merge them into the Content-Security-Policy header of your page.
   csp: Record<string, string[]>;
 };
 
 /**
- * The two events the top bar dispatches on `window`, typed. Loaded with any import
- * from the package, so `event.detail` is checked in a plain `addEventListener` —
- * no import, no wrapper, no cast:
+ * Adds types for the two events the top bar dispatches on `window`. They are
+ * available after any import from the package, so `event.detail` is typed in a
+ * plain `addEventListener` call without an import or a cast:
  *
  *   window.addEventListener("uniformen:sidebar", (event) => {
  *     setCollapsed(event.detail.collapsed);
  *   });
- *
- * Declarations only: dispatching stays the service's, subscribing stays the DOM's.
  */
 declare global {
   interface WindowEventMap {
-    /** A language was picked in the switcher. See `FetchUniformenParams.availableLocales`. */
+    /** Fires when the user picks a language in the switcher. See `FetchUniformenParams.availableLocales`. */
     "uniformen:locale": CustomEvent<{ locale: Locale }>;
 
-    /** `data-uniformen-sidebar` changed, by our button or the app. See `FetchUniformenParams.sidebar`. */
+    /** Fires when `data-uniformen-sidebar` changes, from the top bar button or from your app. See `FetchUniformenParams.sidebar`. */
     "uniformen:sidebar": CustomEvent<{ collapsed: boolean }>;
   }
 }

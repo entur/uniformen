@@ -4,8 +4,9 @@ import { fetchUniformenLayout, type FetchUniformenLayoutProps } from "./lib/fetc
 import type { UniformenLayout } from "./types";
 
 /**
- * A component that renders one `<script>` the way the host framework wants it
- * rendered.
+ * A component that renders one `<script>` element, for example `Script` from
+ * `next/script`. It gets the script's attributes as props, and the inline source
+ * as `children` when there is one.
  */
 export type ScriptLoader = FC<ScriptHTMLAttributes<HTMLScriptElement>>;
 
@@ -29,12 +30,10 @@ const EMPTY_COMPONENTS: UniformenComponents = {
 };
 
 /**
- * A slot whose `<script>` tags go through `loader` when one is passed.
- *
- * Without a loader the tags render as plain `<script>` elements, which is what a
- * server-rendered page needs and all most apps need.
- *
- * The inline body is handed over as its exact source text to match the CSP hash.
+ * Returns a component that renders `html`. If a `loader` is passed, each
+ * `<script>` is rendered with the loader. If not, it is rendered as a plain
+ * `<script>` element. The loader gets the inline source as the exact original
+ * text, so it still matches its CSP hash.
  */
 const scriptSlot =
   (html: string) =>
@@ -48,13 +47,17 @@ const scriptSlot =
         const props = attributesToProps(domNode.attribs, domNode.name);
         const source = (domNode.children[0] as Text | undefined)?.data;
 
-        // We use `createElement` instead of JSX so this file doesn't rely on any particular JSX runtime.
-        // (This avoids JSX transform/runtime configuration concerns for consumers.)
+        // Use `createElement` instead of JSX, so consumers do not need a specific JSX runtime or JSX configuration.
         return source ? createElement(Loader, props, source) : createElement(Loader, props);
       },
     });
   };
 
+/**
+ * Fetches the layout and returns it as React components, plus the CSP sources.
+ * Takes the same options as `fetchUniformenLayout`. If the fetch fails, every
+ * component renders nothing and `csp` is `{}`.
+ */
 export async function fetchUniformenComponents(
   props: FetchUniformenLayoutProps = {},
 ): Promise<UniformenComponents> {

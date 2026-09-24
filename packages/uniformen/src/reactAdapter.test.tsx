@@ -31,16 +31,14 @@ describe("fetchUniformenComponents", () => {
     const { HeadAssets } = await fetchUniformenComponents();
     const html = renderToStaticMarkup(createElement(HeadAssets));
 
-    // No illegal wrapper that would be ejected from <head>.
+    // A wrapper element is not allowed in <head>, and the browser would move it out.
     expect(html).not.toContain("<div");
     expect(html).toContain('<link rel="stylesheet" href="/app.css"');
     expect(html).toContain("<style>body{margin:0}</style>");
   });
 
   it("renders the inline script in head assets verbatim, so the CSP hash still matches", async () => {
-    // `headAssets` carries the sidebar's pre-paint script. A hash is over exact
-    // bytes, so anything the adapter rewrites — escaping, reordering, a wrapper —
-    // gets the block dropped by the browser instead of run.
+    // The source has characters that HTML escaping would change.
     const source = 'if (a && b < "c") d();';
     mockFetch({
       ...baseLayout,
@@ -118,16 +116,15 @@ describe("fetchUniformenComponents", () => {
     for (const Component of [HeadAssets, Header, Footer, Scripts]) {
       expect(renderToStaticMarkup(createElement(Component))).toBe("");
     }
-    // No chrome rendered, so there is nothing to admit into the page's CSP.
     expect(csp).toEqual({});
   });
 });
 
 /**
- * The shape `next/script` presents: every `<script>` attribute, plus its own
- * strategy and lifecycle props. Copied rather than imported so the package keeps
- * no dependency on Next — assigning `nextScript` to `loader` below is the check
- * that the real `Script` still fits the prop.
+ * The props of `Script` from `next/script`: all `<script>` attributes plus its own
+ * strategy and lifecycle props. They are copied here so the package does not depend
+ * on Next.js. Passing `nextScript` as `loader` below checks that this type still
+ * fits the prop.
  */
 interface NextScriptProps extends ScriptHTMLAttributes<HTMLScriptElement> {
   strategy?: "afterInteractive" | "lazyOnload" | "beforeInteractive" | "worker";
@@ -139,7 +136,7 @@ interface NextScriptProps extends ScriptHTMLAttributes<HTMLScriptElement> {
   stylesheets?: string[];
 }
 
-/** What `next/script` writes into the element it creates, for these props. */
+/** Returns what `next/script` writes into the script element it creates for these props. */
 function nextScriptElement(props: NextScriptProps) {
   const { children, dangerouslySetInnerHTML, src } = props;
   if (dangerouslySetInnerHTML) return { textContent: dangerouslySetInnerHTML.__html };
@@ -152,7 +149,7 @@ function nextScriptElement(props: NextScriptProps) {
   return { src };
 }
 
-/** Records what a loader is handed, and renders nothing — as `next/script` does. */
+/** Returns a loader that records the props it gets and renders nothing, like `next/script`. */
 function recordingLoader() {
   const calls: NextScriptProps[] = [];
   const nextScript = (props: NextScriptProps) => {
@@ -176,8 +173,8 @@ describe("script loader", () => {
   });
 
   it("hands the inline source over verbatim, so the CSP hash still matches", async () => {
-    // A hash is over exact bytes, and React escapes text children: a loader that
-    // gets `&amp;&amp;` instead of `&&` gets the block dropped rather than run.
+    // React escapes text children. If the loader got `&amp;&amp;` instead of `&&`,
+    // the CSP hash would no longer match and the browser would not run the script.
     const source = 'if (a && b < "c") d();';
     const { calls, nextScript } = recordingLoader();
     mockFetch({ ...baseLayout, scripts: `<script>${source}</script>` });
@@ -208,8 +205,8 @@ describe("script loader", () => {
   });
 
   it("hands an external script no children, so its src is what gets loaded", async () => {
-    // `next/script` reads `children` before `src`, so an empty-but-present body
-    // would install nothing in place of the URL.
+    // `next/script` uses `children` before `src`. An empty `children` would make it
+    // load nothing instead of the URL.
     const { calls, nextScript } = recordingLoader();
     mockFetch({ ...baseLayout, scripts: '<script src="/cdn.js"></script>' });
     const { Scripts } = await fetchUniformenComponents();

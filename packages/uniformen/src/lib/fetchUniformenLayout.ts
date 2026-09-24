@@ -4,12 +4,9 @@ import type { Environment, UniformenLayout, FetchUniformenParams } from "../type
 // TODO Add caching logic and cache invalidation strategy
 
 /**
- * How long to wait for the layout before rendering without it.
- *
- * The header is on the critical path of every page render, so an unbounded wait
- * makes a slow Uniformen a slow application. Five seconds is what the service
- * itself allows its own upstreams, so a request that has not answered by then is
- * one that has already given up on something.
+ * How long to wait for the layout before the page renders without it. Every page
+ * render waits for the header, so without a limit a slow Uniformen makes the app
+ * slow. The service also waits five seconds for its own upstream services.
  */
 const DEFAULT_TIMEOUT_MS = 5_000;
 
@@ -21,12 +18,10 @@ const ENVIRONMENT_HOSTNAMES: Record<Environment, string> = {
 } as const;
 
 /**
- * Serialises params for the SSR endpoint:
- *  - an array repeats the key (`list=a&list=b`), which is how the
- *    service's query schema reads multi-valued params,
- *  - `undefined` values are dropped so they never arrive as the literal string
- *    "undefined",
- *  - an empty (or fully dropped) set yields no `?` at all.
+ * Returns the query string for the SSR endpoint. An array repeats the key
+ * (`list=a&list=b`), because that is how the service reads lists. `undefined`
+ * values are left out so they are not sent as the string "undefined". If no
+ * values are left, it returns an empty string without `?`.
  */
 function buildQueryString(params?: FetchUniformenParams): string {
   const search = new URLSearchParams();
@@ -40,13 +35,21 @@ function buildQueryString(params?: FetchUniformenParams): string {
 }
 
 export type FetchUniformenLayoutProps = {
+  /** The signed-in user's Auth0 access token. It is sent as a bearer token, and the top bar then shows the user. Leave it out for an anonymous top bar. */
   token?: string;
+  /** The Uniformen environment to fetch the layout from. The default is `production`. */
   environment?: Environment;
+  /** The query parameters for the layout. See `FetchUniformenParams`. */
   params?: FetchUniformenParams;
-  /** How long to wait for the service before giving up. Default 5000 ms. */
+  /** How many milliseconds to wait for the service before the call returns `null`. The default is 5000. */
   timeoutMs?: number;
 };
 
+/**
+ * Fetches the header, footer, head assets, scripts and CSP sources from Uniformen.
+ * Returns `null` if the service answers with an error status, the request fails
+ * or the timeout is reached.
+ */
 export async function fetchUniformenLayout({
   environment = "production",
   params,
@@ -75,9 +78,8 @@ export async function fetchUniformenLayout({
       csp,
     };
   } catch (e) {
-    // A timeout is the expected shape of "the service is unwell", so name it:
-    // otherwise it reads as a network error and sends whoever is looking at the
-    // wrong thing.
+    // Log a timeout with its own message. It usually means the service is
+    // unhealthy, and a generic network error would point the reader to the wrong cause.
     if (e instanceof Error && e.name === "TimeoutError") {
       console.error(`Uniformen layout request timed out after ${timeoutMs}ms`);
       return null;
