@@ -190,7 +190,7 @@ describe("portalApplicationPath", () => {
   });
 
   test("returns / for every other app, for a missing id and for an unknown id", () => {
-    for (const id of PORTAL_APPLICATION_IDS.filter((id) => id !== "bedrift")) {
+    for (const id of PORTAL_APPLICATION_IDS.filter((other) => other !== "bedrift")) {
       expect(portalApplicationPath(id)).toBe("/");
     }
     expect(portalApplicationPath()).toBe("/");

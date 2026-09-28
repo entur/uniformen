@@ -181,29 +181,29 @@ describe("JWKS endpoint unavailable", () => {
   test("strict endpoint returns 503, not 401, when JWKS cannot be fetched", async () => {
     const server = jwksServer(() => new Response("boom", { status: 500 }));
     try {
-      const app = new Hono();
-      app.use("/protected", createValidateJwt([deadTenant(server.url)]));
-      app.get("/protected", (c) => c.json({ ok: true }));
+      const strictApp = new Hono();
+      strictApp.use("/protected", createValidateJwt([deadTenant(server.url)]));
+      strictApp.get("/protected", (c) => c.json({ ok: true }));
       const token = await signInternalToken();
-      const res = await app.request("/protected", { headers: bearer(token) });
+      const res = await strictApp.request("/protected", { headers: bearer(token) });
       expect(res.status).toBe(503);
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 
   test("optionalAuth proceeds anonymously when JWKS cannot be fetched", async () => {
     const server = jwksServer(() => new Response("boom", { status: 500 }));
     try {
-      const app = new Hono();
-      app.use("/public", createOptionalAuth(createValidateJwt([deadTenant(server.url)])));
-      app.get("/public", (c) => c.json({ sub: c.get("jwtPayload")?.sub ?? null }));
+      const publicApp = new Hono();
+      publicApp.use("/public", createOptionalAuth(createValidateJwt([deadTenant(server.url)])));
+      publicApp.get("/public", (c) => c.json({ sub: c.get("jwtPayload")?.sub ?? null }));
       const token = await signInternalToken();
-      const res = await app.request("/public", { headers: bearer(token) });
+      const res = await publicApp.request("/public", { headers: bearer(token) });
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ sub: null });
     } finally {
-      server.stop();
+      await server.stop();
     }
   });
 });

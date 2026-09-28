@@ -42,6 +42,10 @@ export type UserInfoServiceOptions = {
   maxEntries?: number;
 };
 
+/** Checks whether a userinfo response body is an object with a string `sub`. */
+const isUserInfo = (body: unknown): body is UserInfo =>
+  typeof body === "object" && body !== null && "sub" in body && typeof body.sub === "string";
+
 type CacheEntry = {
   /** The fetched userinfo, or `null` if the lookup failed. */
   value: UserInfo | null;
@@ -126,12 +130,13 @@ export class UserInfoServiceImpl implements UserInfoService {
         console.warn(`userinfo fetch failed for tenant "${tenantName}": HTTP ${res.status}`);
         return undefined;
       }
-      const body = await res.json();
-      if (typeof body !== "object" || body === null) {
-        console.warn(`userinfo fetch failed for tenant "${tenantName}": non-object response`);
+      const body: unknown = await res.json();
+      // OpenID Connect requires `sub` in every userinfo response.
+      if (!isUserInfo(body)) {
+        console.warn(`userinfo fetch failed for tenant "${tenantName}": no sub in response`);
         return undefined;
       }
-      return body as UserInfo;
+      return body;
     } catch (error) {
       // Timeout, network error or invalid JSON. The caller treats the user as anonymous.
       console.warn(`userinfo fetch failed for tenant "${tenantName}":`, error);

@@ -63,13 +63,10 @@ export async function fetchUniformenLayout({
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return null;
-    const {
-      headerHtml = "",
-      footerHtml = "",
-      headAssets = "",
-      scripts = "",
-      csp = {},
-    } = (await res.json()) as UniformenLayout;
+    // The body comes from the network, so a field can be missing. `Partial` keeps
+    // the defaults below meaningful.
+    const body: Partial<UniformenLayout> = await res.json();
+    const { headerHtml = "", footerHtml = "", headAssets = "", scripts = "", csp = {} } = body;
     return {
       headerHtml,
       footerHtml,

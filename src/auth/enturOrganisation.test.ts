@@ -7,8 +7,10 @@ import {
 import type { UserInfo } from "./userInfo";
 
 /** Returns a profile with the given value in the organisation claim. */
-const withClaim = (value: unknown): UserInfo =>
-  ({ sub: "auth0|abc123", [ORGANISATION_ID_CLAIM]: value }) as UserInfo;
+const withClaim = (value: unknown): UserInfo => ({
+  sub: "auth0|abc123",
+  [ORGANISATION_ID_CLAIM]: value,
+});
 
 describe("isEnturOrganisation", () => {
   test("the configured id, as the number it is", () => {

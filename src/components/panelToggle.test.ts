@@ -265,7 +265,7 @@ function install({
     focusOut: (to: unknown = null) => panel?.fire("focusout", { relatedTarget: to }),
     firstItem: () => items[0],
     /** Focuses an option the way a mouse click does, without a key press. */
-    clickOption: (name: string) => options.filter((option) => option.name === name)[0]?.focus(),
+    clickOption: (name: string) => options.find((option) => option.name === name)?.focus(),
   };
 }
 

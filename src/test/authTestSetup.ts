@@ -16,10 +16,10 @@ import {
 export const userInfoMock = {
   calls: 0,
   respond: (_req: Request): Response | Promise<Response> =>
-    Response.json({ name: "Hallstein Bronskimlet" }),
+    Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" }),
   reset(): void {
     this.calls = 0;
-    this.respond = (_req) => Response.json({ name: "Hallstein Bronskimlet" });
+    this.respond = (_req) => Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
   },
 };
 

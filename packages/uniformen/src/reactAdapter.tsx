@@ -1,5 +1,5 @@
 import { createElement, type FC, type ScriptHTMLAttributes } from "react";
-import parse, { attributesToProps, Element, type Text } from "html-react-parser";
+import parse, { attributesToProps, Element } from "html-react-parser";
 import { fetchUniformenLayout, type FetchUniformenLayoutProps } from "./lib/fetchUniformenLayout";
 import type { UniformenLayout } from "./types";
 
@@ -42,10 +42,11 @@ const scriptSlot =
 
     return parse(html, {
       replace: (domNode) => {
-        if (!(domNode instanceof Element) || domNode.name !== "script") return;
+        if (!(domNode instanceof Element) || domNode.name !== "script") return undefined;
 
         const props = attributesToProps(domNode.attribs, domNode.name);
-        const source = (domNode.children[0] as Text | undefined)?.data;
+        const [first] = domNode.children;
+        const source = first && "data" in first ? first.data : undefined;
 
         // Use `createElement` instead of JSX, so consumers do not need a specific JSX runtime or JSX configuration.
         return source ? createElement(Loader, props, source) : createElement(Loader, props);

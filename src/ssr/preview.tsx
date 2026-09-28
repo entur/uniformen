@@ -351,7 +351,7 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
 
   window.addEventListener("uniformen:locale", (event) => {
     const url = new URL(window.location.href);
-    url.searchParams.set("locale", (event as CustomEvent<{ locale: string }>).detail.locale);
+    url.searchParams.set("locale", event.detail.locale);
     window.location.assign(url.toString());
   });
 
@@ -382,10 +382,12 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
   // text field fires it only when it loses focus, not on every key.
   const FOCUS_KEY = "uniformen-preview-focus";
   controls?.addEventListener("change", (event) => {
-    const field = event.target as HTMLInputElement | HTMLSelectElement;
+    const field = event.target;
     // Submitting loads a new page, which loses focus. Save the control's name and value
     // so it can be focused again, even if the form renders differently.
-    sessionStorage.setItem(FOCUS_KEY, `${field.name}\n${field.value}`);
+    if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
+      sessionStorage.setItem(FOCUS_KEY, `${field.name}\n${field.value}`);
+    }
     controls.requestSubmit();
   });
 
