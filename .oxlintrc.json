@@ -1,11 +1,36 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc"],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "jsx-a11y", "promise"],
   "categories": {
-    "correctness": "error"
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
   },
-  "rules": {},
+  "options": {
+    "typeAware": true
+  },
   "env": {
     "builtin": true
-  }
+  },
+  "rules": {
+    // The browser handlers are sent to the page with `toString()`, so every helper
+    // they use must be declared inside them.
+    "unicorn/consistent-function-scoping": "off",
+    // The panels are popovers with `role="dialog"`. A `<dialog>` element behaves
+    // differently.
+    "jsx-a11y/prefer-tag-over-role": "off",
+    // Loops that read a stream, or tests that run steps in order, must await one at a time.
+    "eslint/no-await-in-loop": "off",
+    // The colour names from `@entur/tokens` start with an underscore, for example `_60`.
+    "eslint/no-underscore-dangle": "off"
+  },
+  "overrides": [
+    {
+      // Tests cast mocks and fakes to the types the code expects.
+      "files": ["**/*.test.ts", "**/*.test.tsx", "src/test/**"],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off"
+      }
+    }
+  ]
 }

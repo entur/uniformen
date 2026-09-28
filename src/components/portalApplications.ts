@@ -193,6 +193,7 @@ type ApplicationUrlTable = {
 
 const APPLICATION_URLS = Object.fromEntries(
   APPLICATIONS_WITH_URLS.map(({ id, urls }) => [id, urls]),
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- See the comment on `ApplicationUrlTable`.
 ) as ApplicationUrlTable;
 
 const isPortalApplicationId = (id: string): id is PortalApplicationId =>

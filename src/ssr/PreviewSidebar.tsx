@@ -37,7 +37,7 @@ export function PreviewSidebar() {
               <ul class="preview-sidebar__list">
                 {section.items.map((item) => (
                   <li>
-                    <a class="preview-sidebar__link" href="#">
+                    <a class="preview-sidebar__link" href="/#">
                       {item}
                     </a>
                   </li>

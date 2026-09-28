@@ -18,7 +18,7 @@ afterEach(() => setSystemTime());
 
 describe("userinfo via /ssr (end-to-end)", () => {
   test("nickname is not used as a display name", async () => {
-    userInfoMock.respond = () => Response.json({ nickname: "ada" });
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test", nickname: "ada" });
     const token = await signInternalToken({ sub: "auth0|nickname-only" });
     const res = await app.request("/ssr", { headers: bearer(token) });
     const body = await res.json();
@@ -27,7 +27,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
   });
 
   test("falls back to email when name and nickname are missing", async () => {
-    userInfoMock.respond = () => Response.json({ email: "ada@example.org" });
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test", email: "ada@example.org" });
     const token = await signInternalToken({ sub: "auth0|email-only" });
     const res = await app.request("/ssr", { headers: bearer(token) });
     const body = await res.json();
@@ -35,7 +35,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
   });
 
   test("2xx with no name or email renders the placeholder", async () => {
-    userInfoMock.respond = () => Response.json({});
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test" });
     const token = await signInternalToken({ sub: "auth0|empty-body" });
     const res = await app.request("/ssr", { headers: bearer(token) });
     expect(res.status).toBe(200);
@@ -54,7 +54,7 @@ describe("userinfo via /ssr (end-to-end)", () => {
     userInfoMock.respond = async () => {
       // Wait a little, so both requests start while this fetch is still running.
       await Bun.sleep(10);
-      return Response.json({ name: "Slow Ada" });
+      return Response.json({ sub: "auth0|test", name: "Slow Ada" });
     };
     const token = await signInternalToken({ sub: "auth0|in-flight" });
     const [a, b] = await Promise.all([
@@ -128,10 +128,17 @@ describe("UserInfoServiceImpl (unit)", () => {
     expect(userInfoMock.calls).toBe(2);
   });
 
+  test("a response without sub resolves to undefined", async () => {
+    userInfoMock.respond = () => Response.json({ name: "No Sub" });
+    const service = new UserInfoServiceImpl(config.tenants);
+    const token = await signInternalToken();
+    expect(await service.getUserInfo("internal", token, "no-sub|user")).toBeUndefined();
+  });
+
   test("timeout resolves to undefined instead of throwing", async () => {
     userInfoMock.respond = async () => {
       await Bun.sleep(200);
-      return Response.json({ name: "Too Late" });
+      return Response.json({ sub: "auth0|test", name: "Too Late" });
     };
     const service = new UserInfoServiceImpl(config.tenants, { timeoutMs: 20 });
     const token = await signInternalToken();

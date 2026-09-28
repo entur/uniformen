@@ -25,6 +25,7 @@ async function signedIn(sub: string, query = ""): Promise<{ headerHtml: string }
 
 /** Returns userinfo for a profile in the Entur organisation. */
 const enturProfile = (extra: Record<string, unknown> = {}) => ({
+  sub: "auth0|test",
   name: "Hallstein Bronskimlet",
   [ORGANISATION_ID_CLAIM]: ENTUR_ORGANISATION_ID,
   ...extra,
@@ -78,7 +79,7 @@ describe("/ssr auth (optional)", () => {
 
 describe("/ssr auth (partner tenant)", () => {
   test("valid partner token renders the userinfo name, not the sub", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Ollvar O. Kleppvold" });
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test", name: "Ollvar O. Kleppvold" });
     const token = await signPartnerToken({ sub: "auth0|partner123" });
     const res = await app.request("/ssr", { headers: bearer(token) });
     expect(res.status).toBe(200);
@@ -115,7 +116,8 @@ describe("/ssr auth (partner tenant)", () => {
 
 describe("/ssr user in top navigation", () => {
   test("valid token renders the userinfo name, not the sub", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const res = await app.request("/ssr", { headers: bearer(token) });
     expect(res.status).toBe(200);
@@ -139,7 +141,11 @@ describe("/ssr user in top navigation", () => {
 describe("/ssr user menu", () => {
   test("the signed-in user gets a menu, with the email under the name", async () => {
     userInfoMock.respond = () =>
-      Response.json({ name: "Hallstein Bronskimlet", email: "hallstein@entur.org" });
+      Response.json({
+        sub: "auth0|test",
+        name: "Hallstein Bronskimlet",
+        email: "hallstein@entur.org",
+      });
     // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|withemail" });
     const body = await (
@@ -155,7 +161,7 @@ describe("/ssr user menu", () => {
   });
 
   test("a nameless profile is labelled by its email, which is then not repeated", async () => {
-    userInfoMock.respond = () => Response.json({ email: "navnlos@entur.org" });
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test", email: "navnlos@entur.org" });
     const token = await signInternalToken({ sub: "auth0|nameless" });
     const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
     expect(body.headerHtml.match(/navnlos@entur\.org/g)).toHaveLength(2);
@@ -164,7 +170,7 @@ describe("/ssr user menu", () => {
   });
 
   test("a profile with neither name nor email still gets a menu", async () => {
-    userInfoMock.respond = () => Response.json({});
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test" });
     const token = await signInternalToken({ sub: "auth0|bare" });
     const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
     expect(body.headerHtml).toContain("Bruker uten navn");
@@ -198,7 +204,8 @@ describe("/ssr login link", () => {
   });
 
   test("authenticated request omits the login link, loginUrl or not", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const res = await app.request("/ssr?loginUrl=/auth/login", { headers: bearer(token) });
     expect(res.status).toBe(200);
@@ -232,7 +239,8 @@ describe("/ssr login link", () => {
 
 describe("/ssr logout link", () => {
   const authed = async (query = "") => {
-    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|logout" });
     return app.request(`/ssr${query}`, { headers: bearer(token) });
@@ -330,6 +338,7 @@ describe("/ssr", () => {
     const hasCloseTag = scripts.slice(-9).toLowerCase() === "</script>";
     const source =
       hasOpenTag && hasCloseTag ? scripts.slice("<script>".length, -"</script>".length) : scripts;
+    // oxlint-disable-next-line typescript/no-implied-eval -- The test compiles the script to check its syntax. It never runs it.
     expect(() => new Function(source)).not.toThrow();
   });
 
@@ -420,7 +429,7 @@ describe("/ssr app query param", () => {
   });
 
   test("app param works alongside an authenticated user", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Kari Nordmann" });
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test", name: "Kari Nordmann" });
     const token = await signInternalToken({ sub: "auth0|appparam" });
     const res = await app.request("/ssr?app=cleos", { headers: bearer(token) });
     expect(res.status).toBe(200);
@@ -510,7 +519,11 @@ describe("/ssr simple query param", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
   const authed = async (query = "") => {
     userInfoMock.respond = () =>
-      Response.json({ name: "Hallstein Bronskimlet", email: "hallstein@entur.org" });
+      Response.json({
+        sub: "auth0|test",
+        name: "Hallstein Bronskimlet",
+        email: "hallstein@entur.org",
+      });
     // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|simple" });
     return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
@@ -646,7 +659,8 @@ describe("/ssr top bar chrome", () => {
 
   // TODO enable this test once the notification panel is wired up
   test.skip("notifications ride along with the user, not the anonymous bar", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const authed = await (await app.request("/ssr", { headers: bearer(token) })).json();
     expect(authed.headerHtml).toContain('aria-label="Varsler"');
@@ -708,7 +722,7 @@ describe("/ssr environment selector", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
   /** Returns the header for one profile. Pass a unique `sub`, because userinfo is cached. */
   const forProfile = async (sub: string, profile: unknown, query = "") => {
-    userInfoMock.respond = () => Response.json(profile);
+    userInfoMock.respond = () => Response.json({ sub, ...(profile as object) });
     const token = await signPartnerToken({ sub });
     const body = await (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
     return body.headerHtml as string;
@@ -825,7 +839,8 @@ describe("/ssr locale", () => {
   });
 
   test("the signed-in half is translated too", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const body = await (
       await app.request("/ssr?locale=en-GB&logoutUrl=/auth/logout", { headers: bearer(token) })
@@ -840,7 +855,7 @@ describe("/ssr locale", () => {
   });
 
   test("a nameless profile gets its placeholder in the locale", async () => {
-    userInfoMock.respond = () => Response.json({});
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test" });
     // Use its own sub, because userinfo is cached per subject.
     const token = await signInternalToken({ sub: "auth0|bare-en" });
     const body = await (await app.request("/ssr?locale=en-GB", { headers: bearer(token) })).json();
@@ -871,7 +886,7 @@ describe("/ssr locale", () => {
 describe("/ssr availableLocales query param", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
   const authed = async (query = "") => {
-    userInfoMock.respond = () => Response.json({ name: "Sigmunn Sagbladet" });
+    userInfoMock.respond = () => Response.json({ sub: "auth0|test", name: "Sigmunn Sagbladet" });
     // Use its own sub, because userinfo is cached by `tenant|sub` for the whole test run.
     const token = await signInternalToken({ sub: "auth0|availableLocales" });
     return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
@@ -912,10 +927,10 @@ describe("/ssr availableLocales query param", () => {
     ).json();
     expect(anonymous.headerHtml).toContain("data-uniformen-locale-switcher-toggle");
 
-    const signedIn = await authed("?simple=true&availableLocales=nb-NO&availableLocales=en-GB");
-    expect(signedIn.headerHtml).toContain("uniformen-locale-menu__heading");
-    expect(signedIn.headerHtml).not.toContain("data-uniformen-locale-switcher-toggle");
-    expect(signedIn.headerHtml).not.toContain("Mine tilganger");
+    const signedInBar = await authed("?simple=true&availableLocales=nb-NO&availableLocales=en-GB");
+    expect(signedInBar.headerHtml).toContain("uniformen-locale-menu__heading");
+    expect(signedInBar.headerHtml).not.toContain("data-uniformen-locale-switcher-toggle");
+    expect(signedInBar.headerHtml).not.toContain("Mine tilganger");
   });
 
   test("only one control at a time: a signed-in bar has the section, not the chip", async () => {
@@ -974,7 +989,8 @@ describe("/ssr caching", () => {
   });
 
   test("an authenticated response is nobody's to store", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const res = await app.request("/ssr", { headers: bearer(token) });
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
@@ -990,7 +1006,8 @@ describe("/ssr caching", () => {
   });
 
   test("the same query with and without a token gets different caching", async () => {
-    userInfoMock.respond = () => Response.json({ name: "Hallstein Bronskimlet" });
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const authed = await app.request("/ssr?app=partner", { headers: bearer(token) });
     const anonymous = await app.request("/ssr?app=partner&loginUrl=/auth/login");

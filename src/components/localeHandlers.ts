@@ -11,6 +11,13 @@
  * not reload for nothing. The listener is on `document`, so it works even when no
  * language options are rendered.
  */
+declare global {
+  // Gives `window.addEventListener("uniformen:locale", ...)` the right event type.
+  interface WindowEventMap {
+    "uniformen:locale": CustomEvent<{ locale: string }>;
+  }
+}
+
 export default function localeHandlers() {
   document.addEventListener("click", (event) => {
     const target = event.target;

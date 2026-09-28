@@ -46,7 +46,7 @@ export default function panelToggle(
   };
 
   const checkedItem = (list: HTMLElement[]) =>
-    list.filter((item) => item.getAttribute("aria-checked") === "true")[0];
+    list.find((item) => item.getAttribute("aria-checked") === "true");
 
   // The radio group, if the panel has one. Its items share one tab stop. The other
   // items in the panel each keep their own tab stop.
