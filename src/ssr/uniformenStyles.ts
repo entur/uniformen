@@ -1,6 +1,7 @@
 import {
   borderRadiuses,
   colors,
+  componentVariables,
   fontSizes,
   fontWeights,
   lineHeights,
@@ -13,6 +14,9 @@ import {
 import uniformenCss from "./uniformen.css" with { type: "text" };
 import { sha256Source } from "./sha256";
 import { environment, type Environment } from "../config";
+
+// Colours for the secondary button in the Entur design system.
+const secondaryButton = componentVariables.light.components.button.secondary;
 
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
@@ -92,6 +96,13 @@ export function buildRootVars(env: Environment): string {
   --uniformen-radius-md: ${rem(borderRadiuses.rem.medium)};
   --uniformen-shadow-focus: ${shadows.focus};
   --uniformen-z-popover: ${zIndexes.popover};
+  --uniformen-secondary: ${secondaryButton.standard.default};
+  --uniformen-secondary-hover: ${secondaryButton.standard.hover};
+  --uniformen-secondary-active: ${secondaryButton.standard.active};
+  --uniformen-secondary-border: ${secondaryButton.standard.border};
+  --uniformen-secondary-border-active: ${secondaryButton.standard.borderActive};
+  --uniformen-on-secondary: ${secondaryButton.standard.text};
+  --uniformen-on-secondary-active: ${secondaryButton.standard.textActive};
 }
 `;
 }
@@ -121,6 +132,13 @@ const CONTRAST_VARS = `.uniformen-top-nav--contrast {
   --uniformen-shadow-bar: ${shadows.boxShadowContrast};
   --uniformen-shadow-panel: ${shadows.cardShadowContrast};
   --uniformen-shadow-focus: ${shadows.focusContrast};
+  --uniformen-secondary: ${secondaryButton.contrast.default};
+  --uniformen-secondary-hover: ${secondaryButton.contrast.hover};
+  --uniformen-secondary-active: ${secondaryButton.contrast.active};
+  --uniformen-secondary-border: ${secondaryButton.contrast.border};
+  --uniformen-secondary-border-active: ${secondaryButton.contrast.borderActive};
+  --uniformen-on-secondary: ${secondaryButton.contrast.text};
+  --uniformen-on-secondary-active: ${secondaryButton.contrast.textActive};
 }
 `;
 

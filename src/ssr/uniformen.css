@@ -140,6 +140,26 @@
   box-shadow: var(--uniformen-shadow-focus);
 }
 
+/* Looks like the secondary button in the Entur design system. These rules come
+   after the action rules above, so they replace the action colours. */
+.uniformen-top-nav__action--secondary {
+  padding: 0 var(--uniformen-space-small);
+  background: var(--uniformen-secondary);
+  border: 0.125rem solid var(--uniformen-secondary-border);
+  color: var(--uniformen-on-secondary);
+  font-weight: var(--uniformen-weight-body);
+}
+
+.uniformen-top-nav__action--secondary:hover {
+  background: var(--uniformen-secondary-hover);
+}
+
+.uniformen-top-nav__action--secondary:active {
+  background: var(--uniformen-secondary-active);
+  border-color: var(--uniformen-secondary-border-active);
+  color: var(--uniformen-on-secondary-active);
+}
+
 .uniformen-top-nav__divider {
   flex: none;
   width: 1px;
