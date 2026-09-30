@@ -8,6 +8,7 @@ import { LogInIcon } from "../components/icons/LogInIcon";
 import { UserMenu, type UserMenuUser } from "../components/UserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NavigationLogo } from "./NavigationLogo";
+import { AiButton } from "../components/AiButton";
 
 const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
 
@@ -96,6 +97,7 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
+          <AiButton locale={locale} />
           {/* Only for anonymous users. Signed-in users get the language options in
               the user menu. */}
           {hasLocales && !user && (
