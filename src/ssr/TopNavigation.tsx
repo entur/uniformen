@@ -39,6 +39,7 @@ export function TopNavigation({
   availableLocales,
   loginUrl,
   logoutUrl,
+  aiAgent,
 }: {
   /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
@@ -81,6 +82,8 @@ export function TopNavigation({
    * an anonymous user it is a separate control in the bar.
    */
   availableLocales?: Locale[];
+  /** Whether to render the AI agent button. */
+  aiAgent?: boolean;
 }) {
   const txt = texts[locale];
   // Also narrows the type, because `LocaleSwitcher` needs a defined list.
@@ -97,7 +100,7 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
-          <AiButton locale={locale} />
+          {aiAgent && <AiButton locale={locale} />}
           {/* Only for anonymous users. Signed-in users get the language options in
               the user menu. */}
           {hasLocales && !user && (

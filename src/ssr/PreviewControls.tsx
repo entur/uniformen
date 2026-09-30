@@ -20,6 +20,7 @@ export function previewUrl(
   if (query.sidebar === "true") params.set("sidebar", "true");
   if (query.simple === "true") params.set("simple", "true");
   if (query.contrast === "true") params.set("contrast", "true");
+  if (query.aiAgent === "true") params.set("aiAgent", "true");
   if (query.loginUrl) params.set("loginUrl", query.loginUrl);
   if (query.logoutUrl) params.set("logoutUrl", query.logoutUrl);
   params.set("locale", query.locale);
@@ -222,6 +223,18 @@ export function PreviewControls({
                   </label>
                 ),
               )}
+            </Field>
+
+            <Field label="aiAgent" hint="Viser AI-agent-knappen i høyre del av baren.">
+              <label class="preview-controls__check">
+                <input
+                  type="checkbox"
+                  name="aiAgent"
+                  value="true"
+                  checked={query.aiAgent === "true"}
+                />
+                Vis AI-agent-knapp
+              </label>
             </Field>
           </Group>
         </div>
