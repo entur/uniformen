@@ -19,6 +19,9 @@ export function AiButton({ locale }: { locale: Locale }) {
       type="button"
       class="uniformen-top-nav__action uniformen-top-nav__action--secondary"
       aria-label={txt.aiAgent}
+      data-uniformen-ai-agent-toggle
+      aria-controls="uniformen-chat-drawer"
+      aria-expanded="false"
     >
       <AiIcon />
       <span class="uniformen-top-nav__action-label">{txt.aiAgent}</span>

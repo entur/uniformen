@@ -9,6 +9,7 @@ import { UserMenu, type UserMenuUser } from "../components/UserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NavigationLogo } from "./NavigationLogo";
 import { AiButton } from "../components/AiButton";
+import { ChatDrawer } from "../components/ChatDrawer";
 
 const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
 
@@ -40,6 +41,7 @@ export function TopNavigation({
   loginUrl,
   logoutUrl,
   aiAgent,
+  chatDrawer,
 }: {
   /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
@@ -84,6 +86,8 @@ export function TopNavigation({
   availableLocales?: Locale[];
   /** Whether to render the AI agent button. */
   aiAgent?: boolean;
+  /** Whether to render the chat drawer. */
+  chatDrawer?: boolean;
 }) {
   const txt = texts[locale];
   // Also narrows the type, because `LocaleSwitcher` needs a defined list.
@@ -100,7 +104,13 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
-          {aiAgent && <AiButton locale={locale} />}
+          {aiAgent && (
+            <>
+              <AiButton locale={locale}/>
+              <ChatDrawer locale={locale}/>
+            </>
+          )          
+          }
           {/* Only for anonymous users. Signed-in users get the language options in
               the user menu. */}
           {hasLocales && !user && (

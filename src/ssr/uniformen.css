@@ -740,3 +740,22 @@
 .uniformen-footer__section {
   color: white;
 }
+
+.uniformen-chat-drawer {
+    -webkit-animation: slideFromRight .1s ease-out forwards;
+    -moz-animation: slideFromRight .1s ease-out forwards;
+    -o-animation: slideFromRight .1s ease-out forwards;
+    animation: slideFromRight .1s ease-out forwards;
+    background-color: var(--components-modal-drawer-standard-background);
+    bottom: 0;
+    color: var(--components-modal-drawer-standard-text);
+    max-width: 100%;
+    min-width: 20rem;
+    overflow-y: auto;
+    padding: 1.5rem;
+    position: fixed;
+    right: 0;
+    top: calc(var(--top-nav-height) + var(--uniformen-env-strip-height));
+    width: 25vw;
+    z-index: 40;
+}
