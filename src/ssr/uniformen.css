@@ -947,3 +947,14 @@
 .uniformen-chat-message--user .uniformen-chat-bubble {
   background: var(--uniformen-chat-user);
 }
+
+.uniformen-new-chat-button {
+  position: absolute;
+  bottom: var(--uniformen-space-medium);
+  right: var(--uniformen-space-medium);
+  /* The secondary fill is transparent, so the button would blend with the drawer.
+     A white fill sets it apart. The text uses the drawer text colour, like the
+     map icon. */
+  --uniformen-secondary: var(--uniformen-color-brand-white);
+  --uniformen-on-secondary: var(--uniformen-on-drawer);
+}
