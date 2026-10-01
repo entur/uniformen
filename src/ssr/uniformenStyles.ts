@@ -2,6 +2,7 @@ import {
   borderRadiuses,
   colors,
   componentVariables,
+  data,
   fontSizes,
   fontWeights,
   lineHeights,
@@ -17,6 +18,19 @@ import { environment, type Environment } from "../config";
 
 // Colours for the secondary button in the Entur design system.
 const secondaryButton = componentVariables.light.components.button.secondary;
+
+// Colours for the drawer in the Entur design system.
+const drawer = componentVariables.light.components.modal.drawer;
+
+// Colours for the floating button in the Entur design system.
+const floatingButton = componentVariables.light.components.button.floating;
+
+// Contrast mode uses the dark theme's floating button. The text area behind the
+// button is white in both modes, and the contrast button is also white.
+const darkFloatingButton = componentVariables.dark.components.button.floating;
+
+// Colours for form fields in the Entur design system.
+const form = componentVariables.light.components.form.baseForm;
 
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
@@ -85,6 +99,7 @@ export function buildRootVars(env: Environment): string {
   --uniformen-space-medium: ${rem(space.rem.medium)};
   --uniformen-space-large: ${rem(space.rem.large)};
   --uniformen-font-xs: ${rem(fontSizes.rem.extraSmall)};
+  --uniformen-font-sm: ${rem(fontSizes.rem.small)};
   --uniformen-font-md: ${rem(fontSizes.rem.medium)};
   --uniformen-font-lg: ${rem(fontSizes.rem.large)};
   --uniformen-font-xl: ${rem(fontSizes.rem.extraLarge)};
@@ -103,6 +118,20 @@ export function buildRootVars(env: Environment): string {
   --uniformen-secondary-border-active: ${secondaryButton.standard.borderActive};
   --uniformen-on-secondary: ${secondaryButton.standard.text};
   --uniformen-on-secondary-active: ${secondaryButton.standard.textActive};
+  --uniformen-drawer: ${drawer.standard.background};
+  --uniformen-on-drawer: ${drawer.standard.text};
+  --uniformen-form-fill: ${form.standard.fillDefault};
+  --uniformen-form-border: ${form.standard.borderDefault};
+  --uniformen-form-border-interactive: ${form.standard.borderInteractive};
+  --uniformen-form-label: ${form.standard.textLabel};
+  --uniformen-form-text: ${form.standard.textContent};
+  --uniformen-floating: ${floatingButton.standard.default};
+  --uniformen-floating-hover: ${floatingButton.standard.hover};
+  --uniformen-floating-active: ${floatingButton.standard.active};
+  --uniformen-on-floating: ${floatingButton.standard.icon};
+  --uniformen-shadow-floating: ${shadows.boxShadow};
+  --uniformen-chat-agent: ${primitive.lavender._10};
+  --uniformen-chat-user: ${data.light.contrast.peach};
 }
 `;
 }
@@ -110,7 +139,7 @@ export function buildRootVars(env: Environment): string {
 /**
  * Colours for contrast mode, for a navy bar. They are set on the modifier class, not
  * on `:root`, so they only apply inside a contrast header, including its panels. All
- * values are the design system's `contrast` variants.
+ * values are the design system's `contrast` variants, except the floating button.
  *
  * The environment badge keeps its colours. It has its own background, so its text
  * contrast does not depend on the bar colour.
@@ -139,6 +168,16 @@ const CONTRAST_VARS = `.uniformen-top-nav--contrast {
   --uniformen-secondary-border-active: ${secondaryButton.contrast.borderActive};
   --uniformen-on-secondary: ${secondaryButton.contrast.text};
   --uniformen-on-secondary-active: ${secondaryButton.contrast.textActive};
+  --uniformen-form-fill: ${form.contrast.fillDefault};
+  --uniformen-form-border: ${form.contrast.borderDefault};
+  --uniformen-form-border-interactive: ${form.contrast.borderInteractive};
+  --uniformen-form-label: ${form.contrast.textLabel};
+  --uniformen-form-text: ${form.contrast.textContent};
+  --uniformen-floating: ${darkFloatingButton.standard.default};
+  --uniformen-floating-hover: ${darkFloatingButton.standard.hover};
+  --uniformen-floating-active: ${darkFloatingButton.standard.active};
+  --uniformen-on-floating: ${darkFloatingButton.standard.icon};
+  --uniformen-shadow-floating: ${shadows.boxShadowContrast};
 }
 `;
 
