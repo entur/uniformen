@@ -948,6 +948,73 @@
   background: var(--uniformen-chat-user);
 }
 
+/* The bubble is only as big as the dots and its padding. The padding leaves room for
+   the bounce. `align-self` stops the message from stretching the bubble to the width
+   of the name bar. `position: relative` keeps the absolutely positioned hidden text
+   inside the scrolling chat window. */
+.uniformen-chat-typing {
+  position: relative;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-xs2);
+  padding: var(--uniformen-space-xs) var(--uniformen-space-small);
+}
+
+.uniformen-chat-typing__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+  /* Without this, forced colours mode removes the background and the dots disappear. */
+  forced-color-adjust: none;
+  animation: uniformen-typing 1.2s ease-in-out infinite;
+}
+
+/* Each dot starts a little later than the one before, so the bounce moves from
+   left to right. */
+.uniformen-chat-typing__dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.uniformen-chat-typing__dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes uniformen-typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-0.1875rem);
+    opacity: 1;
+  }
+}
+
+/* The animation is purely decorative, so it is turned off for users who prefer
+   reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .uniformen-chat-typing__dot {
+    animation: none;
+  }
+}
+
+/* Hides text visually but keeps it for screen readers. */
+.uniformen-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .uniformen-new-chat-button {
   /* Keep the button at full width, so the location text wraps instead. */
   flex: none;

@@ -59,6 +59,7 @@ export function ChatDrawer({ locale }: { locale: Locale }) {
       <div class="uniformen-chat-window" role="log">
         <ChatMessage sender="agent" text={txt.agentPlaceholder} locale={locale} />
         <ChatMessage sender="user" text={txt.userPlaceholder} locale={locale} />
+        <ChatMessage sender="agent" typing locale={locale} />
       </div>
       <ChatTextArea locale={locale} />
       <div class="uniformen-chat-drawer__footer">
