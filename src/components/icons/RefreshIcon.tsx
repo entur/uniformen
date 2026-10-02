@@ -1,15 +1,11 @@
+/** Circular arrow, shown on the button that starts a new chat. */
 export const RefreshIcon = () => (
   <svg
-    style="margin-block: auto;"
-    aria-label="Forhåndsvisning av Refresh-ikonet"
-    xml:space="preserve"
-    x="0"
-    y="0"
+    aria-hidden="true"
     viewBox="0 0 16 16"
-    width="16px"
-    height="16px"
-    class="eds-icon "
-    color="currentColor"
+    width="1rem"
+    height="1rem"
+    xmlns="http://www.w3.org/2000/svg"
   >
     <path
       fill="currentColor"

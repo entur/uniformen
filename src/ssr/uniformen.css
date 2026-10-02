@@ -949,12 +949,40 @@
 }
 
 .uniformen-new-chat-button {
-  position: absolute;
-  bottom: var(--uniformen-space-medium);
-  right: var(--uniformen-space-medium);
+  /* Keep the button at full width, so the location text wraps instead. */
+  flex: none;
   /* The secondary fill is transparent, so the button would blend with the drawer.
      A white fill sets it apart. The text uses the drawer text colour, like the
      map icon. */
   --uniformen-secondary: var(--uniformen-color-brand-white);
   --uniformen-on-secondary: var(--uniformen-on-drawer);
+}
+
+.uniformen-chat-drawer__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--uniformen-space-medium);
+  padding-top: var(--uniformen-space-large);
+}
+
+.uniformen-chat-drawer__location {
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-xs);
+  min-width: 0;
+  /* Break long words, such as a path, so they do not push into the button. */
+  overflow-wrap: anywhere;
+}
+
+/* If the location does not fit after the label, the whole location moves to the
+   next line. A location longer than one line still wraps inside itself. */
+.uniformen-chat-drawer__location-name {
+  display: inline-block;
+}
+
+/* Move the icon up by 0.08em, like the icons in the bar. */
+.uniformen-chat-drawer__location > svg {
+  flex: none;
+  transform: translateY(-0.08em);
 }

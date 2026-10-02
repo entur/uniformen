@@ -11,21 +11,21 @@ const texts = {
     close: "Lukk skuff",
     agentPlaceholder: "Hei! Hva lurer du på?",
     userPlaceholder: "Hvordan endrer jeg passord?",
-    userLocation: "Du er her:",
+    userLocation: "Du er her: ",
   },
   "nn-NO": {
     aiAgent: "KI agent",
     close: "Lukk skuff",
     agentPlaceholder: "Hei! Kva lurer du på?",
     userPlaceholder: "Korleis endrar eg passord?",
-    userLocation: "Du er her:",
+    userLocation: "Du er her: ",
   },
   "en-GB": {
     aiAgent: "AI agent",
     close: "Close drawer",
     agentPlaceholder: "Hi! What would you like to know?",
     userPlaceholder: "How do I change my password?",
-    userLocation: "You are here:",
+    userLocation: "You are here: ",
   },
 } as const;
 
@@ -61,9 +61,15 @@ export function ChatDrawer({ locale }: { locale: Locale }) {
         <ChatMessage sender="user" text={txt.userPlaceholder} locale={locale} />
       </div>
       <ChatTextArea locale={locale} />
-      <div >
-        <div>
-          <MapIcon /> {txt.userLocation}
+      <div class="uniformen-chat-drawer__footer">
+        <div class="uniformen-chat-drawer__location">
+          <MapIcon />
+          {/* One element, so the label and the location wrap together as one text. */}
+          <span>
+            {txt.userLocation}{" "}
+            {/* TODO: Replace the placeholder location with the user's current page. */}
+            <span class="uniformen-chat-drawer__location-name"></span>
+          </span>
         </div>
         <NewChatButton locale={locale} />
       </div>
