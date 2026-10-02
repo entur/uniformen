@@ -40,8 +40,7 @@ export function TopNavigation({
   availableLocales,
   loginUrl,
   logoutUrl,
-  aiAgent,
-  chatDrawer,
+  aiAgent,  
 }: {
   /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
@@ -106,11 +105,10 @@ export function TopNavigation({
         <div class="uniformen-top-nav__right">
           {aiAgent && (
             <>
-              <AiButton locale={locale}/>
-              <ChatDrawer locale={locale}/>
+              <AiButton locale={locale} />
+              <ChatDrawer locale={locale} />
             </>
-          )          
-          }
+          )}
           {/* Only for anonymous users. Signed-in users get the language options in
               the user menu. */}
           {hasLocales && !user && (
