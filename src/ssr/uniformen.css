@@ -790,6 +790,17 @@
   right: var(--uniformen-space-medium);
 }
 
+/* The bar's icon buttons use the bar colours for hover and active. On the drawer,
+   the close button uses the design system's icon button colours instead. */
+.uniformen-chat-drawer__close:hover {
+  background: var(--uniformen-icon-button-hover);
+}
+
+.uniformen-chat-drawer__close:active {
+  background: var(--uniformen-icon-button-active);
+  color: var(--uniformen-on-icon-button-active);
+}
+
 .uniformen-chat-drawer__title {
   margin: 0 0 var(--uniformen-space-medium);
   font-size: var(--uniformen-font-xl);
@@ -920,19 +931,19 @@
   align-items: center;
   gap: var(--uniformen-space-xs);
   margin: 0;
-  color: var(--uniformen-on-drawer);
+  color: var(--uniformen-on-chat);
   font-size: var(--uniformen-font-sm);
   font-weight: var(--uniformen-weight-heading);
 }
 
 /* The bubble colours are the same in contrast mode. Both are light, so the dark
-   drawer text works on them. */
+   chat text works on them. */
 .uniformen-chat-bubble {
   margin: 0;
   padding: var(--uniformen-space-small) var(--uniformen-space-medium);
   /* The Figma design uses a 10px radius. The design system has no token for it. */
   border-radius: 0.625rem;
-  color: var(--uniformen-on-drawer);
+  color: var(--uniformen-on-chat);
   font-size: var(--uniformen-font-md);
   line-height: var(--uniformen-line-md);
   /* Keep the line breaks in the message, and break long words such as URLs. */
@@ -1018,9 +1029,13 @@
 .uniformen-new-chat-button {
   /* Keep the button at full width, so the location text wraps instead. */
   flex: none;
-  /* The secondary fill is transparent, so the button would blend with the drawer.
-     A white fill sets it apart. The text uses the drawer text colour, like the
-     map icon. */
+}
+
+/* The secondary fill is transparent, so on the light drawer the button would blend
+   with the background. A white fill sets it apart. The text uses the drawer text
+   colour, like the map icon. In contrast mode the drawer is navy, and the design
+   system's contrast secondary button is used without changes. */
+.uniformen-top-nav:not(.uniformen-top-nav--contrast) .uniformen-new-chat-button {
   --uniformen-secondary: var(--uniformen-color-brand-white);
   --uniformen-on-secondary: var(--uniformen-on-drawer);
 }

@@ -19,6 +19,9 @@ import { environment, type Environment } from "../config";
 // Colours for the secondary button in the Entur design system.
 const secondaryButton = componentVariables.light.components.button.secondary;
 
+// Colours for the icon button in the Entur design system.
+const iconButton = componentVariables.light.components.button.iconButton;
+
 // Colours for the drawer in the Entur design system.
 const drawer = componentVariables.light.components.modal.drawer;
 
@@ -118,6 +121,9 @@ export function buildRootVars(env: Environment): string {
   --uniformen-secondary-border-active: ${secondaryButton.standard.borderActive};
   --uniformen-on-secondary: ${secondaryButton.standard.text};
   --uniformen-on-secondary-active: ${secondaryButton.standard.textActive};
+  --uniformen-icon-button-hover: ${iconButton.standard.hover};
+  --uniformen-icon-button-active: ${iconButton.standard.active};
+  --uniformen-on-icon-button-active: ${iconButton.standard.iconActive};
   --uniformen-drawer: ${drawer.standard.background};
   --uniformen-on-drawer: ${drawer.standard.text};
   --uniformen-form-fill: ${form.standard.fillDefault};
@@ -132,6 +138,9 @@ export function buildRootVars(env: Environment): string {
   --uniformen-shadow-floating: ${shadows.boxShadow};
   --uniformen-chat-agent: ${primitive.lavender._10};
   --uniformen-chat-user: ${data.light.contrast.peach};
+  /* Text in the chat window. The window and the bubbles are light in both modes,
+     so this colour is not changed in contrast mode. */
+  --uniformen-on-chat: ${drawer.standard.text};
 }
 `;
 }
@@ -168,6 +177,11 @@ const CONTRAST_VARS = `.uniformen-top-nav--contrast {
   --uniformen-secondary-border-active: ${secondaryButton.contrast.borderActive};
   --uniformen-on-secondary: ${secondaryButton.contrast.text};
   --uniformen-on-secondary-active: ${secondaryButton.contrast.textActive};
+  --uniformen-icon-button-hover: ${iconButton.contrast.hover};
+  --uniformen-icon-button-active: ${iconButton.contrast.active};
+  --uniformen-on-icon-button-active: ${iconButton.contrast.iconActive};
+  --uniformen-drawer: ${drawer.contrast.background};
+  --uniformen-on-drawer: ${drawer.contrast.text};
   --uniformen-form-fill: ${form.contrast.fillDefault};
   --uniformen-form-border: ${form.contrast.borderDefault};
   --uniformen-form-border-interactive: ${form.contrast.borderInteractive};
