@@ -12,6 +12,7 @@ const texts = {
     agentPlaceholder: "Hei! Hva lurer du på?",
     userPlaceholder: "Hvordan endrer jeg passord?",
     userLocation: "Du er her: ",
+    unspecifiedLocation: "hjemmesiden",
   },
   "nn-NO": {
     aiAgent: "KI agent",
@@ -19,6 +20,7 @@ const texts = {
     agentPlaceholder: "Hei! Kva lurer du på?",
     userPlaceholder: "Korleis endrar eg passord?",
     userLocation: "Du er her: ",
+    unspecifiedLocation: "heimesida",
   },
   "en-GB": {
     aiAgent: "AI agent",
@@ -26,6 +28,7 @@ const texts = {
     agentPlaceholder: "Hi! What would you like to know?",
     userPlaceholder: "How do I change my password?",
     userLocation: "You are here: ",
+    unspecifiedLocation: "homepage",
   },
 } as const;
 
@@ -68,8 +71,8 @@ export function ChatDrawer({ locale }: { locale: Locale }) {
           {/* One element, so the label and the location wrap together as one text. */}
           <span>
             {txt.userLocation}{" "}
-            {/* TODO: Replace the placeholder location with the user's current page. */}
-            <span class="uniformen-chat-drawer__location-name"></span>
+            {/* The browser replaces this text with the current path, if a location is specified. See `aiAgentHandlers`. */}
+            <span class="uniformen-chat-drawer__location-name">{txt.unspecifiedLocation}</span>
           </span>
         </div>
         <NewChatButton locale={locale} />

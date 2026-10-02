@@ -18,6 +18,12 @@ export default function aiAgentHandlers() {
     // If they aren't in the page (aiAgent is off), do nothing.
     if (!drawer || !button) return;
 
+    const locationName = drawer.querySelector<HTMLElement>(".uniformen-chat-drawer__location-name");
+    // "/turnover/settlements" becomes "turnover, settlements". Empty parts are
+    // removed, so "/" and a trailing "/" give no extra commas.
+    const location = window.location.pathname.split("/").filter(Boolean).join(", ");
+    // When the path is empty, keep the server-rendered "unknown" text.
+    if (locationName && location) locationName.textContent = location;
     // `closest` checks the clicked element and its parents. So a click on the icon                                                                     
     // inside the button still counts as a click on the button.
     if (target.closest("[data-uniformen-ai-agent-toggle]")) {
