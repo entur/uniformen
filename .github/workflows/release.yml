@@ -47,8 +47,6 @@ jobs:
           release_type: manifest
           package_manager: bun
 
-  # npm trusted publishing checks the name of this file. Rename it only together with
-  # the trusted publisher settings on npmjs.
   publish-package:
     name: Publish @entur/uniformen to npm
     needs: [build-package]
