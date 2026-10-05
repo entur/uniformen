@@ -15,37 +15,47 @@ jobs:
       pull-requests: write
       issues: write
 
-  publish-package:
-    name: Publish @entur/uniformen to npm
+  build-package:
+    name: Build @entur/uniformen
     needs: [release-please]
     if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      id-token: write
+    outputs:
+      artifact_name: ${{ steps.prepare-packages.outputs.artifact_name }}
     defaults:
       run:
         working-directory: packages/uniformen
     steps:
+      # Manifest mode has no single tag, so build the commit that created the release.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: 1.3.14
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+          ref: ${{ github.sha }}
+      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
         with:
-          node-version: 24.21.0
-          registry-url: https://registry.npmjs.org/
+          version: 2026.9.18
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Test
         run: bun run test
       - name: Build
         run: bun run build
-      - name: Publish #TODO: Remove publishing without provenance when we make the repository public
-        run: |
-          if [ "${{ github.event.repository.private }}" = "false" ]; then
-            npm publish --provenance --access public
-          else
-            echo "::warning::repository is private — publishing without provenance"
-            npm publish --access public
-          fi
+      - id: prepare-packages
+        uses: entur/gha-npmjs/.github/actions/prepare-packages@d1701803b89f6393047cdff568ba264b25cefd2d # v1.0.0
+        with:
+          release_type: manifest
+          package_manager: bun
+
+  # npm trusted publishing checks the name of this file. Rename it only together with
+  # the trusted publisher settings on npmjs.
+  publish-package:
+    name: Publish @entur/uniformen to npm
+    needs: [build-package]
+    permissions:
+      contents: read
+      id-token: write
+    uses: entur/gha-npmjs/.github/workflows/publish.yml@d1701803b89f6393047cdff568ba264b25cefd2d # v1.0.0
+    with:
+      artifact_name: ${{ needs.build-package.outputs.artifact_name }}
+      provenance: true
