@@ -28,7 +28,7 @@ jobs:
         run: bun audit --audit-level=critical
 
   docker-build:
-    uses: entur/gha-docker/.github/workflows/build.yml@664fc307771c3dd17d2cc3925ea330d7f0c5f24c # v1.12.0
+    uses: entur/gha-docker/.github/workflows/build.yml@dcdc76ce2d251de20f35a92c566d8fe99036e03e # v1.13.0
 
   docker-scan:
     name: Docker Scan
@@ -41,7 +41,7 @@ jobs:
 
   docker-push:
     needs: [docker-build, build]
-    uses: entur/gha-docker/.github/workflows/push.yml@664fc307771c3dd17d2cc3925ea330d7f0c5f24c # v1.12.0
+    uses: entur/gha-docker/.github/workflows/push.yml@dcdc76ce2d251de20f35a92c566d8fe99036e03e # v1.13.0
 
   post-to-slack:
     needs: [docker-push]
