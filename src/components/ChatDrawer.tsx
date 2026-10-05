@@ -9,7 +9,7 @@ const texts = {
   "nb-NO": {
     aiAgent: "KI agent",
     close: "Lukk skuff",
-    agentPlaceholder: "Hei! Hva lurer du på?",
+    agentWelcomeText: "Hei! Hva lurer du på?",
     userPlaceholder: "Hvordan endrer jeg passord?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "hjemmesiden",
@@ -22,7 +22,7 @@ const texts = {
   "nn-NO": {
     aiAgent: "KI agent",
     close: "Lukk skuff",
-    agentPlaceholder: "Hei! Kva lurer du på?",
+    agentWelcomeText: "Hei! Kva lurer du på?",
     userPlaceholder: "Korleis endrar eg passord?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "heimesida",
@@ -35,7 +35,7 @@ const texts = {
   "en-GB": {
     aiAgent: "AI agent",
     close: "Close drawer",
-    agentPlaceholder: "Hi! What would you like to know?",
+    agentWelcomeText: "Hi! What would you like to know?",
     userPlaceholder: "How do I change my password?",
     userLocation: "You are here: ",
     unspecifiedLocation: "homepage",
@@ -73,13 +73,17 @@ export function ChatDrawer({ locale }: { locale: Locale }) {
       <h2 class="uniformen-chat-drawer__title" id="uniformen-chat-drawer-title">
         Sporai
       </h2>
-      {/* TODO: Remove these placeholder messages when the chat shows real messages. */}
       <div class="uniformen-chat-window" role="log">
-        <ChatMessage sender="agent" text={txt.agentPlaceholder} locale={locale} />
+        <ChatMessage sender="agent" text={txt.agentWelcomeText} locale={locale} />
         <ChatMessage sender="system" questions={txt.examples} locale={locale} />
-        <ChatMessage sender="user" text={txt.userPlaceholder} locale={locale} />
-        <ChatMessage sender="agent" typing locale={locale} />
       </div>
+      {/* The browser copies these messages into the chat. See `aiAgentHandlers`. */}
+      <template data-uniformen-chat-user-template>
+        <ChatMessage sender="user" text="" locale={locale} />
+      </template>
+      <template data-uniformen-chat-typing-template>
+        <ChatMessage sender="agent" typing locale={locale} />
+      </template>
       <ChatTextArea locale={locale} />
       <div class="uniformen-chat-drawer__footer">
         <div class="uniformen-chat-drawer__location">
