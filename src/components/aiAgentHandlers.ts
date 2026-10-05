@@ -36,18 +36,16 @@ export default function aiAgentHandlers() {
     // If they aren't in the page (aiAgent is off), do nothing.
     if (!drawer || !button) return;
 
+    //show where the user is located (homepage / a micro-frontend)
     displayLocation(drawer);
 
     // Hide the example questions when the user clicks one of them, or sends a
     // question of their own. The send button only counts when the field has text.
-    // TODO: Show the example questions again when the user starts a new chat.
+    // TODO: Call `setExamplesVisible(drawer, true)` when the user starts a new chat.
     const example = target.closest<HTMLElement>("[data-uniformen-chat-example]");
     const textarea = drawer.querySelector<HTMLTextAreaElement>(".uniformen-chat-textarea");
     const sent = target.closest("[data-uniformen-chat-send]") && textarea?.value.trim();
-    if (example || sent) {
-      const examples = drawer.querySelector<HTMLElement>("[data-uniformen-chat-examples]");
-      if (examples) examples.hidden = true;
-    }
+    if (example || sent) toggleExamplesVisible(drawer, false);
     if (sent && textarea) {
       // Remove the typing message first, so the new question is added after the
       // earlier messages and not after the typing dots.
@@ -99,6 +97,12 @@ export default function aiAgentHandlers() {
    * @return Returns the user location as a string, ex. price-and-product, fare-structures
    */
   function findLocation() {return window.location.pathname.split("/").filter(Boolean).join(", ")}
+
+  /** Shows the example questions when `visible` is true, and hides them when it is false. */
+  function toggleExamplesVisible(drawer: HTMLElement, visible: boolean) {
+    const examples = drawer.querySelector<HTMLElement>("[data-uniformen-chat-examples]");
+    if (examples) examples.hidden = !visible;
+  }
 
   /**
    * Copies the message in the template that matches `templateSelector` to the end of
