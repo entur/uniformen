@@ -13,6 +13,11 @@ const texts = {
     userPlaceholder: "Hvordan endrer jeg passord?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "hjemmesiden",
+    examples: [
+      "Hvordan endrer jeg passord?",
+      "Hvordan gir jeg en kollega tilgang?",
+      "Hvor finner jeg fakturaene mine?",
+    ],
   },
   "nn-NO": {
     aiAgent: "KI agent",
@@ -21,6 +26,11 @@ const texts = {
     userPlaceholder: "Korleis endrar eg passord?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "heimesida",
+    examples: [
+      "Korleis endrar eg passord?",
+      "Korleis gir eg ein kollega tilgang?",
+      "Kvar finn eg fakturaene mine?",
+    ],
   },
   "en-GB": {
     aiAgent: "AI agent",
@@ -29,6 +39,11 @@ const texts = {
     userPlaceholder: "How do I change my password?",
     userLocation: "You are here: ",
     unspecifiedLocation: "homepage",
+    examples: [
+      "How do I change my password?",
+      "How do I give a colleague access?",
+      "Where can I find my invoices?",
+    ],
   },
 } as const;
 
@@ -61,6 +76,7 @@ export function ChatDrawer({ locale }: { locale: Locale }) {
       {/* TODO: Remove these placeholder messages when the chat shows real messages. */}
       <div class="uniformen-chat-window" role="log">
         <ChatMessage sender="agent" text={txt.agentPlaceholder} locale={locale} />
+        <ChatMessage sender="system" questions={txt.examples} locale={locale} />
         <ChatMessage sender="user" text={txt.userPlaceholder} locale={locale} />
         <ChatMessage sender="agent" typing locale={locale} />
       </div>

@@ -42,6 +42,21 @@ export default function aiAgentHandlers() {
     const location = window.location.pathname.split("/").filter(Boolean).join(", ");
     // When the path is empty, keep the server-rendered "unknown" text.
     if (locationName && location) locationName.textContent = location;
+    // Hide the example questions when the user clicks one of them, or sends a
+    // question of their own. The send button only counts when the field has text.
+    // TODO: Show the example questions again when the user starts a new chat.
+    const example = target.closest<HTMLElement>("[data-uniformen-chat-example]");
+    const textarea = drawer.querySelector<HTMLTextAreaElement>(".uniformen-chat-textarea");
+    const sent = target.closest("[data-uniformen-chat-send]") && textarea?.value.trim();
+    if (example || sent) {
+      const examples = drawer.querySelector<HTMLElement>("[data-uniformen-chat-examples]");
+      if (examples) examples.hidden = true;
+    }
+    // TODO: Send the question to the agent instead of putting it in the field.
+    if (example && textarea) {
+      textarea.value = example.textContent ?? "";
+      textarea.focus();
+    }
     // `closest` checks the clicked element and its parents. So a click on the icon
     // inside the button still counts as a click on the button.
     if (target.closest("[data-uniformen-ai-agent-toggle]")) {

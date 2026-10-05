@@ -1068,3 +1068,42 @@
   flex: none;
   transform: translateY(-0.08em);
 }
+
+/* The example questions sit on the right, like the user's messages. */
+.uniformen-chat-message--system {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+/* `display: flex` on the message would otherwise show it when it has `hidden`. */
+.uniformen-chat-message[hidden] {
+  display: none;
+}
+
+.uniformen-chat-examples {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--uniformen-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.uniformen-chat-example {
+  padding: var(--uniformen-space-xs) var(--uniformen-space-medium);
+  /* The Figma design uses a 10px radius. The design system has no token for it. */
+  border-radius: 0.625rem;
+  border: 0.125rem solid var(--uniformen-secondary-border);
+  background: var(--uniformen-form-fill);
+  color: var(--uniformen-on-chat);
+  font: inherit;
+  font-size: var(--uniformen-font-md);
+  line-height: var(--uniformen-line-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.uniformen-chat-example:hover {
+  background: var(--uniformen-secondary-hover);
+}
