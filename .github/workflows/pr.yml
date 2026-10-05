@@ -4,7 +4,7 @@ on:
 
 jobs:
   docker-lint:
-    uses: entur/gha-docker/.github/workflows/lint.yml@664fc307771c3dd17d2cc3925ea330d7f0c5f24c # v1.12.0
+    uses: entur/gha-docker/.github/workflows/lint.yml@dcdc76ce2d251de20f35a92c566d8fe99036e03e # v1.13.0
 
   helm-lint:
     uses: entur/gha-helm/.github/workflows/lint.yml@eebe21e7625a695085aefd79f64893a34adc2302 # v2.0.0
@@ -58,7 +58,7 @@ jobs:
         run: bun run build
 
   docker-build:
-    uses: entur/gha-docker/.github/workflows/build.yml@664fc307771c3dd17d2cc3925ea330d7f0c5f24c # v1.12.0
+    uses: entur/gha-docker/.github/workflows/build.yml@dcdc76ce2d251de20f35a92c566d8fe99036e03e # v1.13.0
 
   docker-scan:
     name: Docker Scan
