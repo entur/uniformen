@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    # The Docker image does not contain the package, so a push that only changes the
-    # package or its release files does not deploy the app.
     paths-ignore:
       - packages/**
       - .release-please-manifest.json
