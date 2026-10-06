@@ -32,6 +32,10 @@ export default function aiAgentHandlers() {
       setDrawerOpen(drawer, button, false);
     } else if (target.closest("[data-uniformen-chat-send]")) {
       sendQuestion(drawer);
+    } else if (target.closest("[data-uniformen-new-chat]")) {
+      // TODO: Ask the backend to start a new chat instead. Until then, reloading
+      // the page clears the chat, because the chat is not saved in the browser.
+      window.location.reload();
     } else {
       const example = target.closest<HTMLElement>("[data-uniformen-chat-example]");
       if (example) useExample(drawer, example);
@@ -81,6 +85,7 @@ export default function aiAgentHandlers() {
     // TODO: Send the question to the agent instead of putting it in the field.
     textarea.value = example.textContent ?? "";
     textarea.focus();
+    sendQuestion(drawer)
   }
 
   /**

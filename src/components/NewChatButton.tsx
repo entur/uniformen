@@ -18,6 +18,7 @@ export function NewChatButton({ locale }: { locale: Locale }) {
     <button
       type="button"
       class="uniformen-new-chat-button uniformen-top-nav__action uniformen-top-nav__action--secondary"
+      data-uniformen-new-chat
     >
       <RefreshIcon />
       <span>{txt.newChat}</span>
