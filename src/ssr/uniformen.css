@@ -701,11 +701,6 @@
   padding-left: var(--uniformen-space-medium);
 }
 
-.uniformen-footer--contrast {
-  --uniformen-surface: #181c56;
-  --uniformen-on-surface: #ffffff;
-}
-
 .uniformen-footer__inner {
   display: flex;
   flex-direction: row;

@@ -600,14 +600,14 @@ describe("/ssr contrast query param", () => {
 
   test("contrast=true paints the bar with the modifier class", async () => {
     const body = await (await ssr("?contrast=true")).json();
-    expect(body.headerHtml).toContain("uniformen-top-nav uniformen-top-nav--contrast");
+    expect(body.headerHtml).toContain("uniformen-top-nav uniformen-contrast");
   });
 
   test("contrast=false and no param render the light bar", async () => {
     for (const query of ["", "?contrast=false"]) {
       const body = await (await ssr(query)).json();
       expect(body.headerHtml).toContain('class="uniformen-top-nav"');
-      expect(body.headerHtml).not.toContain("uniformen-top-nav--contrast");
+      expect(body.headerHtml).not.toContain("uniformen-contrast");
     }
   });
 
@@ -635,7 +635,7 @@ describe("/ssr contrast query param", () => {
     const light = await (await ssr()).json();
     expect(contrast.headAssets).toBe(light.headAssets);
     expect(contrast.csp).toEqual(light.csp);
-    expect(contrast.headAssets).toContain(".uniformen-top-nav--contrast");
+    expect(contrast.headAssets).toContain(".uniformen-contrast");
   });
 });
 

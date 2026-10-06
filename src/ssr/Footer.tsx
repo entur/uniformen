@@ -4,9 +4,8 @@ import { LinkedInIcon } from "../components/icons/LinkedInIcon";
 
 export function Footer({ contrast }: { contrast?: boolean }) {
   return (
-    <footer id="footer" class={contrast ? "uniformen-footer--contrast" : ""}>
+    <footer id="footer" class={`uniformen-footer${contrast ? " uniformen-contrast" : ""}`}>
       <div class="uniformen-footer__inner">
-        <section class="uniformen-footer__text">© 2026 Entur AS | Entur.no</section>
         <section class="uniformen-footer__text">
           © {new Date().getFullYear()} Entur AS | <a href="https://www.entur.no/">Entur.no</a>
         </section>

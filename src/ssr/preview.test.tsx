@@ -229,7 +229,7 @@ describe("preview page simple", () => {
 describe("preview page contrast", () => {
   test("the page behind the header goes dark with the bar", async () => {
     const { html } = await preview("?contrast=true");
-    expect(html).toContain('class="uniformen-top-nav uniformen-top-nav--contrast"');
+    expect(html).toContain('class="uniformen-top-nav uniformen-contrast"');
     expect(html).toContain('<body class="preview--contrast">');
   });
 
