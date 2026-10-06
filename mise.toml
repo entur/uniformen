@@ -1,2 +1,4 @@
+# Dependabot does not update this file. When you bump bun here, also bump the
+# oven/bun images in the Dockerfile, and the other way round.
 [tools]
 bun = "1.4.2"
