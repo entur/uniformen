@@ -135,6 +135,7 @@
 
 .uniformen-top-nav__action:focus-visible,
 .uniformen-top-nav__login:focus-visible,
+.uniformen-footer a:focus-visible,
 .uniformen-top-nav__user:focus-visible {
   outline: none;
   box-shadow: var(--uniformen-shadow-focus);
@@ -700,23 +701,31 @@
   padding-left: var(--uniformen-space-medium);
 }
 
-.uniformen-footer__inner {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: start;
-  padding: var(--uniformen-space-large);
-  background: var(--uniformen-color-brand-blue);
+.uniformen-footer--contrast {
+  --uniformen-surface: #181c56;
+  --uniformen-on-surface: #ffffff;
 }
 
-.uniformen-footer__sections {
+.uniformen-footer__inner {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: start;
-  width: 100%;
+  padding: var(--uniformen-space-large);
+  background: var(--uniformen-surface);
+  color: var(--uniformen-on-surface);
+  font-family: inherit;
+  font-weight: 300;
+  font-size: 0.85rem;
 }
 
-.uniformen-footer__section {
-  color: white;
+.uniformen-footer__social-media {
+  display: flex;
+  gap: 1rem;
+}
+
+.uniformen-footer a,
+.uniformen-footer a:visited {
+  color: inherit;
+  text-decoration: none;
 }

@@ -224,12 +224,6 @@ describe("preview page simple", () => {
     expect(html).not.toContain('class="preview-sidebar"');
     expect(html).not.toContain('data-preview-sidebar-close="');
   });
-
-  test("the footer is the full one", async () => {
-    const { html } = await preview("?simple=true");
-    expect(html).toContain("Tjenester");
-    expect(html).toContain("Informasjon");
-  });
 });
 
 describe("preview page contrast", () => {
@@ -438,9 +432,8 @@ describe("preview page locale", () => {
     for (const block of blocks) expect(csp).toContain(await sha256(block));
   });
 
-  test("the locale reaches the chrome the page renders, header and footer both", async () => {
+  test("the locale reaches the chrome the page renders", async () => {
     const { html } = await preview("?locale=en-GB&debugUser=Navn+Navnesen&logoutUrl=/auth/logout");
     expect(html).toContain(">Log out<");
-    expect(html).toContain(">Information<");
   });
 });

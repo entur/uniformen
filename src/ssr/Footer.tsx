@@ -1,21 +1,41 @@
-import type { Locale } from "../types";
+import { FacebookIcon } from "../components/icons/FacebookIcon";
+import { InstagramIcon } from "../components/icons/InstagramIcon";
+import { LinkedInIcon } from "../components/icons/LinkedInIcon";
 
-const texts = {
-  "nb-NO": { informasjon: "Informasjon", tjenester: "Tjenester" },
-  "nn-NO": { informasjon: "Informasjon", tjenester: "Tenester" },
-  "en-GB": { informasjon: "Information", tjenester: "Services" },
-} as const;
-
-export function Footer({ locale }: { locale: Locale }) {
-  const txt = texts[locale];
+export function Footer({ contrast }: { contrast?: boolean }) {
   return (
-    <footer id="footer">
+    <footer id="footer" class={contrast ? "uniformen-footer--contrast" : ""}>
       <div class="uniformen-footer__inner">
-        <div class="uniformen-footer__sections" id="footer-sections">
-          <section class="uniformen-footer__section">Entur AS</section>
-          <section class="uniformen-footer__section">{txt.informasjon}</section>
-          <section class="uniformen-footer__section">{txt.tjenester}</section>
-        </div>
+        <section class="uniformen-footer__text">© 2026 Entur AS | Entur.no</section>
+        <section class="uniformen-footer__text">
+          © {new Date().getFullYear()} Entur AS | <a href="https://www.entur.no/">Entur.no</a>
+        </section>
+        <section class="uniformen-footer__social-media">
+          <a
+            href="https://www.facebook.com/entur.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Facebook"
+          >
+            <FacebookIcon />
+          </a>
+          <a
+            href="https://www.instagram.com/entur_as/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram"
+          >
+            <InstagramIcon />
+          </a>
+          <a
+            href="https://www.linkedin.com/company/entur-as/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="LinkedIn"
+          >
+            <LinkedInIcon />
+          </a>
+        </section>
       </div>
     </footer>
   );
