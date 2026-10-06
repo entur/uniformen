@@ -1,4 +1,6 @@
-/** Headset person shown next to the name of the customer service agent in the chat. */
+/**
+ * Headset person shown next to the name of the customer service agent in the chat.
+ */
 export const CustomerServiceIcon = () => (
   <svg
     aria-hidden="true"

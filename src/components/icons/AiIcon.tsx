@@ -1,3 +1,6 @@
+/*
+  Icon for the ai chat button in navbar (AiButton), which opens the drawer that the chat lives in.
+ */
 export const AiIcon = () => (
   <svg
     aria-label="Forhåndsvisning av New-ikonet"

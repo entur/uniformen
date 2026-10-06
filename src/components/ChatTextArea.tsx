@@ -7,7 +7,7 @@ const texts = {
   "en-GB": { label: "How can I help you today?", send: "Send message" },
 } as const;
 
-/** Returns the field where the user writes a message to the AI agent. */
+/** Returns the field where the user writes and clicks to send a message to the AI agent. */
 export function ChatTextArea({ locale }: { locale: Locale }) {
   const txt = texts[locale];
   return (

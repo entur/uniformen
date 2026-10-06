@@ -1,4 +1,6 @@
-/** Paper plane shown on the button that sends a chat message. */
+/**
+ * Paper plane shown on the button that sends a chat message.
+ */
 export const SendIcon = () => (
   <svg
     aria-hidden="true"

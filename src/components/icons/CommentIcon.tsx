@@ -1,4 +1,6 @@
-/** Speech bubble shown next to the name of system messages in the chat. */
+/**
+ * Speech bubble shown next to the name of system messages in the chat.
+ */
 export const CommentIcon = () => (
   <svg
     aria-hidden="true"

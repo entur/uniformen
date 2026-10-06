@@ -8,10 +8,9 @@ const texts = {
 } as const;
 
 /**
- * Renders the AI agent button. It looks like the secondary button in the Entur
- * design system. It has no click handler yet.
+ * Renders the AI agent button, which opens the chatdrawer. It looks like the secondary button in the Entur
+ * design system.
  */
-// TODO open the AI agent when the button is clicked.
 export function AiButton({ locale }: { locale: Locale }) {
   const txt = texts[locale];
   return (

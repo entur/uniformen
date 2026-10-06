@@ -48,7 +48,7 @@ const texts = {
 } as const;
 
 /**
- * Renders the Chat drawer.
+ * Renders the Chat drawer and its content.
  * It is a drawer that slides in from the right side of the screen.
  */
 export function ChatDrawer({ locale }: { locale: Locale }) {

@@ -1,4 +1,6 @@
-/** Circular arrow, shown on the button that starts a new chat. */
+/**
+ * Circular arrow, shown on the button that starts a new chat.
+ */
 export const RefreshIcon = () => (
   <svg
     aria-hidden="true"

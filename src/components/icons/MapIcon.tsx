@@ -1,4 +1,6 @@
-/** Map with a location pin, shown next to where the user is in the app. */
+/**
+ * Map with a location pin, shown next to where the user is in the application (ex. MapIcon "price-and-product, fare-structures" ).
+ */
 export const MapIcon = () => (
   <svg
     aria-hidden="true"
