@@ -1,9 +1,3 @@
-/// <reference lib="dom" />
-
-/**
- * Dispatches `uniformen:ai-agent` on `window` when the AI agent button is clicked,
- * so the consuming app can open its agent.
- */
 export default function aiAgentHandlers() {
   /**
   * Positions the drawer correctly without conflicting with navbar and/or footer.
@@ -22,66 +16,75 @@ export default function aiAgentHandlers() {
   window.addEventListener("scroll", placeDrawer, { passive: true });
   window.addEventListener("resize", placeDrawer);
 
-  // Wait for clicks anywhere on the page.
   document.addEventListener("click", (event) => {
-    // `event.target` is the element that was clicked
     const target = event.target;
-    // TypeScript doesn't know `target` is an element, so we check first.
     if (!(target instanceof Element)) return;
 
-    // Find the drawer and the button by their names.
     const drawer = document.getElementById("uniformen-chat-drawer");
     const button = document.querySelector("[data-uniformen-ai-agent-toggle]");
-
-    // If they aren't in the page (aiAgent is off), do nothing.
+    // If they aren't in the page, the AI agent is turned off.
     if (!drawer || !button) return;
 
-    //show where the user is located (homepage / a micro-frontend)
-    displayLocation(drawer);
-
-    // Hide the example questions when the user clicks one of them, or sends a
-    // question of their own. The send button only counts when the field has text.
-    // TODO: Call `setExamplesVisible(drawer, true)` when the user starts a new chat.
-    const example = target.closest<HTMLElement>("[data-uniformen-chat-example]");
-    const textarea = drawer.querySelector<HTMLTextAreaElement>(".uniformen-chat-textarea");
-    const sent = target.closest("[data-uniformen-chat-send]") && textarea?.value.trim();
-    if (example || sent) toggleExamplesVisible(drawer, false);
-    if (sent && textarea) {
-      // Remove the typing message first, so the new question is added after the
-      // earlier messages and not after the typing dots.
-      hideTyping(drawer);
-      const bubble = addMessage(drawer, "[data-uniformen-chat-user-template]")?.querySelector(
-        ".uniformen-chat-bubble",
-      );
-      // Use `textContent`, not `innerHTML`, so the text cannot add HTML to the page.
-      if (bubble) bubble.textContent = textarea.value.trim();
-      showTyping(drawer);
-      // TODO: Send the question to the backend here. Call `hideTyping` when the reply
-      // arrives, before the reply is added to the chat.
-      textarea.value = "";
-      textarea.focus();
-    }
-    // TODO: Send the question to the agent instead of putting it in the field.
-    if (example && textarea) {
-      textarea.value = example.textContent ?? "";
-      textarea.focus();
-    }
-    // `closest` checks the clicked element and its parents. So a click on the icon
-    // inside the button still counts as a click on the button.
+    // `closest` also matches a click on the icon inside a button.
     if (target.closest("[data-uniformen-ai-agent-toggle]")) {
-      drawer.hidden = !drawer.hidden; // flip: hidden -> shown, shown -> hidden
+      setDrawerOpen(drawer, button, Boolean(drawer.hidden));
     } else if (target.closest("[data-uniformen-chat-drawer-close]")) {
-      drawer.hidden = true;
+      setDrawerOpen(drawer, button, false);
+    } else if (target.closest("[data-uniformen-chat-send]")) {
+      sendQuestion(drawer);
     } else {
-      return;
+      const example = target.closest<HTMLElement>("[data-uniformen-chat-example]");
+      if (example) useExample(drawer, example);
     }
-    button.setAttribute("aria-expanded", drawer.hidden ? "false" : "true");
-    // The page may have scrolled while the drawer was closed.
-    placeDrawer();
   });
 
+  /** Opens or closes the drawer, and updates the button to match. */
+  function setDrawerOpen(drawer: HTMLElement, button: Element, open: boolean) {
+    drawer.hidden = !open;
+    button.setAttribute("aria-expanded", String(open));
+    if (!open) return;
+    displayLocation(drawer);
+    // The page may have scrolled while the drawer was closed.
+    placeDrawer();
+  }
+
   /**
-   * Uses findlocation to display where the user is located in the application and display
+   * Adds the question in the text field to the chat, and empties the field. Does
+   * nothing when the field is empty.
+   */
+  function sendQuestion(drawer: HTMLElement) {
+    const textarea = drawer.querySelector<HTMLTextAreaElement>(".uniformen-chat-textarea");
+    const question = textarea?.value.trim();
+    if (!textarea || !question) return;
+
+    // TODO: Call `toggleExamplesVisible(drawer, true)` when the user starts a new chat.
+    toggleExamplesVisible(drawer, false);
+    // Remove the typing message first, so the new question is added after the
+    // earlier messages and not after the typing dots.
+    hideTyping(drawer);
+    const message = addMessage(drawer, "[data-uniformen-chat-user-template]");
+    // Use `textContent`, not `innerHTML`, so the text cannot add HTML to the page.
+    const bubble = message?.querySelector(".uniformen-chat-bubble");
+    if (bubble) bubble.textContent = question;
+    showTyping(drawer);
+    // TODO: Send the question to the backend here. Call `hideTyping` when the reply
+    // arrives, before the reply is added to the chat.
+    textarea.value = "";
+    textarea.focus();
+  }
+
+  /** Puts the example question in the text field and hides the example questions. */
+  function useExample(drawer: HTMLElement, example: HTMLElement) {
+    toggleExamplesVisible(drawer, false);
+    const textarea = drawer.querySelector<HTMLTextAreaElement>(".uniformen-chat-textarea");
+    if (!textarea) return;
+    // TODO: Send the question to the agent instead of putting it in the field.
+    textarea.value = example.textContent ?? "";
+    textarea.focus();
+  }
+
+  /**
+   * Uses findlocation to display where the user is located in the application
    * @param drawer HTMLElement of where the location is to be displayed
    */
   function displayLocation(drawer:HTMLElement) {
