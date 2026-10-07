@@ -225,7 +225,10 @@ export function PreviewControls({
               )}
             </Field>
 
-            <Field label="aiAgent" hint="KI-agent-knappen. Ikke slått på ennå.">
+            <Field
+              label="aiAgent"
+              hint="KI-agent-knappen. På /ssr vises den bare når Ai-Agent-flagget i PostHog er på for brukeren. Skjult her i produksjon."
+            >
               <label class="preview-controls__check">
                 <input
                   type="checkbox"

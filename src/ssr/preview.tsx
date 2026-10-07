@@ -522,6 +522,8 @@ export function previewRoutes(server: OpenAPIHono): void {
                 ${await renderComponentToString(
                   <TopNavigation
                     {...navProps}
+                    // The public production preview must not show the unreleased AI agent.
+                    aiAgent={navProps.aiAgent && runningEnvironment !== "production"}
                     user={user}
                     isEnturUser={previewIsEnturUser(query)}
                   />,
