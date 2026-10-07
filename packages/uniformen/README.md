@@ -80,7 +80,7 @@ service. When the timeout is reached, the call returns `null`, like it does for 
 other failure. Your page can then render without the header and footer instead of
 waiting for them.
 
-`params.app` (`"bedrift" | "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis"`)
+`params.app` (`"bedrift" | "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis" | "varslingssenter"`)
 is the portal application that asks for the layout. The top bar shows the app name
 next to the Entur logo. The app switcher marks this application as the current one,
 unless the application is unlisted. An unknown value makes the service answer `400`,
