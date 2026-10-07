@@ -225,7 +225,7 @@ export function PreviewControls({
               )}
             </Field>
 
-            <Field label="aiAgent" hint="Viser AI-agent-knappen i høyre del av baren.">
+            <Field label="aiAgent" hint="KI-agent-knappen. Ikke slått på ennå.">
               <label class="preview-controls__check">
                 <input
                   type="checkbox"
@@ -233,7 +233,7 @@ export function PreviewControls({
                   value="true"
                   checked={query.aiAgent === "true"}
                 />
-                Vis AI-agent-knapp
+                Vis KI-agent-knapp
               </label>
             </Field>
           </Group>

@@ -8,10 +8,9 @@ const texts = {
 } as const;
 
 /**
- * Renders the new chat button. It looks like the secondary button in the Entur
- * design system. It has no click handler yet.
+ * Renders the button that starts a new chat. It looks like the secondary button in
+ * the Entur design system.
  */
-// TODO clears the chat when the button is clicked.
 export function NewChatButton({ locale }: { locale: Locale }) {
   const txt = texts[locale];
   return (

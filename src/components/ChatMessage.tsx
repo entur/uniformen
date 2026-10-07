@@ -5,8 +5,8 @@ import { CustomerServiceIcon } from "./icons/CustomerServiceIcon";
 export type ChatSender = "agent" | "user" | "system";
 
 const texts = {
-  "nb-NO": { you: "Deg", typing: "agenten skriver", faq: "Ofte stilte spørsmål" },
-  "nn-NO": { you: "Deg", typing: "agenten skriv", faq: "Ofte stilte spørsmål" },
+  "nb-NO": { you: "Du", typing: "agenten skriver", faq: "Ofte stilte spørsmål" },
+  "nn-NO": { you: "Du", typing: "agenten skriv", faq: "Ofte stilte spørsmål" },
   "en-GB": { you: "You", typing: "The agent is typing", faq: "Frequently asked questions" },
 } as const;
 

@@ -1,5 +1,6 @@
 /**
- * Map with a location pin, shown next to where the user is in the application (ex. MapIcon "price-and-product, fare-structures" ).
+ * Shows a map with a location pin. The chat drawer shows it next to the user's
+ * current place in the app.
  */
 export const MapIcon = () => (
   <svg

@@ -2,14 +2,14 @@ import type { Locale } from "../types";
 import { AiIcon } from "./icons/AiIcon";
 
 const texts = {
-  "nb-NO": { aiAgent: "KI agent" },
-  "nn-NO": { aiAgent: "KI agent" },
+  "nb-NO": { aiAgent: "KI-agent" },
+  "nn-NO": { aiAgent: "KI-agent" },
   "en-GB": { aiAgent: "AI agent" },
 } as const;
 
 /**
- * Renders the AI agent button, which opens the chatdrawer. It looks like the secondary button in the Entur
- * design system.
+ * Renders the button that opens and closes the AI agent's chat drawer. It looks like
+ * the secondary button in the Entur design system.
  */
 export function AiButton({ locale }: { locale: Locale }) {
   const txt = texts[locale];

@@ -7,10 +7,8 @@ import { NewChatButton } from "./NewChatButton";
 
 const texts = {
   "nb-NO": {
-    aiAgent: "KI agent",
     close: "Lukk skuff",
     agentWelcomeText: "Hei! Hva lurer du på?",
-    userPlaceholder: "Hvordan endrer jeg passord?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "hjemmesiden",
     examples: [
@@ -20,10 +18,8 @@ const texts = {
     ],
   },
   "nn-NO": {
-    aiAgent: "KI agent",
     close: "Lukk skuff",
     agentWelcomeText: "Hei! Kva lurer du på?",
-    userPlaceholder: "Korleis endrar eg passord?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "heimesida",
     examples: [
@@ -33,10 +29,8 @@ const texts = {
     ],
   },
   "en-GB": {
-    aiAgent: "AI agent",
     close: "Close drawer",
     agentWelcomeText: "Hi! What would you like to know?",
-    userPlaceholder: "How do I change my password?",
     userLocation: "You are here: ",
     unspecifiedLocation: "homepage",
     examples: [
@@ -48,8 +42,8 @@ const texts = {
 } as const;
 
 /**
- * Renders the Chat drawer and its content.
- * It is a drawer that slides in from the right side of the screen.
+ * Renders the AI agent's chat drawer. It is hidden until the user clicks the AI agent
+ * button, and then it slides in from the right side of the window.
  */
 export function ChatDrawer({ locale }: { locale: Locale }) {
   const txt = texts[locale];
@@ -91,7 +85,8 @@ export function ChatDrawer({ locale }: { locale: Locale }) {
           {/* One element, so the label and the location wrap together as one text. */}
           <span>
             {txt.userLocation}{" "}
-            {/* The browser replaces this text with the current path, if a location is specified. See `aiAgentHandlers`. */}
+            {/* The browser replaces this text with the current path when the path is
+                not empty. See `aiAgentHandlers`. */}
             <span class="uniformen-chat-drawer__location-name">{txt.unspecifiedLocation}</span>
           </span>
         </div>

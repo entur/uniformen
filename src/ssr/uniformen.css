@@ -751,7 +751,7 @@
   right: 0;
   bottom: 0;
   box-sizing: border-box;
-  /* `min-width` wins over `max-width`, so the 20rem minimum is put inside `width`.
+  /* `min-width` wins over `max-width`, so the 25rem minimum is put inside `width`.
      Then `max-width` can still keep the drawer inside a narrow viewport. */
   width: max(25rem, 30vw);
   max-width: 100%;
@@ -807,12 +807,6 @@
   font-weight: var(--uniformen-weight-heading);
 }
 
-.uniformen-chat-drawer__text {
-  margin: 0 0 var(--uniformen-space-medium);
-  font-size: var(--uniformen-font-lg);
-  line-height: var(--uniformen-line-md);
-}
-
 .uniformen-chat-textarea__wrapper {
   position: relative;
 }
@@ -829,13 +823,13 @@
   /* Leave room on the right so the text does not go under the send button. */
   padding-right: calc(2 * var(--uniformen-space-small) + 2.5rem);
   border: 1px solid var(--uniformen-form-border);
-  border-radius: var(--uniformen-radius-md);
   background: var(--uniformen-form-fill);
   color: var(--uniformen-form-text);
   font: inherit;
   font-size: var(--uniformen-font-lg);
   line-height: var(--uniformen-line-md);
   resize: vertical;
+  /* The Figma design uses a 10px radius. The design system has no token for it. */
   border-radius: 0.625rem;
 }
 

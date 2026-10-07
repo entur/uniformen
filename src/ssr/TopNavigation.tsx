@@ -12,6 +12,7 @@ import { AiButton } from "../components/AiButton";
 import { ChatDrawer } from "../components/ChatDrawer";
 
 const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
+export const AI_AGENT_ENABLED = false; // TODO: remove this when the AI agent is ready for production
 
 const texts = {
   "nb-NO": {
@@ -40,7 +41,7 @@ export function TopNavigation({
   availableLocales,
   loginUrl,
   logoutUrl,
-  aiAgent,  
+  aiAgent,
 }: {
   /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
@@ -83,10 +84,8 @@ export function TopNavigation({
    * an anonymous user it is a separate control in the bar.
    */
   availableLocales?: Locale[];
-  /** Whether to render the AI agent button. */
+  /** Whether to render the AI agent button and its chat drawer. */
   aiAgent?: boolean;
-  /** Whether to render the chat drawer. */
-  chatDrawer?: boolean;
 }) {
   const txt = texts[locale];
   // Also narrows the type, because `LocaleSwitcher` needs a defined list.
@@ -103,7 +102,7 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
-          {aiAgent && (
+          {aiAgent && AI_AGENT_ENABLED && (
             <>
               <AiButton locale={locale} />
               <ChatDrawer locale={locale} />
