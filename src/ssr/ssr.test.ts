@@ -9,6 +9,7 @@ import {
   signInternalToken,
 } from "../test/authTestKeys";
 import { app } from "../index";
+import { AI_AGENT_ENABLED } from "./TopNavigation";
 
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
@@ -629,6 +630,42 @@ describe("/ssr contrast query param", () => {
     const contrast = await (await ssr("?contrast=true")).json();
     const light = await (await ssr()).json();
     expect(contrast.footerHtml).toBe(light.footerHtml);
+  });
+});
+
+describe("/ssr aiAgent query param", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+
+  // The button and the drawer are only rendered while `AI_AGENT_ENABLED` is on.
+  test("aiAgent=true renders the AI agent button and its drawer when the feature is on", async () => {
+    const res = await ssr("?aiAgent=true");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml.includes("data-uniformen-ai-agent-toggle")).toBe(AI_AGENT_ENABLED);
+    expect(body.headerHtml.includes('id="uniformen-chat-drawer"')).toBe(AI_AGENT_ENABLED);
+  });
+
+  test("aiAgent=false and no param render no AI agent", async () => {
+    for (const query of ["", "?aiAgent=false"]) {
+      const res = await ssr(query);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+      expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
+    }
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?aiAgent=yes", "?aiAgent=1", "?aiAgent="]) {
+      expect((await ssr(query)).status).toBe(400);
+    }
+  });
+
+  test("the scripts and the CSP are the same with or without it", async () => {
+    const withAgent = await (await ssr("?aiAgent=true")).json();
+    const without = await (await ssr()).json();
+    expect(withAgent.scripts).toBe(without.scripts);
+    expect(withAgent.csp).toEqual(without.csp);
   });
 });
 

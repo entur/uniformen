@@ -4,6 +4,7 @@ import { previewIsEnturUser, previewUser } from "./preview";
 import { PreviewControls } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
+import { AI_AGENT_ENABLED } from "./TopNavigation";
 
 /** Requests the preview page. `chrome` is the part of the HTML before `<main>`. */
 async function preview(query = "") {
@@ -250,6 +251,38 @@ describe("preview page contrast", () => {
   test("the copyable link carries it", async () => {
     const { html } = await preview("?contrast=true");
     expect(html).toContain("contrast=true");
+  });
+});
+
+describe("preview page aiAgent", () => {
+  test("aiAgent=true checks the control and is kept in the copyable link", async () => {
+    const { res, html, chrome } = await preview("?aiAgent=true");
+    expect(res.status).toBe(200);
+    expect(html).toContain('name="aiAgent" value="true" checked=""');
+    expect(html).toContain(">/?aiAgent=true&amp;locale=nb-NO<");
+    // The button is only rendered while `AI_AGENT_ENABLED` is on.
+    expect(chrome.includes("data-uniformen-ai-agent-toggle")).toBe(AI_AGENT_ENABLED);
+  });
+
+  test("aiAgent=false leaves the control unchecked and the link without it", async () => {
+    const { res, html, chrome } = await preview("?aiAgent=false");
+    expect(res.status).toBe(200);
+    expect(html).toContain('name="aiAgent" value="true"/>');
+    expect(html).toContain(">/?locale=nb-NO<");
+    expect(chrome).not.toContain("data-uniformen-ai-agent-toggle");
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?aiAgent=yes", "?aiAgent=1", "?aiAgent="]) {
+      expect((await preview(query)).res.status).toBe(400);
+    }
+  });
+
+  test("the control sits with the right side of the bar", async () => {
+    const { html } = await preview();
+    const groups = html.split(/class="preview-controls__group preview-controls__group--/);
+    const group = groups.find((part) => part.includes('name="aiAgent"'));
+    expect(group?.match(/^[a-z]+/)?.[0]).toBe("right");
   });
 });
 
