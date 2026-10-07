@@ -94,6 +94,15 @@ const APPLICATIONS = [
       production: "sorvis.entur.io",
     },
   },
+  {
+    id: "varslingssenter",
+    appName: "Varslingssenter",
+    hosts: {
+      dev: "notifications-frontend.dev.entur.org",
+      staging: "notifications-frontend.staging.entur.org",
+      production: "notifications-frontend.entur.org",
+    },
+  },
 ] as const satisfies readonly {
   id: string;
   appName: string;

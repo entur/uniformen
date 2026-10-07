@@ -67,6 +67,7 @@ describe("application ids", () => {
       "partner",
       "skoleskyss",
       "sorvis",
+      "varslingssenter",
     ]);
     for (const { id } of PORTAL_APPLICATIONS.production) {
       expect(PORTAL_APPLICATION_IDS).toContain(id);
@@ -133,7 +134,14 @@ describe("portalApplicationUrls", () => {
 
 describe("portalApplicationUrl", () => {
   /** The ids portalApplicationUrl accepts. These apps have a host in every environment. */
-  const FULLY_DEPLOYED = ["cleos", "nplan", "ops-center", "partner", "sorvis"] as const;
+  const FULLY_DEPLOYED = [
+    "cleos",
+    "nplan",
+    "ops-center",
+    "partner",
+    "sorvis",
+    "varslingssenter",
+  ] as const;
 
   test("agrees with the list the switcher renders, for every app in every environment", () => {
     for (const env of ENVIRONMENTS) {

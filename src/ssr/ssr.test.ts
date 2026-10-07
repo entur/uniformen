@@ -374,6 +374,7 @@ describe("/ssr app query param", () => {
   const APP_NAMES: [slug: string, rendered: string][] = [
     ["partner", "Partner"],
     ["sorvis", "Sørvis"],
+    ["varslingssenter", "Varslingssenter"],
     ["cleos", "CLEOS"],
     ["nplan", "Nplan"],
     ["ops-center", "Ops Center"],
