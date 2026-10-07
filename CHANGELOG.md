@@ -8,6 +8,12 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-10-07
+
+### Added
+
+- Varslingssenter is in the app switcher, and `app=varslingssenter` is accepted.
+
 ## 2026-09-24
 
 ### Fixed
