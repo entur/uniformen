@@ -12,7 +12,7 @@ import { AiButton } from "../components/AiButton";
 import { ChatDrawer } from "../components/ChatDrawer";
 
 const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
-export const AI_AGENT_ENABLED = false; // TODO: remove this when the AI agent is ready for production
+export const AI_AGENT_ENABLED = true; // TODO: remove this when the AI agent is ready for production
 
 const texts = {
   "nb-NO": {
