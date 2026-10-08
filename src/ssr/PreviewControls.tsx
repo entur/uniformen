@@ -247,7 +247,7 @@ export function PreviewControls({
             </label>
           </Field>
 
-          <Field label="locale" hint="Språket headeren og footeren skrives på.">
+          <Field label="locale" hint="Språket headeren skrives på.">
             <div class="preview-controls__row">
               {LOCALES.map((locale) => (
                 <label class="preview-controls__check">

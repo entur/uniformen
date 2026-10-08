@@ -118,7 +118,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         headerHtml: await renderComponentToString(
           <TopNavigation {...navProps} user={user} isEnturUser={isEnturOrganisation(info)} />,
         ),
-        footerHtml: await renderComponentToString(<Footer locale={navProps.locale} />),
+        footerHtml: await renderComponentToString(<Footer contrast={navProps.contrast} />),
         scripts: renderUniformenScripts(),
         csp: {
           "style-src": [uniformenCssHash],
