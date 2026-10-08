@@ -31,7 +31,7 @@ export const aiAgentFlag = {
   async isOn(info: UserInfo | undefined): Promise<boolean> {
     if (!posthog || !info) return false;
     const result = await posthog
-      .getFeatureFlagResult("Ai-Agent", info.sub, {
+      .getFeatureFlagResult("ai-agent", info.sub, {
         // The flag picks users by email. Only send a verified email, because anyone
         // can sign up with an address that belongs to someone else.
         personProperties: info.email_verified === true && info.email ? { email: info.email } : {},
