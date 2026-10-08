@@ -52,8 +52,8 @@ export const uniformenQuerySchema = z
         z.array(z.enum(LOCALES)).nonempty(),
       )
       .optional(),
-    // Shows the AI agent button and its chat drawer. It has no effect until
-    // `AI_AGENT_ENABLED` is turned on in `TopNavigation`.
+    // Shows the AI agent button and its chat drawer to signed-in users that the
+    // `Ai-Agent` feature flag in PostHog turns on.
     aiAgent: z.enum(["true", "false"]).optional(),
   })
   // These checks use two fields, so they cannot be on the field itself. A repeated
