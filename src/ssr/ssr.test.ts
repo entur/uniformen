@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { userInfoMock } from "../test/authTestSetup";
 import { ENTUR_ORGANISATION_ID, ORGANISATION_ID_CLAIM } from "../auth/enturOrganisation";
 import {
@@ -9,7 +9,7 @@ import {
   signInternalToken,
 } from "../test/authTestKeys";
 import { app } from "../index";
-import { AI_AGENT_ENABLED } from "./TopNavigation";
+import { aiAgentFlag } from "./ssr";
 
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
@@ -636,23 +636,38 @@ describe("/ssr contrast query param", () => {
 describe("/ssr aiAgent query param", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
 
-  // The button and the drawer are only rendered while `AI_AGENT_ENABLED` is on.
-  test("aiAgent=true renders the AI agent button and its drawer when the feature is on", async () => {
-    const res = await ssr("?aiAgent=true");
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.headerHtml.includes("data-uniformen-ai-agent-toggle")).toBe(AI_AGENT_ENABLED);
-    expect(body.headerHtml.includes('id="uniformen-chat-drawer"')).toBe(AI_AGENT_ENABLED);
+  const hasAgent = (html: string) =>
+    html.includes("data-uniformen-ai-agent-toggle") && html.includes('id="uniformen-chat-drawer"');
+  // Every test that can reach PostHog replaces the flag check, so no test uses the network.
+  const flag = (on: boolean) => spyOn(aiAgentFlag, "isOn").mockResolvedValue(on);
+  afterEach(() => mock.restore());
+
+  test("aiAgent=true renders the button and the drawer when the flag is on for the user", async () => {
+    const isOn = flag(true);
+    const body = await signedIn("auth0|ai-on", "?aiAgent=true");
+    expect(hasAgent(body.headerHtml)).toBe(true);
+    expect(isOn).toHaveBeenCalledWith(expect.objectContaining({ name: "Hallstein Bronskimlet" }));
   });
 
-  test("aiAgent=false and no param render no AI agent", async () => {
+  test("aiAgent=true renders no AI agent when the flag is off", async () => {
+    flag(false);
+    const body = await signedIn("auth0|ai-off", "?aiAgent=true");
+    expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+    expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
+  });
+
+  test("aiAgent=true renders no AI agent for an anonymous user", async () => {
+    const body = await (await ssr("?aiAgent=true")).json();
+    expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
+  });
+
+  test("aiAgent=false and no param render no AI agent and do not check the flag", async () => {
+    const isOn = flag(true);
     for (const query of ["", "?aiAgent=false"]) {
-      const res = await ssr(query);
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+      const body = await signedIn("auth0|ai-no-param", query);
       expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
     }
+    expect(isOn).not.toHaveBeenCalled();
   });
 
   test("anything other than true or false is rejected", async () => {
@@ -662,7 +677,12 @@ describe("/ssr aiAgent query param", () => {
   });
 
   test("the scripts and the CSP are the same with or without it", async () => {
-    const withAgent = await (await ssr("?aiAgent=true")).json();
+    flag(true);
+    const token = await signInternalToken({ sub: "auth0|ai-csp" });
+    const withAgent = await (
+      await app.request("/ssr?aiAgent=true", { headers: bearer(token) })
+    ).json();
+    expect(hasAgent(withAgent.headerHtml)).toBe(true);
     const without = await (await ssr()).json();
     expect(withAgent.scripts).toBe(without.scripts);
     expect(withAgent.csp).toEqual(without.csp);

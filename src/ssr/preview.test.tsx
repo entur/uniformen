@@ -4,7 +4,6 @@ import { previewIsEnturUser, previewUser } from "./preview";
 import { PreviewControls } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
-import { AI_AGENT_ENABLED } from "./TopNavigation";
 
 /** Requests the preview page. `chrome` is the part of the HTML before `<main>`. */
 async function preview(query = "") {
@@ -260,8 +259,8 @@ describe("preview page aiAgent", () => {
     expect(res.status).toBe(200);
     expect(html).toContain('name="aiAgent" value="true" checked=""');
     expect(html).toContain(">/?aiAgent=true&amp;locale=nb-NO<");
-    // The button is only rendered while `AI_AGENT_ENABLED` is on.
-    expect(chrome.includes("data-uniformen-ai-agent-toggle")).toBe(AI_AGENT_ENABLED);
+    // The tests run with ENVIRONMENT=dev. In production the preview hides the AI agent.
+    expect(chrome).toContain("data-uniformen-ai-agent-toggle");
   });
 
   test("aiAgent=false leaves the control unchecked and the link without it", async () => {
