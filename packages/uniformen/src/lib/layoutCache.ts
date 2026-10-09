@@ -15,8 +15,8 @@ export const SIGNED_IN_STALE_MS = 60 * 60_000;
 export const MAX_ENTRIES_PER_CACHE = 100;
 
 /**
- * The most distinct strings `shared` keeps. The service sends a few versions of the
- * head assets, scripts and footer, so this is only reached after many deploys.
+ * The most distinct strings `shared` keeps. When the limit is reached, all of them
+ * are removed, so strings from old layouts do not stay in memory.
  */
 const MAX_SHARED_STRINGS = 20;
 

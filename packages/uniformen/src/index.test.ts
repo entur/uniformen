@@ -460,6 +460,16 @@ describe("retry", () => {
     expect(cancelled).toBe(2);
   });
 
+  it("does not retry a 200 whose body is not JSON", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(respondWith(() => new Response("<html>proxy page</html>")));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("does not retry a 4xx status when cancelling the body fails", async () => {
     suppressConsoleError();
     const failingCancel = () =>
@@ -483,6 +493,49 @@ describe("retry", () => {
 
     expect(await fetchUniformenLayout({ timeoutMs: 20 })).toBeNull();
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("invalid input", () => {
+  it("returns null for a timeoutMs the runtime rejects, without an unhandled rejection", async () => {
+    suppressConsoleError();
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      expect(await fetchUniformenLayout({ timeoutMs: Number.NaN })).toBeNull();
+      expect(await fetchUniformenLayout({ timeoutMs: -1 })).toBeNull();
+      await Bun.sleep(0);
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
+  it("returns null for a body that is JSON null", async () => {
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockImplementation(respondWith(() => new Response("null")));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+  });
+
+  it("uses an empty value for a field with the wrong type", async () => {
+    mockFetch({ headerHtml: 42, footerHtml: null, headAssets: "<style></style>", csp: null });
+
+    expect(await fetchUniformenLayout()).toEqual({
+      headerHtml: "",
+      footerHtml: "",
+      headAssets: "<style></style>",
+      scripts: "",
+      csp: {},
+    });
+  });
+
+  it("keeps only lists of strings in csp", async () => {
+    mockFetch({ csp: { "script-src": ["'self'", 1], "style-src": "'self'" } });
+
+    expect((await fetchUniformenLayout())?.csp).toEqual({ "script-src": ["'self'"] });
   });
 });
 

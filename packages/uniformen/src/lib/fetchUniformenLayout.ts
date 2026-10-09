@@ -97,6 +97,33 @@ function buildQueryString(params?: FetchUniformenParams): string {
 }
 
 /**
+ * Returns the layout from a response body. The body comes from the network, so a
+ * field can be missing or have the wrong type. Such a field gets an empty value.
+ * Returns `null` if the body is not an object.
+ */
+function parseLayout(body: unknown): UniformenLayout | null {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return null;
+  const fields: Record<string, unknown> = Object.fromEntries(Object.entries(body));
+  const text = (value: unknown) => (typeof value === "string" ? value : "");
+  const csp: Record<string, string[]> = {};
+  const cspField = fields["csp"];
+  if (typeof cspField === "object" && cspField !== null) {
+    for (const [directive, sources] of Object.entries(cspField)) {
+      if (Array.isArray(sources)) {
+        csp[directive] = sources.filter((source) => typeof source === "string");
+      }
+    }
+  }
+  return {
+    headerHtml: text(fields["headerHtml"]),
+    footerHtml: text(fields["footerHtml"]),
+    headAssets: text(fields["headAssets"]),
+    scripts: text(fields["scripts"]),
+    csp,
+  };
+}
+
+/**
  * Fetches the layout and returns it with its fresh lifetime. Tries once more if the
  * request fails with a network error or a 5xx status and the time budget is not
  * used up. A 4xx status means the request is wrong, so it is not retried.
@@ -118,14 +145,18 @@ async function fetchLayout(
         if (res.status < 500) return null;
         continue;
       }
-      // The body comes from the network, so a field can be missing. `Partial` makes
-      // every field optional, so the defaults below are used for a missing field.
-      const body: Partial<UniformenLayout> = await res.json();
-      const { headerHtml = "", footerHtml = "", headAssets = "", scripts = "", csp = {} } = body;
-      return {
-        layout: { headerHtml, footerHtml, headAssets, scripts, csp },
-        freshMs: freshLifetimeMs(res),
-      };
+      let body: unknown;
+      try {
+        body = await res.json();
+      } catch (e) {
+        if (signal.aborted) throw e;
+        // A body that is not JSON comes back the same on a retry, so do not retry.
+        console.error("Uniformen layout response is not valid JSON", e);
+        return null;
+      }
+      const layout = parseLayout(body);
+      if (!layout) console.error("Uniformen layout response is not an object");
+      return layout && { layout, freshMs: freshLifetimeMs(res) };
     } catch (e) {
       // Log a timeout with its own message. It usually means the service is
       // unhealthy, and a generic network error would point the reader to the wrong cause.
@@ -165,22 +196,24 @@ export async function fetchUniformenLayout({
   timeoutMs = DEFAULT_TIMEOUT_MS,
 }: FetchUniformenLayoutProps = {}): Promise<UniformenLayout | null> {
   const url = `${ENVIRONMENT_HOSTNAMES[environment]}/ssr${buildQueryString(params)}`;
-  const key = await cacheKey(url, token);
+  // If hashing fails, the call goes on without the cache.
+  const key = await cacheKey(url, token).catch(() => undefined);
   const signedIn = Boolean(token);
   const cached = key === undefined ? undefined : readCache(key, signedIn);
   if (cached && cached.freshUntil > Date.now()) return copyLayout(cached.layout);
 
   let pending = key === undefined ? undefined : inFlight.get(key);
   if (!pending) {
-    const request = fetchAndCache(url, token, timeoutMs, key);
-    pending = request;
+    const request = fetchAndCache(url, token, timeoutMs, key, signedIn);
     if (key !== undefined) {
       inFlight.set(key, request);
       // Only remove this request. After a clear, the key can belong to a newer one.
-      void request.finally(() => {
+      const remove = () => {
         if (inFlight.get(key) === request) inFlight.delete(key);
-      });
+      };
+      void request.then(remove, remove);
     }
+    pending = request;
   }
 
   const layout = await pending;
@@ -192,28 +225,37 @@ export async function fetchUniformenLayout({
 /**
  * Fetches the layout and writes it to the cache under `key`. Returns `null` if the
  * fetch fails or takes longer than `timeoutMs` plus `DEADLINE_MARGIN_MS`. When `key`
- * is `undefined`, the layout is not cached.
+ * is `undefined`, the layout is not cached. It never throws, because other calls can
+ * wait for the same promise.
  */
 async function fetchAndCache(
   url: string,
   token: string | undefined,
   timeoutMs: number,
   key: string | undefined,
+  signedIn: boolean,
 ): Promise<UniformenLayout | null> {
   const startGeneration = cacheGeneration();
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), timeoutMs + DEADLINE_MARGIN_MS);
-  });
-  const result = await Promise.race([fetchLayout(url, token, timeoutMs), deadline]).finally(() =>
-    clearTimeout(timer),
-  );
-  if (!result) return null;
-  if (key !== undefined) {
-    // A signed-in layout gets no fresh lifetime, so it is only used when a later
-    // fetch fails. The service also marks it `no-store`.
-    const freshMs = token ? 0 : result.freshMs;
-    writeCache(key, Boolean(token), result.layout, freshMs, startGeneration);
+  try {
+    const deadline = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), timeoutMs + DEADLINE_MARGIN_MS);
+    });
+    // `AbortSignal.timeout` throws for a `timeoutMs` such as `NaN` or -1. The catch
+    // below turns that into `null`.
+    const result = await Promise.race([fetchLayout(url, token, timeoutMs), deadline]);
+    if (!result) return null;
+    if (key !== undefined) {
+      // A signed-in layout gets no fresh lifetime, so it is only used when a later
+      // fetch fails.
+      const freshMs = signedIn ? 0 : result.freshMs;
+      writeCache(key, signedIn, result.layout, freshMs, startGeneration);
+    }
+    return result.layout;
+  } catch (e) {
+    console.error("Failed to fetch Uniformen layout", e);
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
-  return result.layout;
 }
