@@ -9,7 +9,7 @@ import { Footer } from "./Footer";
 import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
 import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenHeadScript";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
-import { ssrRequestMetric } from "../metrics";
+import { clientVersionLabel, ssrRequestMetric } from "../metrics";
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
@@ -96,6 +96,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       consumer_app: query?.app ?? "none",
       locale: query?.locale,
       authenticated: String(!!info),
+      client_version: clientVersionLabel(ctx.req.header("X-Uniformen-Client")),
     });
 
     // A response for a signed-in user contains the user's name, so no cache may
