@@ -1,5 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { serveStatic } from "hono/bun";
+import { chat, chatRoutes } from "./chat/chat";
+import { environment } from "./config";
 import { beginShutdown, isReady } from "./lifecycle";
 import { previewRoutes } from "./ssr/preview";
 import { uniformenSsrRoutes } from "./ssr/ssr";
@@ -36,6 +38,7 @@ app.use("/static/*", serveStatic({ root: "./src" }));
 
 uniformenSsrRoutes(app);
 previewRoutes(app);
+chatRoutes(app, chat, environment);
 
 app.doc("/doc", {
   openapi: "3.0.0",
@@ -48,7 +51,9 @@ app.doc("/doc", {
 // Only start the server when this file is run directly. Tests import `app`
 // without starting a server.
 if (import.meta.main) {
-  const server = Bun.serve({ port: PORT, fetch: app.fetch });
+  // Bun closes a connection that has been quiet for 10 seconds by default. A chat
+  // answer can take up to 30 seconds, plus 5 seconds for the machine token.
+  const server = Bun.serve({ port: PORT, fetch: app.fetch, idleTimeout: 60 });
 
   /**
    * Fails readiness, keeps serving for `SHUTDOWN_DRAIN_MS`, then stops accepting
