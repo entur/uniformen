@@ -64,7 +64,7 @@ const layout = await fetchUniformenLayout({
     loginUrl: "/auth/login",
     logoutUrl: "/auth/logout",
   },
-  timeoutMs: 5000, // default
+  timeoutMs: 1000, // default
 });
 ```
 
@@ -125,7 +125,7 @@ const { HeadAssets, Header, Footer, Scripts } = await fetchUniformenComponents({
 
 ### Step 4: Render without the chrome when the fetch fails
 
-`fetchUniformenLayout` returns `UniformenLayout | null`. It returns `null` for every kind of failure: a timeout (5 seconds by default), a network error, or a `400` for an invalid parameter. In that case the React components render nothing.
+`fetchUniformenLayout` returns `UniformenLayout | null`. When the fetch fails, it returns the last layout it got for the same options, if it has one. The package keeps those layouts in memory. It returns `null` when it has no such layout and the fetch fails: a timeout (1 second by default, retry included), a network error, or a `400` for an invalid parameter. In that case the React components render nothing.
 
 The page waits for the layout before it renders. So when you get `null`, render the page without the shared header and footer. Do not show an error page, throw an exception or retry while the page waits.
 
