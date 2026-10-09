@@ -178,6 +178,21 @@ describe("/ssr user menu", () => {
     expect(body.headerHtml).not.toContain("auth0|bare");
   });
 
+  test("only the user menu is hidden from PostHog autocapture", async () => {
+    userInfoMock.respond = () =>
+      Response.json({ sub: "auth0|test", name: "Synne Sporløs", email: "synne@entur.org" });
+    const token = await signInternalToken({ sub: "auth0|nocapture" });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    const html: string = body.headerHtml;
+    expect(html.match(/ph-no-capture/g)).toHaveLength(1);
+    const menuStart = html.indexOf('<div class="uniformen-user-menu ph-no-capture">');
+    expect(menuStart).toBeGreaterThan(-1);
+    expect(html.slice(0, menuStart)).not.toContain("Synne Sporløs");
+    expect(html.slice(0, menuStart)).not.toContain("synne@entur.org");
+    expect(html.slice(menuStart)).toContain("Synne Sporløs");
+    expect(html.slice(menuStart)).toContain("synne@entur.org");
+  });
+
   test("anonymous requests carry no menu and no account links", async () => {
     const body = await (await app.request("/ssr")).json();
     expect(body.headerHtml).not.toContain("uniformen-user-menu");

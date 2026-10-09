@@ -62,7 +62,7 @@ describe("preview page debug user", () => {
   test("no debugUser renders the anonymous bar", async () => {
     const { html } = await preview("?loginUrl=/auth/login");
     expect(html).not.toContain('id="uniformen-user-menu-panel"');
-    expect(html).not.toContain('class="uniformen-user-menu"');
+    expect(html).not.toContain('class="uniformen-user-menu ph-no-capture"');
     expect(html).toContain('href="/auth/login"');
   });
 
