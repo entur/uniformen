@@ -5,6 +5,7 @@ import {
   fetchUniformenLayout,
   type FetchUniformenParams,
 } from "./index";
+import { cachedLayoutCount, MAX_ENTRIES_PER_CACHE } from "./lib/layoutCache";
 import { PACKAGE_VERSION } from "./version";
 
 /**
@@ -459,6 +460,23 @@ describe("retry", () => {
     expect(cancelled).toBe(2);
   });
 
+  it("does not retry a 4xx status when cancelling the body fails", async () => {
+    suppressConsoleError();
+    const failingCancel = () =>
+      new Response(
+        new ReadableStream({
+          cancel: () => {
+            throw new Error("cancel failed");
+          },
+        }),
+        { status: 400 },
+      );
+    const fetchSpy = jest.spyOn(globalThis, "fetch").mockImplementation(respondWith(failingCancel));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("does not retry after the timeout", async () => {
     suppressConsoleError();
     mockSilentFetch();
@@ -575,9 +593,12 @@ describe("cache", () => {
     expect(await fetchUniformenLayout({ token: "user-a" })).toBeNull();
   });
 
-  it("evicts the least recently used layout when it holds 500", async () => {
+  it("evicts the least recently used signed-in layout when the cache is full", async () => {
     mockFetch(layout);
-    for (let i = 0; i < 501; i++) await fetchUniformenLayout({ token: `user-${i}` });
+    for (let i = 0; i <= MAX_ENTRIES_PER_CACHE; i++) {
+      await fetchUniformenLayout({ token: `user-${i}` });
+    }
+    expect(cachedLayoutCount()).toBe(MAX_ENTRIES_PER_CACHE);
 
     jest.restoreAllMocks();
     jest.spyOn(console, "warn").mockImplementation(() => {});
@@ -585,7 +606,76 @@ describe("cache", () => {
     jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
 
     expect(await fetchUniformenLayout({ token: "user-0" })).toBeNull();
-    expect(await fetchUniformenLayout({ token: "user-500" })).not.toBeNull();
+    expect(await fetchUniformenLayout({ token: `user-${MAX_ENTRIES_PER_CACHE}` })).not.toBeNull();
+  });
+
+  it("keeps anonymous layouts when many signed-in users arrive", async () => {
+    mockFetch(layout);
+    await fetchUniformenLayout({ params: { app: "partner" } });
+    for (let i = 0; i <= MAX_ENTRIES_PER_CACHE; i++) {
+      await fetchUniformenLayout({ token: `user-${i}` });
+    }
+
+    jest.restoreAllMocks();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+
+    expect(await fetchUniformenLayout({ params: { app: "partner" } })).not.toBeNull();
+  });
+
+  it("removes expired layouts on the next write, even if nobody reads them", async () => {
+    setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    mockFetch(layout);
+    await fetchUniformenLayout({ token: "user-a" });
+    await fetchUniformenLayout({ token: "user-b" });
+    expect(cachedLayoutCount()).toBe(2);
+
+    setSystemTime(new Date("2026-01-01T13:00:01Z"));
+    await fetchUniformenLayout();
+
+    expect(cachedLayoutCount()).toBe(1);
+  });
+
+  it("gives each caller its own copy of the csp lists", async () => {
+    mockFetch({ ...layout, csp: { "script-src": ["'sha256-a'"] } }, true, cacheable);
+    const first = await fetchUniformenLayout();
+    first?.csp["script-src"]?.push("'self'");
+
+    const second = await fetchUniformenLayout();
+    expect(second?.csp).toEqual({ "script-src": ["'sha256-a'"] });
+  });
+
+  it("does not write back a layout from a request that started before a clear", async () => {
+    let answer: (res: Response) => void = () => {};
+    jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(
+        (() => new Promise<Response>((resolve) => (answer = resolve))) as unknown as typeof fetch,
+      );
+    const running = fetchUniformenLayout();
+    // Let the call reach `fetch` before the cache is cleared.
+    await Bun.sleep(0);
+
+    clearUniformenLayoutCache();
+    answer(new Response(JSON.stringify(layout), { headers: cacheable }));
+    await running;
+
+    expect(cachedLayoutCount()).toBe(0);
+  });
+
+  it("gives up on a request that ignores its abort signal", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce((() => new Promise<Response>(() => {})) as unknown as typeof fetch);
+
+    expect(await fetchUniformenLayout({ timeoutMs: 20 })).toBeNull();
+
+    fetchSpy.mockImplementation(respondWith(() => new Response(JSON.stringify(layout))));
+    expect((await fetchUniformenLayout({ timeoutMs: 20 }))?.headerHtml).toBe(
+      "<header>first</header>",
+    );
   });
 
   it("does not cache a signed-in layout when the runtime cannot hash the token", async () => {

@@ -1,5 +1,6 @@
 import type { Environment, UniformenLayout, FetchUniformenParams } from "../types";
 import { PACKAGE_VERSION } from "../version";
+import { cacheGeneration, clearCache, readCache, writeCache } from "./layoutCache";
 
 /**
  * How long to wait for the layout, retry included, before the call gives up. Every
@@ -7,20 +8,6 @@ import { PACKAGE_VERSION } from "../version";
  * add to a render.
  */
 const DEFAULT_TIMEOUT_MS = 1_000;
-
-/**
- * How long a cached layout can be used when Uniformen fails. An anonymous layout is
- * the same for everyone, so it is kept for a day. A signed-in layout contains the
- * user's name, so it is kept for a shorter time.
- */
-const ANONYMOUS_STALE_MS = 24 * 60 * 60_000;
-const SIGNED_IN_STALE_MS = 60 * 60_000;
-
-/**
- * The most layouts the cache holds. Each signed-in user adds entries, so without a
- * limit the cache would grow for as long as the process runs.
- */
-const MAX_CACHE_ENTRIES = 500;
 
 /** Tells the service which version of this package made the request. */
 const CLIENT_HEADER = { "X-Uniformen-Client": `@entur/uniformen@${PACKAGE_VERSION}` };
@@ -32,55 +19,37 @@ const ENVIRONMENT_HOSTNAMES: Record<Environment, string> = {
   production: "https://uniformen.entur.no",
 } as const;
 
-type CacheEntry = {
-  layout: UniformenLayout;
-  /** Until this time the layout is used without asking Uniformen. */
-  freshUntil: number;
-  /** Until this time the layout is used when Uniformen fails. */
-  staleUntil: number;
-};
-
-/**
- * Layouts keyed by URL, and for a signed-in user also by a hash of the token. A
- * `Map` keeps insertion order, so the first key is the least recently used one.
- */
-const cache = new Map<string, CacheEntry>();
-
 /**
  * Requests that are running now, by cache key. Calls with the same key wait for the
  * same request, so an expired entry gives one request to Uniformen instead of one
- * per render. A caller that joins a running request also uses its `timeoutMs`.
+ * per render. A call that joins a running request waits as long as the first call's
+ * `timeoutMs`, not its own.
  */
 const inFlight = new Map<string, Promise<UniformenLayout | null>>();
+
+/**
+ * Extra time after `timeoutMs` before a shared request is given up, even if `fetch`
+ * does not stop when its signal aborts. Without it, a request that never ends would
+ * stay in `inFlight`, and every later call with the same key would wait for it.
+ */
+const DEADLINE_MARGIN_MS = 100;
 
 /**
  * Removes all cached layouts. Call it if your app must show a new layout at once,
  * for example after a Uniformen deploy.
  */
 export function clearUniformenLayoutCache(): void {
-  cache.clear();
+  clearCache();
+  inFlight.clear();
 }
 
-function readCache(key: string): CacheEntry | undefined {
-  const entry = cache.get(key);
-  if (!entry) return undefined;
-  if (entry.staleUntil <= Date.now()) {
-    cache.delete(key);
-    return undefined;
-  }
-  // Move the entry to the end, so it is the last one to be evicted.
-  cache.delete(key);
-  cache.set(key, entry);
-  return entry;
-}
-
-function writeCache(key: string, entry: CacheEntry): void {
-  cache.delete(key);
-  cache.set(key, entry);
-  if (cache.size > MAX_CACHE_ENTRIES) {
-    const oldest = cache.keys().next().value;
-    if (oldest !== undefined) cache.delete(oldest);
-  }
+/**
+ * Returns a copy of the layout. Callers get their own `csp` lists, so a caller that
+ * adds sources to them does not change the cached layout.
+ */
+function copyLayout(layout: UniformenLayout): UniformenLayout {
+  const csp = Object.fromEntries(Object.entries(layout.csp).map(([k, v]) => [k, [...v]]));
+  return { ...layout, csp };
 }
 
 /**
@@ -144,13 +113,13 @@ async function fetchLayout(
       const res = await fetch(url, { headers, signal });
       if (!res.ok) {
         // Cancel the unread body, so the connection is released at once.
-        await res.body?.cancel();
+        await res.body?.cancel().catch(() => {});
         console.error(`Uniformen layout request failed with status ${res.status}`);
         if (res.status < 500) return null;
         continue;
       }
-      // The body comes from the network, so a field can be missing. `Partial` keeps
-      // the defaults below meaningful.
+      // The body comes from the network, so a field can be missing. `Partial` makes
+      // every field optional, so the defaults below are used for a missing field.
       const body: Partial<UniformenLayout> = await res.json();
       const { headerHtml = "", footerHtml = "", headAssets = "", scripts = "", csp = {} } = body;
       return {
@@ -197,27 +166,33 @@ export async function fetchUniformenLayout({
 }: FetchUniformenLayoutProps = {}): Promise<UniformenLayout | null> {
   const url = `${ENVIRONMENT_HOSTNAMES[environment]}/ssr${buildQueryString(params)}`;
   const key = await cacheKey(url, token);
-  const cached = key === undefined ? undefined : readCache(key);
-  if (cached && cached.freshUntil > Date.now()) return cached.layout;
+  const signedIn = Boolean(token);
+  const cached = key === undefined ? undefined : readCache(key, signedIn);
+  if (cached && cached.freshUntil > Date.now()) return copyLayout(cached.layout);
 
   let pending = key === undefined ? undefined : inFlight.get(key);
   if (!pending) {
-    pending = fetchAndCache(url, token, timeoutMs, key);
+    const request = fetchAndCache(url, token, timeoutMs, key);
+    pending = request;
     if (key !== undefined) {
-      inFlight.set(key, pending);
-      void pending.finally(() => inFlight.delete(key));
+      inFlight.set(key, request);
+      // Only remove this request. After a clear, the key can belong to a newer one.
+      void request.finally(() => {
+        if (inFlight.get(key) === request) inFlight.delete(key);
+      });
     }
   }
 
   const layout = await pending;
-  if (layout) return layout;
+  if (layout) return copyLayout(layout);
   if (cached) console.warn("Using a cached Uniformen layout because the fetch failed");
-  return cached?.layout ?? null;
+  return cached ? copyLayout(cached.layout) : null;
 }
 
 /**
  * Fetches the layout and writes it to the cache under `key`. Returns `null` if the
- * fetch fails. When `key` is `undefined`, the layout is not cached.
+ * fetch fails or takes longer than `timeoutMs` plus `DEADLINE_MARGIN_MS`. When `key`
+ * is `undefined`, the layout is not cached.
  */
 async function fetchAndCache(
   url: string,
@@ -225,16 +200,20 @@ async function fetchAndCache(
   timeoutMs: number,
   key: string | undefined,
 ): Promise<UniformenLayout | null> {
-  const result = await fetchLayout(url, token, timeoutMs);
-  if (!result) return null;
-  if (key === undefined) return result.layout;
-  const now = Date.now();
-  writeCache(key, {
-    layout: result.layout,
-    // The service marks a signed-in layout `no-store`. It is only kept here for the
-    // case where a later fetch fails, so it is never used while the service answers.
-    freshUntil: token ? now : now + result.freshMs,
-    staleUntil: now + (token ? SIGNED_IN_STALE_MS : ANONYMOUS_STALE_MS),
+  const startGeneration = cacheGeneration();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs + DEADLINE_MARGIN_MS);
   });
+  const result = await Promise.race([fetchLayout(url, token, timeoutMs), deadline]).finally(() =>
+    clearTimeout(timer),
+  );
+  if (!result) return null;
+  if (key !== undefined) {
+    // A signed-in layout gets no fresh lifetime, so it is only used when a later
+    // fetch fails. The service also marks it `no-store`.
+    const freshMs = token ? 0 : result.freshMs;
+    writeCache(key, Boolean(token), result.layout, freshMs, startGeneration);
+  }
   return result.layout;
 }
