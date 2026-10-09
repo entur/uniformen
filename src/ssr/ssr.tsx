@@ -1,7 +1,7 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
 import { optionalAuth } from "../auth/optionalAuth";
-import { userInfoService } from "../auth/userInfo";
+import { type UserInfo, userInfoService } from "../auth/userInfo";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
@@ -10,6 +10,37 @@ import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts
 import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenHeadScript";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import { ssrRequestMetric } from "../metrics";
+import { PostHog } from "posthog-node";
+
+// Without POSTHOG_API_KEY, the AI agent feature flag is off for everyone. Without
+// retries, a slow PostHog delays a response by at most the 3 second flag timeout.
+const posthogApiKey = process.env["POSTHOG_API_KEY"];
+const posthog = posthogApiKey
+  ? new PostHog(posthogApiKey, {
+      host: "https://eu.i.posthog.com",
+      featureFlagsRequestMaxRetries: 0,
+    })
+  : undefined;
+
+export const aiAgentFlag = {
+  /**
+   * Checks whether the `ai-agent` feature flag in PostHog is on for the user.
+   * Returns false for an anonymous user and when PostHog fails, so PostHog never
+   * breaks the bar.
+   */
+  async isOn(info: UserInfo | undefined): Promise<boolean> {
+    if (!posthog || !info) return false;
+    const result = await posthog
+      .getFeatureFlagResult("ai-agent", info.sub, {
+        // The flag picks users by email. Only send a verified email, because anyone
+        // can sign up with an address that belongs to someone else.
+        personProperties: info.email_verified === true && info.email ? { email: info.email } : {},
+        sendFeatureFlagEvents: false,
+      })
+      .catch(() => undefined);
+    return result?.enabled ?? false;
+  },
+};
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
