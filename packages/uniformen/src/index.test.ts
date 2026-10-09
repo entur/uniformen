@@ -605,6 +605,43 @@ describe("cache", () => {
     }
   });
 
+  it("sends one request for calls with the same options at the same time", async () => {
+    const fetchSpy = mockFetch(layout, true, cacheable);
+    const layouts = await Promise.all([
+      fetchUniformenLayout({ params: { app: "partner" } }),
+      fetchUniformenLayout({ params: { app: "partner" } }),
+      fetchUniformenLayout({ params: { app: "partner" } }),
+    ]);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(layouts.map((l) => l?.headerHtml)).toEqual(Array(3).fill("<header>first</header>"));
+  });
+
+  it("does not share a request between different tokens", async () => {
+    const fetchSpy = mockFetch(layout);
+    await Promise.all([
+      fetchUniformenLayout({ token: "user-a" }),
+      fetchUniformenLayout({ token: "user-b" }),
+    ]);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends a new request after a shared request fails", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockRejectedValueOnce(new Error("network error"));
+    const failed = await Promise.all([fetchUniformenLayout(), fetchUniformenLayout()]);
+    expect(failed).toEqual([null, null]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    fetchSpy.mockImplementation(respondWith(() => new Response(JSON.stringify(layout))));
+    expect((await fetchUniformenLayout())?.headerHtml).toBe("<header>first</header>");
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
   it("fetches again after the cache is cleared", async () => {
     const fetchSpy = mockFetch(layout, true, cacheable);
     await fetchUniformenLayout();

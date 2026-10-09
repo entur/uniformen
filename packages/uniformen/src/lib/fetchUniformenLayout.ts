@@ -47,6 +47,13 @@ type CacheEntry = {
 const cache = new Map<string, CacheEntry>();
 
 /**
+ * Requests that are running now, by cache key. Calls with the same key wait for the
+ * same request, so an expired entry gives one request to Uniformen instead of one
+ * per render. A caller that joins a running request also uses its `timeoutMs`.
+ */
+const inFlight = new Map<string, Promise<UniformenLayout | null>>();
+
+/**
  * Removes all cached layouts. Call it if your app must show a new layout at once,
  * for example after a Uniformen deploy.
  */
@@ -193,12 +200,33 @@ export async function fetchUniformenLayout({
   const cached = key === undefined ? undefined : readCache(key);
   if (cached && cached.freshUntil > Date.now()) return cached.layout;
 
-  const result = await fetchLayout(url, token, timeoutMs);
-  if (!result) {
-    if (cached) console.warn("Using a cached Uniformen layout because the fetch failed");
-    return cached?.layout ?? null;
+  let pending = key === undefined ? undefined : inFlight.get(key);
+  if (!pending) {
+    pending = fetchAndCache(url, token, timeoutMs, key);
+    if (key !== undefined) {
+      inFlight.set(key, pending);
+      void pending.finally(() => inFlight.delete(key));
+    }
   }
 
+  const layout = await pending;
+  if (layout) return layout;
+  if (cached) console.warn("Using a cached Uniformen layout because the fetch failed");
+  return cached?.layout ?? null;
+}
+
+/**
+ * Fetches the layout and writes it to the cache under `key`. Returns `null` if the
+ * fetch fails. When `key` is `undefined`, the layout is not cached.
+ */
+async function fetchAndCache(
+  url: string,
+  token: string | undefined,
+  timeoutMs: number,
+  key: string | undefined,
+): Promise<UniformenLayout | null> {
+  const result = await fetchLayout(url, token, timeoutMs);
+  if (!result) return null;
   if (key === undefined) return result.layout;
   const now = Date.now();
   writeCache(key, {

@@ -213,6 +213,9 @@ combination of `environment` and `params` has its own entry.
   and for a signed-in user also the same token. An anonymous layout is kept for this
   for one day. If there is no such layout, the
   call returns `null`.
+- Calls with the same options, and for a signed-in user the same token, that run
+  at the same time share one request to Uniformen. A call that joins a running
+  request also uses that request's `timeoutMs`.
 - The memory holds at most 500 layouts. When it is full, the layout that was used
   least recently is removed.
 
