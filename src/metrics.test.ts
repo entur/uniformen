@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "./index";
-import { clientVersionLabel } from "./metrics";
+import { clientVersionLabel, MAX_CLIENT_VERSIONS } from "./metrics";
 
 /**
  * Returns the lines of the Prometheus scrape output. It requests the app, not the
@@ -93,5 +93,20 @@ describe("client version label", () => {
     expect(clientVersionLabel("curl/8.0")).toBe("unknown");
     expect(clientVersionLabel("@entur/uniformen@1.0.0 extra")).toBe("unknown");
     expect(clientVersionLabel("@entur/uniformen@1.0")).toBe("unknown");
+  });
+
+  test("stops adding versions to the label after the limit", async () => {
+    for (let i = 0; i < MAX_CLIENT_VERSIONS + 20; i++) {
+      await app.request("/ssr", { headers: { "X-Uniformen-Client": `@entur/uniformen@9.9.${i}` } });
+    }
+
+    const versions = new Set(
+      seriesFor(await metricLines(), "uniformen_ssr_requests").map(
+        (line) => /client_version="([^"]*)"/.exec(line)?.[1],
+      ),
+    );
+    // "none", "unknown" and "other" can also be present.
+    expect(versions.size).toBeLessThanOrEqual(MAX_CLIENT_VERSIONS + 3);
+    expect(versions).toContain("other");
   });
 });
