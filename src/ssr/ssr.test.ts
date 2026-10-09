@@ -661,6 +661,23 @@ describe("/ssr aiAgent query param", () => {
     }
   });
 
+  test("only a signed-in user gets a chat token", async () => {
+    const signedInBody = await signedIn("auth0|chat-token", "?aiAgent=true");
+    expect(signedInBody.headerHtml.includes("data-uniformen-chat-token=")).toBe(AI_AGENT_ENABLED);
+
+    const anonymous = await (await ssr("?aiAgent=true")).json();
+    expect(anonymous.headerHtml).not.toContain("data-uniformen-chat-token=");
+
+    const invalid = await app.request("/ssr?aiAgent=true", { headers: bearer("not-a-jwt") });
+    expect(invalid.status).toBe(200);
+    expect((await invalid.json()).headerHtml).not.toContain("data-uniformen-chat-token=");
+  });
+
+  test("a signed-in user without aiAgent gets no chat token", async () => {
+    const body = await signedIn("auth0|chat-no-agent");
+    expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
+  });
+
   test("the scripts and the CSP are the same with or without it", async () => {
     const withAgent = await (await ssr("?aiAgent=true")).json();
     const without = await (await ssr()).json();

@@ -1,9 +1,10 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
+import { chat, issueChatToken } from "../chat/chat";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
 import { optionalAuth } from "../auth/optionalAuth";
 import { userInfoService } from "../auth/userInfo";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
-import { TopNavigation } from "./TopNavigation";
+import { AI_AGENT_ENABLED, TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
 import { Footer } from "./Footer";
 import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts";
@@ -92,6 +93,14 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         }
       : undefined;
 
+    // Only a user with a profile gets a chat token. This keeps machine tokens out,
+    // but it also means a signed-in user has no chat while userinfo fails. Without
+    // a token, the drawer shows the error text for every question.
+    const chatToken =
+      info && tenant && payload?.sub && navProps.aiAgent && AI_AGENT_ENABLED
+        ? await issueChatToken(chat, `${tenant}|${payload.sub}`)
+        : undefined;
+
     ssrRequestMetric.inc({
       consumer_app: query?.app ?? "none",
       locale: query?.locale,
@@ -116,7 +125,12 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         // Put `user` and `isEnturUser` after `navProps` so the query cannot override
         // them. They must come from the verified token, never from the URL.
         headerHtml: await renderComponentToString(
-          <TopNavigation {...navProps} user={user} isEnturUser={isEnturOrganisation(info)} />,
+          <TopNavigation
+            {...navProps}
+            user={user}
+            isEnturUser={isEnturOrganisation(info)}
+            chat={chatToken}
+          />,
         ),
         footerHtml: await renderComponentToString(<Footer locale={navProps.locale} />),
         scripts: renderUniformenScripts(),
