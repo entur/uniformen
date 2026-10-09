@@ -14,12 +14,6 @@ export const SIGNED_IN_STALE_MS = 60 * 60_000;
  */
 export const MAX_ENTRIES_PER_CACHE = 100;
 
-/**
- * The most distinct strings `shared` keeps. When the limit is reached, all of them
- * are removed, so strings from old layouts do not stay in memory.
- */
-const MAX_SHARED_STRINGS = 20;
-
 type CacheEntry = {
   layout: UniformenLayout;
   /** Until this time the layout is used without asking Uniformen. */
@@ -36,12 +30,6 @@ const anonymousCache = new Map<string, CacheEntry>();
 const signedInCache = new Map<string, CacheEntry>();
 
 /**
- * One copy of each large string that many layouts contain. Without it, every cached
- * layout keeps its own copy of the same 30 KB of CSS and scripts.
- */
-const sharedStrings = new Map<string, string>();
-
-/**
  * Increases on every clear. A request that started before a clear checks it, so it
  * does not write an old layout back into the cache.
  */
@@ -51,7 +39,6 @@ let generation = 0;
 export function clearCache(): void {
   anonymousCache.clear();
   signedInCache.clear();
-  sharedStrings.clear();
   generation++;
 }
 
@@ -103,12 +90,7 @@ export function writeCache(
   const cache = cacheFor(signedIn);
   cache.delete(key);
   cache.set(key, {
-    layout: {
-      ...layout,
-      headAssets: shared(layout.headAssets),
-      scripts: shared(layout.scripts),
-      footerHtml: shared(layout.footerHtml),
-    },
+    layout,
     freshUntil: now + freshMs,
     staleUntil: now + (signedIn ? SIGNED_IN_STALE_MS : ANONYMOUS_STALE_MS),
   });
@@ -122,13 +104,4 @@ function removeExpired(cache: Map<string, CacheEntry>, now: number): void {
   for (const [key, entry] of cache) {
     if (entry.staleUntil <= now) cache.delete(key);
   }
-}
-
-/** Returns the stored copy of `value` if there is one. Otherwise it stores `value`. */
-function shared(value: string): string {
-  const existing = sharedStrings.get(value);
-  if (existing !== undefined) return existing;
-  if (sharedStrings.size >= MAX_SHARED_STRINGS) sharedStrings.clear();
-  sharedStrings.set(value, value);
-  return value;
 }
