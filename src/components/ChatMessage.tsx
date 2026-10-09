@@ -61,7 +61,8 @@ export function ChatMessage(
           ))}
         </ul>
       ) : (
-        <p class="uniformen-chat-bubble">{props.text}</p>
+        // A `div`, because an answer can hold paragraphs and lists.
+        <div class="uniformen-chat-bubble">{props.text}</div>
       )}
     </article>
   );

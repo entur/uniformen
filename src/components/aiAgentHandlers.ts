@@ -42,13 +42,23 @@ export default function aiAgentHandlers() {
       setDrawerOpen(false);
       button.focus();
     } else if (target.closest("[data-uniformen-chat-send]")) {
-      sendQuestion();
+      void sendQuestion();
     } else if (target.closest("[data-uniformen-new-chat]")) {
       startNewChat();
     } else {
       const example = target.closest("[data-uniformen-chat-example]");
       if (example) useExample(example);
     }
+  });
+
+  // Enter sends the question. Shift+Enter adds a new line.
+  drawer.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    if (!(event.target instanceof Element) || !event.target.closest(".uniformen-chat-textarea")) {
+      return;
+    }
+    event.preventDefault();
+    void sendQuestion();
   });
 
   document.addEventListener("keydown", (event) => {
@@ -70,28 +80,147 @@ export default function aiAgentHandlers() {
     textarea()?.focus();
   }
 
+  // The sporai session of this chat. The first answer gives it. `startNewChat`
+  // forgets it, so the next question starts a new session.
+  let session: string | undefined;
+  // Counts the questions sent. An answer that arrives after "New chat" belongs to
+  // an older question, so it is not shown.
+  let questionCount = 0;
+  let waiting = false;
+
   /**
-   * Adds the question in the text field to the chat, and empties the field. Does
-   * nothing when the field is empty.
+   * Adds the question in the text field to the chat, empties the field and adds the
+   * answer when it arrives. Does nothing when the field is empty, or while the
+   * answer to the previous question is still on its way.
    */
-  function sendQuestion() {
+  async function sendQuestion() {
     const field = textarea();
     const question = field?.value.trim();
-    if (!field || !question) return;
+    if (!field || !question || waiting) return;
 
     toggleExamplesVisible(false);
-    // Remove the typing message first, so the new question is added after the
-    // earlier messages and not after the typing dots.
-    hideTyping();
     const message = addMessage("[data-uniformen-chat-user-template]");
     // Use `textContent`, not `innerHTML`, so the text cannot add HTML to the page.
     const bubble = message?.querySelector(".uniformen-chat-bubble");
     if (bubble) bubble.textContent = question;
     showTyping();
-    // TODO: Send the question to the backend here. Call `hideTyping` when the reply
-    // arrives, before the reply is added to the chat.
     field.value = "";
     field.focus();
+
+    waiting = true;
+    const count = ++questionCount;
+    const reply = await askAgent(question, count);
+    if (count !== questionCount) return;
+    waiting = false;
+    hideTyping();
+    const answer = addMessage("[data-uniformen-chat-agent-template]");
+    const answerBubble = answer?.querySelector(".uniformen-chat-bubble");
+    if (answerBubble) renderMarkdown(answerBubble, reply);
+  }
+
+  /**
+   * Shows `text` in `target`, with the markdown that sporai uses: paragraphs, bullet
+   * and numbered lists, headings and bold text. The answer comes from a language
+   * model, so the elements are created here and the text is only ever added as text.
+   * Other markdown, such as links, stays as plain text.
+   */
+  function renderMarkdown(target: Element, text: string) {
+    target.textContent = "";
+    let list: HTMLElement | null = null;
+    let listTag = "";
+    let paragraph: HTMLElement | null = null;
+    for (const line of text.split("\n")) {
+      const trimmed = line.trim();
+      // A blank line ends the paragraph or list.
+      if (!trimmed) {
+        list = null;
+        paragraph = null;
+        continue;
+      }
+      const item = /^(?:[*-]|(\d+)\.)\s+(.*)$/.exec(trimmed);
+      if (item) {
+        const tag = item[1] ? "ol" : "ul";
+        if (!list || listTag !== tag) {
+          list = document.createElement(tag);
+          listTag = tag;
+          target.append(list);
+        }
+        const entry = document.createElement("li");
+        addInline(entry, item[2] ?? "");
+        list.append(entry);
+        paragraph = null;
+        continue;
+      }
+      list = null;
+      const heading = /^#{1,6}\s+(.*)$/.exec(trimmed);
+      if (heading) {
+        // A heading in a short chat answer is shown as a bold paragraph.
+        const strong = document.createElement("strong");
+        addInline(strong, heading[1] ?? "");
+        const block = document.createElement("p");
+        block.append(strong);
+        target.append(block);
+        paragraph = null;
+        continue;
+      }
+      // Lines next to each other belong to the same paragraph.
+      if (paragraph) {
+        paragraph.append(document.createElement("br"));
+      } else {
+        paragraph = document.createElement("p");
+        target.append(paragraph);
+      }
+      addInline(paragraph, trimmed);
+    }
+  }
+
+  /** Adds `text` to `target`, and makes the parts between pairs of `**` bold. */
+  function addInline(target: Element, text: string) {
+    const parts = text.split("**");
+    // An even number of parts means a `**` without a partner. Keep the text as it is.
+    if (parts.length % 2 === 0) {
+      target.append(text);
+      return;
+    }
+    for (const [index, part] of parts.entries()) {
+      if (!part) continue;
+      if (index % 2 === 0) {
+        target.append(part);
+      } else {
+        const strong = document.createElement("strong");
+        strong.textContent = part;
+        target.append(strong);
+      }
+    }
+  }
+
+  /**
+   * Sends the question to the chat URL on the drawer, and returns the answer. Returns
+   * the drawer's error text when the request fails or the drawer has no chat URL.
+   * Only updates the session when `count` is still the newest question.
+   */
+  async function askAgent(text: string, count: number): Promise<string> {
+    const url = drawer?.getAttribute("data-uniformen-chat-url");
+    const token = drawer?.getAttribute("data-uniformen-chat-token");
+    const errorText = drawer?.getAttribute("data-uniformen-chat-error") ?? "";
+    if (!url || !token) return errorText;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        // The token is the only credential. Cookies for the page must not be sent.
+        credentials: "omit",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ text, session, page: window.location.pathname }),
+      });
+      // 410 means the session has expired, so the next question starts a new one.
+      if (res.status === 410 && count === questionCount) session = undefined;
+      if (!res.ok) return errorText;
+      const body: { reply: string; session: string } = await res.json();
+      if (count === questionCount) session = body.session;
+      return body.reply;
+    } catch {
+      return errorText;
+    }
   }
 
   /** Sends the text of the example question that the user clicked. */
@@ -99,7 +228,7 @@ export default function aiAgentHandlers() {
     const field = textarea();
     if (!field) return;
     field.value = example.textContent ?? "";
-    sendQuestion();
+    void sendQuestion();
   }
 
   /**
@@ -108,7 +237,10 @@ export default function aiAgentHandlers() {
    * rendered stay.
    */
   function startNewChat() {
-    // TODO: Ask the backend to start a new chat when the chat is connected to it.
+    // Sporai removes the old session by itself when it has not been used for a while.
+    session = undefined;
+    questionCount++;
+    waiting = false;
     for (const message of drawer?.querySelectorAll("[data-uniformen-chat-added]") ?? []) {
       message.remove();
     }

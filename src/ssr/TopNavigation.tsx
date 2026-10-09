@@ -42,6 +42,7 @@ export function TopNavigation({
   loginUrl,
   logoutUrl,
   aiAgent,
+  chat,
 }: {
   /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
@@ -86,6 +87,8 @@ export function TopNavigation({
   availableLocales?: Locale[];
   /** Whether to render the AI agent button and its chat drawer. */
   aiAgent?: boolean;
+  /** The chat URL and token for the chat drawer. See `issueChatToken`. */
+  chat?: { url: string; token: string };
 }) {
   const txt = texts[locale];
   // Also narrows the type, because `LocaleSwitcher` needs a defined list.
@@ -105,7 +108,7 @@ export function TopNavigation({
           {aiAgent && AI_AGENT_ENABLED && (
             <>
               <AiButton locale={locale} />
-              <ChatDrawer locale={locale} />
+              <ChatDrawer locale={locale} chat={chat} />
             </>
           )}
           {/* Only for anonymous users. Signed-in users get the language options in

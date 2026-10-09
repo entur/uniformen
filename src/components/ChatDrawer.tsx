@@ -11,6 +11,7 @@ const texts = {
     agentWelcomeText: "Hei! Hva lurer du på?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "hjemmesiden",
+    error: "Beklager, jeg kunne ikke svare nå. Prøv igjen litt senere.",
     examples: [
       "Hvordan endrer jeg passord?",
       "Hvordan gir jeg en kollega tilgang?",
@@ -22,6 +23,7 @@ const texts = {
     agentWelcomeText: "Hei! Kva lurer du på?",
     userLocation: "Du er her: ",
     unspecifiedLocation: "heimesida",
+    error: "Beklagar, eg kunne ikkje svare no. Prøv igjen litt seinare.",
     examples: [
       "Korleis endrar eg passord?",
       "Korleis gir eg ein kollega tilgang?",
@@ -33,6 +35,7 @@ const texts = {
     agentWelcomeText: "Hi! What would you like to know?",
     userLocation: "You are here: ",
     unspecifiedLocation: "homepage",
+    error: "Sorry, I could not answer right now. Please try again later.",
     examples: [
       "How do I change my password?",
       "How do I give a colleague access?",
@@ -45,12 +48,25 @@ const texts = {
  * Renders the AI agent's chat drawer. It is hidden until the user clicks the AI agent
  * button, and then it slides in from the right side of the window.
  */
-export function ChatDrawer({ locale }: { locale: Locale }) {
+export function ChatDrawer({
+  locale,
+  chat,
+}: {
+  locale: Locale;
+  /**
+   * Where the browser sends questions, and the token it sends with them. Without
+   * it, every question gets the error text.
+   */
+  chat?: { url: string; token: string };
+}) {
   const txt = texts[locale];
   return (
     <div
       hidden
       id="uniformen-chat-drawer"
+      data-uniformen-chat-url={chat?.url}
+      data-uniformen-chat-token={chat?.token}
+      data-uniformen-chat-error={txt.error}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"
@@ -74,6 +90,9 @@ export function ChatDrawer({ locale }: { locale: Locale }) {
       {/* The browser copies these messages into the chat. See `aiAgentHandlers`. */}
       <template data-uniformen-chat-user-template>
         <ChatMessage sender="user" text="" locale={locale} />
+      </template>
+      <template data-uniformen-chat-agent-template>
+        <ChatMessage sender="agent" text="" locale={locale} />
       </template>
       <template data-uniformen-chat-typing-template>
         <ChatMessage sender="agent" typing locale={locale} />

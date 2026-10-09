@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
-import { previewIsEnturUser, previewUser } from "./preview";
+import { previewChat, previewIsEnturUser, previewUser } from "./preview";
 import { PreviewControls } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
@@ -276,6 +276,24 @@ describe("preview page aiAgent", () => {
     for (const query of ["?aiAgent=yes", "?aiAgent=1", "?aiAgent="]) {
       expect((await preview(query)).res.status).toBe(400);
     }
+  });
+
+  test("only local development gets a chat token, and only for a debug user", async () => {
+    const query = { debugUser: "Test", aiAgent: "true" } as const;
+    expect(await previewChat(query, "local")).toEqual({
+      url: expect.stringMatching(/\/chat$/),
+      token: expect.any(String),
+    });
+    for (const env of ["dev", "staging", "production"] as const) {
+      expect(await previewChat(query, env)).toBeUndefined();
+    }
+    expect(await previewChat({ aiAgent: "true" }, "local")).toBeUndefined();
+    expect(await previewChat({ debugUser: "Test", aiAgent: "false" }, "local")).toBeUndefined();
+  });
+
+  test("the drawer on the dev preview page has no chat token", async () => {
+    const { chrome } = await preview("?aiAgent=true&debugUser=Test");
+    expect(chrome).not.toContain("data-uniformen-chat-token");
   });
 
   test("the control sits with the right side of the bar", async () => {

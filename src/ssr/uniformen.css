@@ -913,6 +913,7 @@
 
 .uniformen-chat-message--agent {
   align-self: flex-start;
+  max-width: 90%;
 }
 
 .uniformen-chat-message--user {
@@ -943,6 +944,20 @@
   /* Keep the line breaks in the message, and break long words such as URLs. */
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* The paragraphs and lists in an answer. See `renderMarkdown` in `aiAgentHandlers`. */
+.uniformen-chat-bubble :is(p, ul, ol) {
+  margin: 0;
+  white-space: normal;
+}
+
+.uniformen-chat-bubble :is(p, ul, ol) + :is(p, ul, ol) {
+  margin-top: var(--uniformen-space-small);
+}
+
+.uniformen-chat-bubble :is(ul, ol) {
+  padding-left: var(--uniformen-space-medium);
 }
 
 .uniformen-chat-message--agent .uniformen-chat-bubble {

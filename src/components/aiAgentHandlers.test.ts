@@ -10,6 +10,8 @@ import aiAgentHandlers from "./aiAgentHandlers";
 type Listener = (event: unknown) => void;
 
 class FakeElement {
+  /** Lower case, unlike the real DOM. `#text` for the text that `append` adds. */
+  tagName = "div";
   readonly attributes = new Map<string, string>();
   readonly children: FakeElement[] = [];
   parent: FakeElement | null = null;
@@ -19,7 +21,7 @@ class FakeElement {
   scrollHeight = 100;
   focused = 0;
   readonly style: Record<string, string> = {};
-  private text = "";
+  text = "";
   private readonly listeners = new Map<string, Listener[]>();
   /** Called when the element gets focus. The setup uses it to set `document.activeElement`. */
   onFocus?: (element: FakeElement) => void;
@@ -71,9 +73,26 @@ class FakeElement {
     return this.querySelectorAll(selector)[0] ?? null;
   }
 
-  append(child: FakeElement): void {
+  append(child: FakeElement | string): void {
+    if (typeof child === "string") {
+      const text = new FakeElement();
+      text.tagName = "#text";
+      text.textContent = child;
+      child = text;
+    }
     child.parent = this;
     this.children.push(child);
+  }
+
+  /** Returns the elements and text inside this element, written as HTML without attributes. */
+  markup(): string {
+    return this.children
+      .map((child) =>
+        child.tagName === "#text"
+          ? child.textContent
+          : `<${child.tagName}>${child.text}${child.markup()}</${child.tagName}>`,
+      )
+      .join("");
   }
 
   remove(): void {
@@ -102,6 +121,11 @@ class FakeElement {
 
   addEventListener(type: string, listener: Listener): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  /** Runs the listeners for `type` on this element only. */
+  fire(type: string, event: unknown): void {
+    for (const listener of this.listeners.get(type) ?? []) listener(event);
   }
 
   /** Runs the click listeners on this element and on each parent, as a bubbling click does. */
@@ -139,6 +163,12 @@ class FakeDocument {
     return id === "uniformen-chat-drawer" ? this.drawer : null;
   }
 
+  createElement(tagName: string): FakeElement {
+    const element = new FakeElement();
+    element.tagName = tagName;
+    return element;
+  }
+
   addEventListener(type: string, listener: Listener): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
   }
@@ -165,7 +195,10 @@ const saved = {
   HTMLElement: globals["HTMLElement"],
   document: globals["document"],
   window: globals["window"],
+  fetch: globals["fetch"],
 };
+
+type FetchCall = { url: string; init: RequestInit & { body: string } };
 
 function bubble(text = ""): FakeElement {
   const element = new FakeElement({ class: "uniformen-chat-bubble" });
@@ -177,7 +210,17 @@ function install({
   pathname = "/",
   button: withButton = true,
   drawer: withDrawer = true,
-}: { pathname?: string; button?: boolean; drawer?: boolean } = {}) {
+  chat = true,
+  respond = () => Response.json({ reply: "Svar", session: "s-1" }),
+}: {
+  pathname?: string;
+  button?: boolean;
+  drawer?: boolean;
+  /** Whether the drawer has a chat URL and token. */
+  chat?: boolean;
+  /** The answer from `/chat`. */
+  respond?: () => Response | Promise<Response>;
+} = {}) {
   const button = new FakeElement({
     "data-uniformen-ai-agent-toggle": "",
     "aria-expanded": "false",
@@ -197,24 +240,34 @@ function install({
   const locationName = new FakeElement({ class: "uniformen-chat-drawer__location-name" });
   locationName.textContent = "hjemmesiden";
 
-  const drawer = new FakeElement({ id: "uniformen-chat-drawer" }, [
-    close,
-    chatWindow,
-    new FakeTemplate(
-      "data-uniformen-chat-user-template",
-      new FakeElement({ class: "uniformen-chat-message" }, [bubble()]),
-    ),
-    new FakeTemplate(
-      "data-uniformen-chat-typing-template",
-      new FakeElement({ class: "uniformen-chat-message" }, [
-        new FakeElement({ class: "uniformen-chat-typing" }),
-      ]),
-    ),
-    textarea,
-    send,
-    newChat,
-    locationName,
-  ]);
+  const chatAttributes: Record<string, string> = chat
+    ? { "data-uniformen-chat-url": "https://uniformen.test/chat", "data-uniformen-chat-token": "t" }
+    : {};
+  const drawer = new FakeElement(
+    { id: "uniformen-chat-drawer", "data-uniformen-chat-error": "Feil", ...chatAttributes },
+    [
+      close,
+      chatWindow,
+      new FakeTemplate(
+        "data-uniformen-chat-user-template",
+        new FakeElement({ class: "uniformen-chat-message" }, [bubble()]),
+      ),
+      new FakeTemplate(
+        "data-uniformen-chat-agent-template",
+        new FakeElement({ class: "uniformen-chat-message" }, [bubble()]),
+      ),
+      new FakeTemplate(
+        "data-uniformen-chat-typing-template",
+        new FakeElement({ class: "uniformen-chat-message" }, [
+          new FakeElement({ class: "uniformen-chat-typing" }),
+        ]),
+      ),
+      textarea,
+      send,
+      newChat,
+      locationName,
+    ],
+  );
   drawer.hidden = true;
 
   const doc = new FakeDocument(withButton ? button : null, withDrawer ? drawer : null);
@@ -226,6 +279,11 @@ function install({
   globals["HTMLElement"] = FakeElement;
   globals["document"] = doc;
   globals["window"] = win;
+  const calls: FetchCall[] = [];
+  globals["fetch"] = async (url: string, init: FetchCall["init"]) => {
+    calls.push({ url, init });
+    return respond();
+  };
 
   aiAgentHandlers();
 
@@ -252,6 +310,22 @@ function install({
     type,
     typing: () => chatWindow.querySelectorAll("[data-uniformen-chat-typing]").length,
     escape: () => doc.fire("keydown", { key: "Escape" }),
+    /** Presses a key in the text field. Returns whether the default action was stopped. */
+    press: (key: string, shiftKey = false) => {
+      let prevented = false;
+      drawer.fire("keydown", {
+        key,
+        shiftKey,
+        target: textarea,
+        preventDefault: () => (prevented = true),
+      });
+      return prevented;
+    },
+    calls,
+    /** The markup in the newest message bubble. */
+    lastBubble: () => chatWindow.querySelectorAll(".uniformen-chat-bubble").at(-1)?.markup(),
+    /** The JSON body of each request to `/chat`. */
+    bodies: () => calls.map((call) => JSON.parse(call.init.body)),
   };
 }
 
@@ -260,7 +334,11 @@ afterEach(() => {
   globals["HTMLElement"] = saved.HTMLElement;
   globals["document"] = saved.document;
   globals["window"] = saved.window;
+  globals["fetch"] = saved.fetch;
 });
+
+/** Lets the fake request and the code that waits for it finish. */
+const answered = () => Bun.sleep(1);
 
 describe("aiAgentHandlers", () => {
   test("does nothing and adds no listeners when the drawer or the button is missing", () => {
@@ -348,15 +426,108 @@ describe("aiAgentHandlers", () => {
     expect(page.examples.hidden).toBe(false);
   });
 
-  test("the chat shows one typing message, after the newest question", () => {
+  test("the answer replaces the typing message", async () => {
+    const page = install();
+    page.type("Hvor er fakturaene?");
+    page.send.click();
+    await answered();
+    expect(page.messages()).toEqual(["Hei!", "Hvor er fakturaene?", "Svar"]);
+    expect(page.typing()).toBe(0);
+  });
+
+  test("sends the question with the token, the path and no cookies", async () => {
+    const page = install({ pathname: "/price-and-product/fare-structures" });
+    page.type("Hei");
+    page.send.click();
+    await answered();
+    const [call] = page.calls;
+    expect(call?.url).toBe("https://uniformen.test/chat");
+    expect(call?.init.credentials).toBe("omit");
+    expect(call?.init.headers).toEqual({
+      Authorization: "Bearer t",
+      "Content-Type": "application/json",
+    });
+    expect(page.bodies()).toEqual([{ text: "Hei", page: "/price-and-product/fare-structures" }]);
+  });
+
+  test("the next question uses the session from the answer", async () => {
+    const page = install();
+    page.type("Første");
+    page.send.click();
+    await answered();
+    page.type("Andre");
+    page.send.click();
+    await answered();
+    expect(page.bodies().map((body) => body.session)).toEqual([undefined, "s-1"]);
+  });
+
+  test("a second question waits until the first is answered", async () => {
     const page = install();
     page.type("Første");
     page.send.click();
     page.type("Andre");
     page.send.click();
-    expect(page.typing()).toBe(1);
-    expect(page.chatWindow.children.at(-1)?.querySelector(".uniformen-chat-typing")).not.toBeNull();
-    expect(page.messages()).toEqual(["Hei!", "Første", "Andre"]);
+    expect(page.textarea.value).toBe("Andre");
+    expect(page.messages()).toEqual(["Hei!", "Første"]);
+    await answered();
+    expect(page.calls).toHaveLength(1);
+  });
+
+  test.each([
+    ["the request fails", { respond: () => Promise.reject(new Error("offline")) }],
+    ["the server answers with an error", { respond: () => new Response(null, { status: 502 }) }],
+    ["the drawer has no chat URL", { chat: false }],
+  ])("shows the error text when %s", async (_name, options) => {
+    const page = install(options);
+    page.type("Hei");
+    page.send.click();
+    await answered();
+    expect(page.messages()).toEqual(["Hei!", "Hei", "Feil"]);
+  });
+
+  test("an expired session is forgotten", async () => {
+    let status = 200;
+    const page = install({
+      respond: () =>
+        status === 200
+          ? Response.json({ reply: "Svar", session: "s-1" })
+          : new Response(null, { status }),
+    });
+    page.type("Første");
+    page.send.click();
+    await answered();
+    status = 410;
+    page.type("Andre");
+    page.send.click();
+    await answered();
+    status = 200;
+    page.type("Tredje");
+    page.send.click();
+    await answered();
+    expect(page.bodies().map((body) => body.session)).toEqual([undefined, "s-1", undefined]);
+  });
+
+  test("an answer that arrives after a new chat is not shown", async () => {
+    const page = install();
+    page.type("Gammel");
+    page.send.click();
+    page.newChat.click();
+    await answered();
+    expect(page.messages()).toEqual(["Hei!"]);
+    page.type("Ny");
+    page.send.click();
+    await answered();
+    expect(page.messages()).toEqual(["Hei!", "Ny", "Svar"]);
+    expect(page.bodies().map((body) => body.session)).toEqual([undefined, undefined]);
+  });
+
+  test("Enter sends the question and Shift+Enter does not", () => {
+    const page = install();
+    page.type("Hei");
+    expect(page.press("Enter", true)).toBe(false);
+    expect(page.messages()).toEqual(["Hei!"]);
+    expect(page.press("Enter")).toBe(true);
+    expect(page.messages()).toEqual(["Hei!", "Hei"]);
   });
 
   test("a click on an example sends its text", () => {
@@ -380,9 +551,51 @@ describe("aiAgentHandlers", () => {
     expect(aiAgentHandlers.toString()).not.toContain("reload");
   });
 
-  test("the question is set as text, never as HTML", () => {
+  test("the question is set as text and nothing is set as HTML", () => {
     const source = aiAgentHandlers.toString();
-    expect(source).not.toContain("innerHTML");
+    expect(source).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML/);
     expect(source).toContain("textContent = question");
+  });
+
+  test.each([
+    ["a paragraph", "Hei der", "<p>Hei der</p>"],
+    ["lines in one paragraph", "Linje en\nLinje to", "<p>Linje en<br></br>Linje to</p>"],
+    ["two paragraphs", "En\n\nTo", "<p>En</p><p>To</p>"],
+    [
+      "a bullet list with bold text",
+      "* **SSO (Single Sign-On):** logg inn én gang\n- Roller",
+      "<ul><li><strong>SSO (Single Sign-On):</strong> logg inn én gang</li><li>Roller</li></ul>",
+    ],
+    ["a numbered list", "1. Først\n2. Så", "<ol><li>Først</li><li>Så</li></ol>"],
+    [
+      "a heading, a paragraph and a list",
+      "## Tilgang\nSlik gjør du:\n* Gå til Tilgang",
+      "<p><strong>Tilgang</strong></p><p>Slik gjør du:</p><ul><li>Gå til Tilgang</li></ul>",
+    ],
+    ["a ** without a partner", "2 ** 3", "<p>2 ** 3</p>"],
+    ["a link, which stays text", "[Entur](https://entur.no)", "<p>[Entur](https://entur.no)</p>"],
+    [
+      "HTML, which stays text",
+      "<img src=x onerror=alert(1)>",
+      "<p><img src=x onerror=alert(1)></p>",
+    ],
+  ])("shows the markdown in an answer: %s", async (_name, reply, markup) => {
+    const page = install({ respond: () => Response.json({ reply, session: "s-1" }) });
+    page.type("Hei");
+    page.send.click();
+    await answered();
+    expect(page.lastBubble()).toBe(markup);
+  });
+
+  test("HTML in an answer is added as text, not as elements", async () => {
+    const page = install({
+      respond: () => Response.json({ reply: "<script>alert(1)</script>", session: "s-1" }),
+    });
+    page.type("Hei");
+    page.send.click();
+    await answered();
+    const answer = page.chatWindow.querySelectorAll(".uniformen-chat-bubble").at(-1);
+    expect(answer?.children.map((child) => child.tagName)).toEqual(["p"]);
+    expect(answer?.children[0]?.children.map((child) => child.tagName)).toEqual(["#text"]);
   });
 });
