@@ -151,3 +151,7 @@ Security reasoning, TODOs, ticket keys, "delete when" notes and lint directives 
 - `loginUrl` and `logoutUrl` accept only a path on the app's own origin. Absolute
   URLs, `//host` and `javascript:` are rejected with a 400. This protects against open
   redirects, so keep the check strict.
+- Markup that shows personal data, such as the user's name or email, must be inside
+  an element with the `ph-no-capture` class. Apps that embed the bar may run PostHog
+  with autocapture on, and autocapture records the text of clicked elements. Do not
+  put the class on the whole bar, because clicks elsewhere are useful analytics.
