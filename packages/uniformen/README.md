@@ -209,8 +209,9 @@ combination of `environment` and `params` has its own entry.
   fetch fails. It stores a SHA-256 hash of the token, not the token itself.
 - If a request fails with a network error or a `5xx` status, the package tries once
   more within the same `timeoutMs`. A `4xx` status is not retried.
-- If the fetch fails, the call returns the last layout it got for the same options.
-  An anonymous layout is kept for this for one day. If there is no such layout, the
+- If the fetch fails, the call returns the last layout it got for the same options,
+  and for a signed-in user also the same token. An anonymous layout is kept for this
+  for one day. If there is no such layout, the
   call returns `null`.
 - The memory holds at most 500 layouts. When it is full, the layout that was used
   least recently is removed.

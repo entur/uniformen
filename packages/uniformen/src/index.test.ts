@@ -51,12 +51,13 @@ function suppressConsoleError() {
  * Mocks a service that accepts the connection and never answers. The request only
  * ends when its signal aborts.
  */
+const silentFetch = ((_url: unknown, init?: { signal?: AbortSignal }) =>
+  new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+  })) as unknown as typeof fetch;
+
 function mockSilentFetch() {
-  const silent = (_url: unknown, init?: { signal?: AbortSignal }) =>
-    new Promise<Response>((_resolve, reject) => {
-      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
-    });
-  jest.spyOn(globalThis, "fetch").mockImplementation(silent as unknown as typeof fetch);
+  jest.spyOn(globalThis, "fetch").mockImplementation(silentFetch);
 }
 
 afterEach(() => {
@@ -434,6 +435,30 @@ describe("retry", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("uses one time budget for both attempts", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockImplementationOnce(silentFetch);
+
+    expect(await fetchUniformenLayout({ timeoutMs: 20 })).toBeNull();
+    const [first, second] = fetchSpy.mock.calls.map(([, init]) => init?.signal);
+    expect(second).toBe(first);
+    expect(second?.aborted).toBe(true);
+  });
+
+  it("cancels the body of a failed response", async () => {
+    suppressConsoleError();
+    let cancelled = 0;
+    const failedResponse = () =>
+      new Response(new ReadableStream({ cancel: () => void cancelled++ }), { status: 503 });
+    jest.spyOn(globalThis, "fetch").mockImplementation(respondWith(failedResponse));
+
+    await fetchUniformenLayout();
+    expect(cancelled).toBe(2);
+  });
+
   it("does not retry after the timeout", async () => {
     suppressConsoleError();
     mockSilentFetch();
@@ -561,6 +586,23 @@ describe("cache", () => {
 
     expect(await fetchUniformenLayout({ token: "user-0" })).toBeNull();
     expect(await fetchUniformenLayout({ token: "user-500" })).not.toBeNull();
+  });
+
+  it("does not cache a signed-in layout when the runtime cannot hash the token", async () => {
+    const originalCrypto = globalThis.crypto;
+    // A browser page that is not served over HTTPS has `crypto` without `subtle`.
+    Object.defineProperty(globalThis, "crypto", { value: {}, configurable: true });
+    try {
+      mockFetch(layout);
+      expect(await fetchUniformenLayout({ token: "user-a" })).not.toBeNull();
+
+      jest.restoreAllMocks();
+      suppressConsoleError();
+      jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+      expect(await fetchUniformenLayout({ token: "user-a" })).toBeNull();
+    } finally {
+      Object.defineProperty(globalThis, "crypto", { value: originalCrypto, configurable: true });
+    }
   });
 
   it("fetches again after the cache is cleared", async () => {

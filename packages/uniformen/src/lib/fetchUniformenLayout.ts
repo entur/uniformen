@@ -80,9 +80,12 @@ function writeCache(key: string, entry: CacheEntry): void {
  * Returns the cache key. For a signed-in user it includes a SHA-256 hash of the
  * token, so each user gets their own entry. The hash is used instead of the token
  * itself, so the cache does not keep access tokens in memory after the request.
+ * Returns `undefined` when the runtime cannot hash, for example a browser page that
+ * is not served over HTTPS. The signed-in layout is then not cached.
  */
-async function cacheKey(url: string, token?: string): Promise<string> {
+async function cacheKey(url: string, token?: string): Promise<string | undefined> {
   if (!token) return url;
+  if (!globalThis.crypto?.subtle) return undefined;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
   const hash = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
   return `${url} ${hash}`;
@@ -133,6 +136,8 @@ async function fetchLayout(
     try {
       const res = await fetch(url, { headers, signal });
       if (!res.ok) {
+        // Cancel the unread body, so the connection is released at once.
+        await res.body?.cancel();
         console.error(`Uniformen layout request failed with status ${res.status}`);
         if (res.status < 500) return null;
         continue;
@@ -174,8 +179,8 @@ export type FetchUniformenLayoutProps = {
  *
  * An anonymous layout is cached in memory for as long as the service's
  * `Cache-Control` header allows. A signed-in layout is always fetched. If the fetch
- * fails, the call returns the last layout it got for the same options, if there is
- * one. Otherwise it returns `null`.
+ * fails, the call returns the last layout it got for the same options and token, if
+ * there is one. Otherwise it returns `null`.
  */
 export async function fetchUniformenLayout({
   environment = "production",
@@ -185,7 +190,7 @@ export async function fetchUniformenLayout({
 }: FetchUniformenLayoutProps = {}): Promise<UniformenLayout | null> {
   const url = `${ENVIRONMENT_HOSTNAMES[environment]}/ssr${buildQueryString(params)}`;
   const key = await cacheKey(url, token);
-  const cached = readCache(key);
+  const cached = key === undefined ? undefined : readCache(key);
   if (cached && cached.freshUntil > Date.now()) return cached.layout;
 
   const result = await fetchLayout(url, token, timeoutMs);
@@ -194,6 +199,7 @@ export async function fetchUniformenLayout({
     return cached?.layout ?? null;
   }
 
+  if (key === undefined) return result.layout;
   const now = Date.now();
   writeCache(key, {
     layout: result.layout,
