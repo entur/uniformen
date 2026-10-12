@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { serveStatic } from "hono/bun";
-import { chat, chatRoutes } from "./chat/chat";
+import { chatProxyConfig, chatProxyRoutes } from "./chat/chatProxy";
 import { environment } from "./config";
 import { beginShutdown, isReady } from "./lifecycle";
 import { previewRoutes } from "./ssr/preview";
@@ -38,7 +38,7 @@ app.use("/static/*", serveStatic({ root: "./src" }));
 
 uniformenSsrRoutes(app);
 previewRoutes(app);
-chatRoutes(app, chat, environment);
+chatProxyRoutes(app, chatProxyConfig, environment);
 
 app.doc("/doc", {
   openapi: "3.0.0",

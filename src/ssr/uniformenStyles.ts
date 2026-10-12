@@ -35,7 +35,6 @@ const darkFloatingButton = componentVariables.dark.components.button.floating;
 // Colours for form fields in the Entur design system.
 const form = componentVariables.light.components.form.baseForm;
 
-
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
 

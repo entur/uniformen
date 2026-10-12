@@ -3,29 +3,35 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { SignJWT } from "jose";
 import { signInternalToken } from "../test/authTestKeys";
 import { machineTokenMock, SPORAI_SESSION_ID, sporaiMock } from "../test/authTestSetup";
-import { allowedOrigin, type Chat, chatRoutes, issueChatToken, loadChat } from "./chat";
+import {
+  allowedOrigin,
+  type ChatProxyConfig,
+  chatProxyRoutes,
+  issueChatToken,
+  loadChatProxyConfig,
+} from "./chatProxy";
 
 const ORIGIN = "https://partner.dev.entur.org";
 
-let chat: Chat;
+let proxyConfig: ChatProxyConfig;
 let app: OpenAPIHono;
 let token: string;
 
 beforeEach(async () => {
   machineTokenMock.reset();
   sporaiMock.reset();
-  // A new app for every test, so the in-flight counter and the machine token
+  // A new app for every test, so the counter of active sporai calls and the machine token
   // cache do not carry over.
-  chat = loadChat()!;
+  proxyConfig = loadChatProxyConfig()!;
   app = new OpenAPIHono();
-  chatRoutes(app, chat, "dev");
-  token = (await issueChatToken(chat, "internal|user-1"))!.token;
+  chatProxyRoutes(app, proxyConfig, "dev");
+  token = (await issueChatToken(proxyConfig, "internal|user-1"))!.token;
 });
 
 afterEach(() => setSystemTime());
 
 function ask(body: unknown, auth: string | null = token) {
-  return app.request("/chat", {
+  return app.request("/chat-proxy", {
     method: "POST",
     headers: {
       Origin: ORIGIN,
@@ -36,17 +42,17 @@ function ask(body: unknown, auth: string | null = token) {
   });
 }
 
-describe("POST /chat", () => {
-  test("creates a session for the first question and returns the answer", async () => {
+describe("POST /chat-proxy", () => {
+  test("creates a session for the first question and returns the reply", async () => {
     let sent: unknown;
     sporaiMock.respond = async (req) => {
       sent = await req.json();
       return new Response("svar");
     };
-    const res = await ask({ text: " Hva er en rolle? ", page: "/price-and-product" });
+    const res = await ask({ query: " Hva er en rolle? ", location: "/price-and-product" });
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(await res.json()).toEqual({ reply: "svar", session: SPORAI_SESSION_ID });
+    expect(await res.json()).toEqual({ reply: "svar", sessionId: SPORAI_SESSION_ID });
     expect(sent).toEqual({
       sessionId: SPORAI_SESSION_ID,
       query: "Hva er en rolle?",
@@ -60,45 +66,47 @@ describe("POST /chat", () => {
       sent = await req.json();
       return new Response("svar");
     };
-    const session = crypto.randomUUID();
-    const res = await ask({ text: "Og så?", session });
-    expect(await res.json()).toEqual({ reply: "svar", session });
-    expect(sent).toEqual({ sessionId: session, query: "Og så?" });
+    const sessionId = crypto.randomUUID();
+    const res = await ask({ query: "Og så?", sessionId });
+    expect(await res.json()).toEqual({ reply: "svar", sessionId });
+    expect(sent).toEqual({ sessionId, query: "Og så?" });
   });
 
-  test("leaves out a page that sporai would reject", async () => {
+  test("leaves out a location that sporai would reject", async () => {
     let sent: unknown;
     sporaiMock.respond = async (req) => {
       sent = await req.json();
       return new Response("svar");
     };
-    const res = await ask({ text: "Hei", page: "price-and-product, fare-structures" });
+    const res = await ask({ query: "Hei", location: "price-and-product, fare-structures" });
     expect(res.status).toBe(200);
     expect(sent).toEqual({ sessionId: SPORAI_SESSION_ID, query: "Hei" });
   });
 
-  test("returns 410 when sporai does not know the session", async () => {
+  test("returns 404 when sporai does not know the session", async () => {
     sporaiMock.respond = () => new Response(null, { status: 404 });
-    const res = await ask({ text: "Hei", session: crypto.randomUUID() });
-    expect(res.status).toBe(410);
-    expect(await res.json()).toEqual({ error: "SessionExpired" });
+    const res = await ask({ query: "Hei", sessionId: crypto.randomUUID() });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Content-Type")).toBe("application/problem+json");
+    expect(await res.json()).toEqual({ title: "Not Found", status: 404 });
   });
 
-  test("returns 502 when sporai fails", async () => {
+  test("returns 503 when sporai fails", async () => {
     sporaiMock.respond = () => new Response("boom", { status: 500 });
-    const res = await ask({ text: "Hei" });
-    expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({ error: "Unavailable" });
+    const res = await ask({ query: "Hei" });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ title: "Service Unavailable", status: 503 });
   });
 
   test.each([
-    ["empty text", { text: "   " }],
-    ["too long text", { text: "a".repeat(1001) }],
-    ["a session that is not a UUID", { text: "Hei", session: "abc" }],
+    ["an empty query", { query: "   " }],
+    ["a query that is too long", { query: "a".repeat(1001) }],
+    ["a session id that is not a UUID", { query: "Hei", sessionId: "abc" }],
+    ["the old field name text", { text: "Hei" }],
   ])("returns 400 for %s", async (_name, body) => {
     const res = await ask(body);
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid" });
+    expect(await res.json()).toEqual({ title: "Bad Request", status: 400 });
     expect(sporaiMock.calls).toBe(0);
   });
 
@@ -109,22 +117,24 @@ describe("POST /chat", () => {
   });
 
   test("returns 413 for a body over 8 KiB", async () => {
-    const res = await ask({ text: "a".repeat(9000) });
+    const res = await ask({ query: "a".repeat(9000) });
     expect(res.status).toBe(413);
+    expect(res.headers.get("Content-Type")).toBe("application/problem+json");
   });
 });
 
 describe("chat token", () => {
   test("is required", async () => {
-    const res = await ask({ text: "Hei" }, null);
+    const res = await ask({ query: "Hei" }, null);
     expect(res.status).toBe(401);
+    expect(res.headers.get("WWW-Authenticate")).toBe('Bearer error="invalid_token"');
     // The browser can only read the status when the CORS headers are there.
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe(ORIGIN);
     expect(sporaiMock.calls).toBe(0);
   });
 
   test("is not an Auth0 token", async () => {
-    const res = await ask({ text: "Hei" }, await signInternalToken({ sub: "chat-auth0" }));
+    const res = await ask({ query: "Hei" }, await signInternalToken({ sub: "chat-auth0" }));
     expect(res.status).toBe(401);
   });
 
@@ -133,26 +143,29 @@ describe("chat token", () => {
       .setProtectedHeader({ alg: "HS256" })
       .setAudience("uniformen-chat")
       .setExpirationTime("60m")
-      .sign(chat.key);
-    const res = await ask({ text: "Hei" }, anonymous);
+      .sign(proxyConfig.key);
+    const res = await ask({ query: "Hei" }, anonymous);
     expect(res.status).toBe(401);
     expect(sporaiMock.calls).toBe(0);
   });
 
   test("expires after 60 minutes", async () => {
     setSystemTime(new Date(Date.now() + 61 * 60 * 1000));
-    const res = await ask({ text: "Hei" });
+    const res = await ask({ query: "Hei" });
     expect(res.status).toBe(401);
   });
 
   test("from another key is rejected", async () => {
-    const other = { ...chat, key: new Uint8Array(32) };
-    const res = await ask({ text: "Hei" }, (await issueChatToken(other, "internal|user-1"))!.token);
+    const other = { ...proxyConfig, key: new Uint8Array(32) };
+    const res = await ask(
+      { query: "Hei" },
+      (await issueChatToken(other, "internal|user-1"))!.token,
+    );
     expect(res.status).toBe(401);
   });
 
   test("comes with the URL for the environment", async () => {
-    expect((await issueChatToken(chat, "internal|user-1"))?.url).toMatch(/\/chat$/);
+    expect((await issueChatToken(proxyConfig, "internal|user-1"))?.url).toMatch(/\/chat-proxy$/);
     expect(await issueChatToken(undefined, "internal|user-1")).toBeUndefined();
   });
 });
@@ -164,23 +177,23 @@ test("answers 503 when too many questions are open in the pod", async () => {
     await waiting;
     return new Response("svar");
   };
-  const open = Array.from({ length: 10 }, async () => ask({ text: "Hei" }));
+  const open = Array.from({ length: 10 }, async () => ask({ query: "Hei" }));
   // Wait until all ten calls have reached sporai.
   while (sporaiMock.calls < 10) await Bun.sleep(5);
 
-  const busy = await ask({ text: "Hei" });
+  const busy = await ask({ query: "Hei" });
   expect(busy.status).toBe(503);
   expect(busy.headers.get("Retry-After")).toBe("5");
 
   release();
   expect((await Promise.all(open)).map((res) => res.status)).toEqual(Array(10).fill(200));
   // The counter goes down again when the calls end.
-  expect((await ask({ text: "Hei" })).status).toBe(200);
+  expect((await ask({ query: "Hei" })).status).toBe(200);
 });
 
 describe("CORS", () => {
   test("allows a preflight from an Entur origin", async () => {
-    const res = await app.request("/chat", {
+    const res = await app.request("/chat-proxy", {
       method: "OPTIONS",
       headers: { Origin: ORIGIN, "Access-Control-Request-Method": "POST" },
     });
@@ -203,18 +216,18 @@ describe("CORS", () => {
   });
 });
 
-describe("loadChat", () => {
+describe("loadChatProxyConfig", () => {
   test("turns chat off and names the missing variable", () => {
     const warn = spyOn(console, "warn").mockImplementation(() => {});
     const env = { ...process.env, SPORAI_URL: "" };
-    expect(loadChat(env)).toBeUndefined();
+    expect(loadChatProxyConfig(env)).toBeUndefined();
     expect(warn).toHaveBeenCalledWith("Chat is off. Missing env vars: SPORAI_URL");
     warn.mockRestore();
   });
 
   test("adds no route when chat is off", async () => {
     const off = new OpenAPIHono();
-    chatRoutes(off, undefined, "dev");
-    expect((await off.request("/chat", { method: "POST" })).status).toBe(404);
+    chatProxyRoutes(off, undefined, "dev");
+    expect((await off.request("/chat-proxy", { method: "POST" })).status).toBe(404);
   });
 });

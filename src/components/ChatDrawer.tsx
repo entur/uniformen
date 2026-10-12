@@ -1,3 +1,4 @@
+import type { ChatAccessToken } from "../chat/chatProxy";
 import type { Locale } from "../types";
 import { ChatMessage } from "./ChatMessage";
 import { ChatTextArea } from "./ChatTextArea";
@@ -13,9 +14,9 @@ const texts = {
     unspecifiedLocation: "hjemmesiden",
     error: "Beklager, jeg kunne ikke svare nå. Prøv igjen litt senere.",
     examples: [
-      "Hvordan endrer jeg passord?",
-      "Hvordan gir jeg en kollega tilgang?",
-      "Hvor finner jeg fakturaene mine?",
+      "Hvor ser jeg mine avtaler?",
+      "Hvor kan jeg se terminalrapporter?",
+      "Hvem kontakter man ved problemer?",
     ],
   },
   "nn-NO": {
@@ -25,9 +26,9 @@ const texts = {
     unspecifiedLocation: "heimesida",
     error: "Beklagar, eg kunne ikkje svare no. Prøv igjen litt seinare.",
     examples: [
-      "Korleis endrar eg passord?",
-      "Korleis gir eg ein kollega tilgang?",
-      "Kvar finn eg fakturaene mine?",
+      "Kvar ser eg avtalene mine?",
+      "Kvar kan eg sjå terminalrapportar?",
+      "Kven kontaktar ein ved problem?",
     ],
   },
   "en-GB": {
@@ -37,9 +38,9 @@ const texts = {
     unspecifiedLocation: "homepage",
     error: "Sorry, I could not answer right now. Please try again later.",
     examples: [
-      "How do I change my password?",
-      "How do I give a colleague access?",
-      "Where can I find my invoices?",
+      "Where can I see my agreements?",
+      "Where can I see terminal reports?",
+      "Who do I contact if there are problems?",
     ],
   },
 } as const;
@@ -50,23 +51,20 @@ const texts = {
  */
 export function ChatDrawer({
   locale,
-  chat,
+  chatAccessToken,
 }: {
   locale: Locale;
-  /**
-   * Where the browser sends questions, and the token it sends with them. Without
-   * it, every question gets the error text.
-   */
-  chat?: { url: string; token: string };
+  /** Without it, every question gets the error text. */
+  chatAccessToken?: ChatAccessToken;
 }) {
   const txt = texts[locale];
   return (
     <div
       hidden
       id="uniformen-chat-drawer"
-      data-uniformen-chat-url={chat?.url}
-      data-uniformen-chat-token={chat?.token}
-      data-uniformen-chat-error={txt.error}
+      data-uniformen-chat-proxy-url={chatAccessToken?.url}
+      data-uniformen-chat-token={chatAccessToken?.token}
+      data-uniformen-chat-error-text={txt.error}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"

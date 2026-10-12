@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
-import { previewChat, previewIsEnturUser, previewUser } from "./preview";
+import { previewChatAccessToken, previewIsEnturUser, previewUser } from "./preview";
 import { PreviewControls } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
@@ -274,15 +274,17 @@ describe("preview page aiAgent", () => {
 
   test("only local development gets a chat token, and only for a debug user", async () => {
     const query = { debugUser: "Test", aiAgent: "true" } as const;
-    expect(await previewChat(query, "local")).toEqual({
-      url: expect.stringMatching(/\/chat$/),
+    expect(await previewChatAccessToken(query, "local")).toEqual({
+      url: expect.stringMatching(/\/chat-proxy$/),
       token: expect.any(String),
     });
     for (const env of ["dev", "staging", "production"] as const) {
-      expect(await previewChat(query, env)).toBeUndefined();
+      expect(await previewChatAccessToken(query, env)).toBeUndefined();
     }
-    expect(await previewChat({ aiAgent: "true" }, "local")).toBeUndefined();
-    expect(await previewChat({ debugUser: "Test", aiAgent: "false" }, "local")).toBeUndefined();
+    expect(await previewChatAccessToken({ aiAgent: "true" }, "local")).toBeUndefined();
+    expect(
+      await previewChatAccessToken({ debugUser: "Test", aiAgent: "false" }, "local"),
+    ).toBeUndefined();
   });
 
   test("the drawer on the dev preview page has no chat token", async () => {

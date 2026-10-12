@@ -4,7 +4,7 @@ import { machineTokenMock, SPORAI_SESSION_ID, sporaiMock } from "../test/authTes
 import { SporaiClient } from "./sporaiClient";
 
 const config = {
-  sporaiUrl: process.env["SPORAI_URL"]!,
+  baseUrl: process.env["SPORAI_URL"]!,
   tokenUri: process.env["AUTH0_INTERNAL_TOKEN_URI"]!,
   clientId: process.env["MNG_AUTH0_INT_CLIENT_ID"]!,
   clientSecret: process.env["MNG_AUTH0_INT_CLIENT_SECRET"]!,
@@ -61,23 +61,23 @@ describe("machine token", () => {
     });
   });
 
-  test("a failed fetch gives 502 and is not cached", async () => {
+  test("a failed fetch gives an error and is not cached", async () => {
     machineTokenMock.respond = () => new Response("nope", { status: 500 });
-    expect(await client.chat(question)).toEqual({ kind: "error", status: 502 });
+    expect(await client.chat(question)).toEqual({ kind: "error" });
     expect(sporaiMock.calls).toBe(0);
 
     machineTokenMock.reset();
     expect(await client.chat(question)).toEqual({ kind: "ok", reply: "svar" });
   });
 
-  test("a response without access_token gives 502", async () => {
+  test("a response without access_token gives an error", async () => {
     machineTokenMock.respond = () => Response.json({ expires_in: 3600 });
-    expect(await client.chat(question)).toEqual({ kind: "error", status: 502 });
+    expect(await client.chat(question)).toEqual({ kind: "error" });
   });
 
   test("is dropped after sporai answers 401, so the next call fetches a new one", async () => {
     sporaiMock.respond = () => new Response("no", { status: 401 });
-    expect(await client.chat(question)).toEqual({ kind: "error", status: 502 });
+    expect(await client.chat(question)).toEqual({ kind: "error" });
 
     sporaiMock.reset();
     expect(await client.chat(question)).toEqual({ kind: "ok", reply: "svar" });
@@ -90,13 +90,13 @@ describe("createSession", () => {
     expect(await client.createSession()).toEqual({ kind: "ok", sessionId: SPORAI_SESSION_ID });
   });
 
-  test("a failed request gives 502", async () => {
+  test("a failed request gives an error", async () => {
     // This path does not exist on the fake server, so sporai answers 404.
     const broken = new SporaiClient(
-      { ...config, sporaiUrl: `${config.sporaiUrl}/broken` },
+      { ...config, baseUrl: `${config.baseUrl}/broken` },
       { timeoutMs: 200 },
     );
-    expect(await broken.createSession()).toEqual({ kind: "error", status: 502 });
+    expect(await broken.createSession()).toEqual({ kind: "error" });
   });
 });
 
@@ -122,20 +122,20 @@ describe("chat", () => {
     expect(await client.chat(question)).toEqual({ kind: "sessionGone" });
   });
 
-  test.each([400, 403, 500])("sporai %i gives 502", async (status) => {
+  test.each([400, 403, 500])("sporai %i gives an error", async (status) => {
     sporaiMock.respond = () => new Response("no", { status });
-    expect(await client.chat(question)).toEqual({ kind: "error", status: 502 });
+    expect(await client.chat(question)).toEqual({ kind: "error" });
   });
 
-  test("a slow sporai gives 504", async () => {
+  test("a slow sporai gives an error", async () => {
     sporaiMock.respond = async () => {
       await Bun.sleep(400);
       return new Response("svar");
     };
-    expect(await client.chat(question)).toEqual({ kind: "error", status: 504 });
+    expect(await client.chat(question)).toEqual({ kind: "error" });
   });
 
-  test("a timeout while the reply is still arriving gives 504", async () => {
+  test("a timeout while the reply is still arriving gives an error", async () => {
     sporaiMock.respond = () =>
       new Response(
         new ReadableStream({
@@ -146,19 +146,19 @@ describe("chat", () => {
           },
         }),
       );
-    expect(await client.chat(question)).toEqual({ kind: "error", status: 504 });
+    expect(await client.chat(question)).toEqual({ kind: "error" });
   });
 
-  test("a reply that is too long gives 502", async () => {
+  test("a reply that is too long gives an error", async () => {
     sporaiMock.respond = () => new Response("x".repeat(8_001));
-    expect(await client.chat(question)).toEqual({ kind: "error", status: 502 });
+    expect(await client.chat(question)).toEqual({ kind: "error" });
   });
 
   test("an aborted request gives an error and does not throw", async () => {
     const controller = new AbortController();
     const pending = client.chat(question, controller.signal);
     controller.abort();
-    expect(await pending).toEqual({ kind: "error", status: 502 });
+    expect(await pending).toEqual({ kind: "error" });
   });
 });
 

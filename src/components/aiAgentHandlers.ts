@@ -80,23 +80,23 @@ export default function aiAgentHandlers() {
     textarea()?.focus();
   }
 
-  // The sporai session of this chat. The first answer gives it. `startNewChat`
+  // The sporai session of this chat. The first reply gives it. `startNewChat`
   // forgets it, so the next question starts a new session.
-  let session: string | undefined;
-  // Counts the questions sent. An answer that arrives after "New chat" belongs to
+  let sessionId: string | undefined;
+  // Counts the questions sent. A reply that arrives after "New chat" belongs to
   // an older question, so it is not shown.
   let questionCount = 0;
-  let waiting = false;
+  let awaitingReply = false;
 
   /**
    * Adds the question in the text field to the chat, empties the field and adds the
-   * answer when it arrives. Does nothing when the field is empty, or while the
-   * answer to the previous question is still on its way.
+   * reply when it arrives. Does nothing when the field is empty, or while the reply
+   * to the previous question is still on its way.
    */
   async function sendQuestion() {
     const field = textarea();
     const question = field?.value.trim();
-    if (!field || !question || waiting) return;
+    if (!field || !question || awaitingReply) return;
 
     toggleExamplesVisible(false);
     const message = addMessage("[data-uniformen-chat-user-template]");
@@ -107,20 +107,20 @@ export default function aiAgentHandlers() {
     field.value = "";
     field.focus();
 
-    waiting = true;
+    awaitingReply = true;
     const count = ++questionCount;
-    const reply = await askAgent(question, count);
+    const replyText = await fetchReply(question, count);
     if (count !== questionCount) return;
-    waiting = false;
+    awaitingReply = false;
     hideTyping();
-    const answer = addMessage("[data-uniformen-chat-agent-template]");
-    const answerBubble = answer?.querySelector(".uniformen-chat-bubble");
-    if (answerBubble) renderMarkdown(answerBubble, reply);
+    const reply = addMessage("[data-uniformen-chat-agent-template]");
+    const replyBubble = reply?.querySelector(".uniformen-chat-bubble");
+    if (replyBubble) renderMarkdown(replyBubble, replyText);
   }
 
   /**
    * Shows `text` in `target`, with the markdown that sporai uses: paragraphs, bullet
-   * and numbered lists, headings and bold text. The answer comes from a language
+   * and numbered lists, headings and bold text. The reply comes from a language
    * model, so the elements are created here and the text is only ever added as text.
    * Other markdown, such as links, stays as plain text.
    */
@@ -154,7 +154,7 @@ export default function aiAgentHandlers() {
       list = null;
       const heading = /^#{1,6}\s+(.*)$/.exec(trimmed);
       if (heading) {
-        // A heading in a short chat answer is shown as a bold paragraph.
+        // A heading in a short chat reply is shown as a bold paragraph.
         const strong = document.createElement("strong");
         addInline(strong, heading[1] ?? "");
         const block = document.createElement("p");
@@ -195,14 +195,14 @@ export default function aiAgentHandlers() {
   }
 
   /**
-   * Sends the question to the chat URL on the drawer, and returns the answer. Returns
-   * the drawer's error text when the request fails or the drawer has no chat URL.
-   * Only updates the session when `count` is still the newest question.
+   * Sends the question to the chat proxy URL on the drawer, and returns the reply.
+   * Returns the drawer's error text when the request fails or the drawer has no chat
+   * proxy URL. Only updates the session when `count` is still the newest question.
    */
-  async function askAgent(text: string, count: number): Promise<string> {
-    const url = drawer?.getAttribute("data-uniformen-chat-url");
+  async function fetchReply(query: string, count: number): Promise<string> {
+    const url = drawer?.getAttribute("data-uniformen-chat-proxy-url");
     const token = drawer?.getAttribute("data-uniformen-chat-token");
-    const errorText = drawer?.getAttribute("data-uniformen-chat-error") ?? "";
+    const errorText = drawer?.getAttribute("data-uniformen-chat-error-text") ?? "";
     if (!url || !token) return errorText;
     try {
       const res = await fetch(url, {
@@ -210,13 +210,15 @@ export default function aiAgentHandlers() {
         // The token is the only credential. Cookies for the page must not be sent.
         credentials: "omit",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ text, session, page: window.location.pathname }),
+        // Send the raw path. Sporai rejects the comma-separated text that
+        // `findLocation` makes.
+        body: JSON.stringify({ query, sessionId, location: window.location.pathname }),
       });
-      // 410 means the session has expired, so the next question starts a new one.
-      if (res.status === 410 && count === questionCount) session = undefined;
+      // 404 means sporai does not know the session, so the next question starts a new one.
+      if (res.status === 404 && count === questionCount) sessionId = undefined;
       if (!res.ok) return errorText;
-      const body: { reply: string; session: string } = await res.json();
-      if (count === questionCount) session = body.session;
+      const body: { reply: string; sessionId: string } = await res.json();
+      if (count === questionCount) sessionId = body.sessionId;
       return body.reply;
     } catch {
       return errorText;
@@ -238,9 +240,9 @@ export default function aiAgentHandlers() {
    */
   function startNewChat() {
     // Sporai removes the old session by itself when it has not been used for a while.
-    session = undefined;
+    sessionId = undefined;
     questionCount++;
-    waiting = false;
+    awaitingReply = false;
     for (const message of drawer?.querySelectorAll("[data-uniformen-chat-added]") ?? []) {
       message.remove();
     }

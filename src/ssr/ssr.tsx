@@ -1,5 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
-import { chat, issueChatToken } from "../chat/chat";
+import { chatProxyConfig, issueChatToken } from "../chat/chatProxy";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
 import { optionalAuth } from "../auth/optionalAuth";
 import { type UserInfo, userInfoService } from "../auth/userInfo";
@@ -127,9 +127,9 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     // Only a user with a profile gets a chat token. This keeps machine tokens out,
     // but it also means a signed-in user has no chat while userinfo fails. Without
     // a token, the drawer shows the error text for every question.
-    const chatToken =
+    const chatAccessToken =
       info && tenant && payload?.sub && navProps.aiAgent && AI_AGENT_ENABLED
-        ? await issueChatToken(chat, `${tenant}|${payload.sub}`)
+        ? await issueChatToken(chatProxyConfig, `${tenant}|${payload.sub}`)
         : undefined;
 
     ssrRequestMetric.inc({
@@ -161,7 +161,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
             {...navProps}
             user={user}
             isEnturUser={isEnturOrganisation(info)}
-            chat={chatToken}
+            chatAccessToken={chatAccessToken}
           />,
         ),
         footerHtml: await renderComponentToString(<Footer contrast={navProps.contrast} />),

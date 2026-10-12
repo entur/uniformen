@@ -1,11 +1,11 @@
 export type SporaiConfig = {
   /** The base URL of sporai, without a trailing slash. */
-  sporaiUrl: string;
+  baseUrl: string;
   /** The internal Auth0 token endpoint. */
   tokenUri: string;
   clientId: string;
   clientSecret: string;
-  /** The audience to ask Auth0 for. Sporai accepts the internal API audience. */
+  /** The audience to ask Auth0 for. Sporai does not check it. */
   audience: string;
 };
 
@@ -14,14 +14,14 @@ export type SporaiClientOptions = {
   timeoutMs?: number;
 };
 
-/** The route should answer with this status: 504 for a timeout, 502 for anything else. */
-export type SporaiError = { kind: "error"; status: 502 | 504 };
+/** Sporai could not answer. The reason is in the log. */
+export type SporaiError = { kind: "error" };
 
 export type SessionResult = { kind: "ok"; sessionId: string } | SporaiError;
 /** `sessionGone` means sporai does not know the session, for example because it expired. */
 export type ChatResult = { kind: "ok"; reply: string } | { kind: "sessionGone" } | SporaiError;
 
-export type ChatQuestion = {
+export type ChatRequest = {
   sessionId: string;
   query: string;
   /** The page the user is on. Sporai only accepts path characters. */
@@ -31,14 +31,15 @@ export type ChatQuestion = {
 const TOKEN_TIMEOUT_MS = 5_000;
 // Auth0 gives the token a lifetime in seconds. Stop using it this long before it ends.
 const TOKEN_EXPIRY_MARGIN_MS = 60_000;
-// Sporai limits its answers to about 4,500 characters, so a longer reply is a mistake.
+// Sporai limits the model to 1024 output tokens, so a reply this long means something
+// is wrong.
 const MAX_REPLY_CHARS = 8_000;
 
 type MachineToken = { value: string; expiresAt: number };
 
 /**
  * Calls sporai with a machine token from Auth0, and never throws. A failure comes
- * back as a result that tells the route which status to answer with.
+ * back as a result.
  *
  * The machine token is cached in memory. Parallel calls that need a new token
  * share one request, in the same way as `UserInfoServiceImpl`.
@@ -58,15 +59,15 @@ export class SporaiClient {
   async createSession(signal?: AbortSignal): Promise<SessionResult> {
     const res = await this.request("/api/chat/sessions", { method: "POST" }, signal);
     if (!(res instanceof Response)) return res;
-    if (!res.ok) return this.failed(res.status);
+    if (!res.ok) return this.logFailure(res.status);
     // Invalid JSON is handled in the same way as a missing session id.
-    const sessionId = field(await res.json().catch(() => undefined), "sessionId");
+    const sessionId = readField(await res.json().catch(() => undefined), "sessionId");
     if (typeof sessionId === "string") return { kind: "ok", sessionId };
     console.warn("sporai createSession failed: no session id in the response");
-    return { kind: "error", status: 502 };
+    return { kind: "error" };
   }
 
-  async chat(question: ChatQuestion, signal?: AbortSignal): Promise<ChatResult> {
+  async chat(question: ChatRequest, signal?: AbortSignal): Promise<ChatResult> {
     const res = await this.request(
       "/api/chat",
       { method: "POST", body: JSON.stringify(question) },
@@ -74,18 +75,17 @@ export class SporaiClient {
     );
     if (!(res instanceof Response)) return res;
     if (res.status === 404) return { kind: "sessionGone" };
-    if (!res.ok) return this.failed(res.status);
+    if (!res.ok) return this.logFailure(res.status);
     let reply: string;
     try {
       reply = await res.text();
     } catch (error) {
       console.warn("sporai chat failed while reading the reply:", errorName(error));
-      // The timeout can also end while the body is still arriving.
-      return { kind: "error", status: errorName(error) === "TimeoutError" ? 504 : 502 };
+      return { kind: "error" };
     }
     if (reply.length > MAX_REPLY_CHARS) {
       console.warn("sporai chat failed: the reply is too long");
-      return { kind: "error", status: 502 };
+      return { kind: "error" };
     }
     return { kind: "ok", reply };
   }
@@ -100,11 +100,11 @@ export class SporaiClient {
     signal?: AbortSignal,
   ): Promise<Response | SporaiError> {
     const token = await this.getToken();
-    if (!token) return { kind: "error", status: 502 };
+    if (!token) return { kind: "error" };
 
     const timeout = AbortSignal.timeout(this.timeoutMs);
     try {
-      const res = await fetch(`${this.config.sporaiUrl}${path}`, {
+      const res = await fetch(`${this.config.baseUrl}${path}`, {
         ...init,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -123,14 +123,14 @@ export class SporaiClient {
       return res;
     } catch (error) {
       console.warn(`sporai request failed for ${init.method} ${path}:`, errorName(error));
-      return { kind: "error", status: timeout.aborted ? 504 : 502 };
+      return { kind: "error" };
     }
   }
 
   /** Logs the status of a failed answer from sporai. */
-  private failed(status: number): SporaiError {
+  private logFailure(status: number): SporaiError {
     console.warn(`sporai request failed: HTTP ${status}`);
-    return { kind: "error", status: 502 };
+    return { kind: "error" };
   }
 
   /** Returns a machine token, or `undefined` if Auth0 could not give one. */
@@ -162,12 +162,12 @@ export class SporaiClient {
         return undefined;
       }
       const body: unknown = await res.json();
-      const accessToken = field(body, "access_token");
+      const accessToken = readField(body, "access_token");
       if (typeof accessToken !== "string") {
         console.error("machine token fetch failed: no access_token in the response");
         return undefined;
       }
-      const expiresIn = field(body, "expires_in");
+      const expiresIn = readField(body, "expires_in");
       const seconds = typeof expiresIn === "number" ? expiresIn : 0;
       this.token = {
         value: accessToken,
@@ -187,6 +187,6 @@ function errorName(error: unknown): string {
 }
 
 /** Reads a property from a parsed JSON value. Returns `undefined` if there is none. */
-function field(body: unknown, name: string): unknown {
+function readField(body: unknown, name: string): unknown {
   return typeof body === "object" && body !== null ? Reflect.get(body, name) : undefined;
 }

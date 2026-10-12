@@ -211,14 +211,14 @@ function install({
   button: withButton = true,
   drawer: withDrawer = true,
   chat = true,
-  respond = () => Response.json({ reply: "Svar", session: "s-1" }),
+  respond = () => Response.json({ reply: "Svar", sessionId: "s-1" }),
 }: {
   pathname?: string;
   button?: boolean;
   drawer?: boolean;
   /** Whether the drawer has a chat URL and token. */
   chat?: boolean;
-  /** The answer from `/chat`. */
+  /** The reply from `/chat-proxy`. */
   respond?: () => Response | Promise<Response>;
 } = {}) {
   const button = new FakeElement({
@@ -241,10 +241,13 @@ function install({
   locationName.textContent = "hjemmesiden";
 
   const chatAttributes: Record<string, string> = chat
-    ? { "data-uniformen-chat-url": "https://uniformen.test/chat", "data-uniformen-chat-token": "t" }
+    ? {
+        "data-uniformen-chat-proxy-url": "https://uniformen.test/chat-proxy",
+        "data-uniformen-chat-token": "t",
+      }
     : {};
   const drawer = new FakeElement(
-    { id: "uniformen-chat-drawer", "data-uniformen-chat-error": "Feil", ...chatAttributes },
+    { id: "uniformen-chat-drawer", "data-uniformen-chat-error-text": "Feil", ...chatAttributes },
     [
       close,
       chatWindow,
@@ -324,7 +327,7 @@ function install({
     calls,
     /** The markup in the newest message bubble. */
     lastBubble: () => chatWindow.querySelectorAll(".uniformen-chat-bubble").at(-1)?.markup(),
-    /** The JSON body of each request to `/chat`. */
+    /** The JSON body of each request to `/chat-proxy`. */
     bodies: () => calls.map((call) => JSON.parse(call.init.body)),
   };
 }
@@ -338,7 +341,7 @@ afterEach(() => {
 });
 
 /** Lets the fake request and the code that waits for it finish. */
-const answered = () => Bun.sleep(1);
+const replied = () => Bun.sleep(1);
 
 describe("aiAgentHandlers", () => {
   test("does nothing and adds no listeners when the drawer or the button is missing", () => {
@@ -426,11 +429,11 @@ describe("aiAgentHandlers", () => {
     expect(page.examples.hidden).toBe(false);
   });
 
-  test("the answer replaces the typing message", async () => {
+  test("the reply replaces the typing message", async () => {
     const page = install();
     page.type("Hvor er fakturaene?");
     page.send.click();
-    await answered();
+    await replied();
     expect(page.messages()).toEqual(["Hei!", "Hvor er fakturaene?", "Svar"]);
     expect(page.typing()).toBe(0);
   });
@@ -439,29 +442,31 @@ describe("aiAgentHandlers", () => {
     const page = install({ pathname: "/price-and-product/fare-structures" });
     page.type("Hei");
     page.send.click();
-    await answered();
+    await replied();
     const [call] = page.calls;
-    expect(call?.url).toBe("https://uniformen.test/chat");
+    expect(call?.url).toBe("https://uniformen.test/chat-proxy");
     expect(call?.init.credentials).toBe("omit");
     expect(call?.init.headers).toEqual({
       Authorization: "Bearer t",
       "Content-Type": "application/json",
     });
-    expect(page.bodies()).toEqual([{ text: "Hei", page: "/price-and-product/fare-structures" }]);
+    expect(page.bodies()).toEqual([
+      { query: "Hei", location: "/price-and-product/fare-structures" },
+    ]);
   });
 
-  test("the next question uses the session from the answer", async () => {
+  test("the next question uses the session from the reply", async () => {
     const page = install();
     page.type("Første");
     page.send.click();
-    await answered();
+    await replied();
     page.type("Andre");
     page.send.click();
-    await answered();
-    expect(page.bodies().map((body) => body.session)).toEqual([undefined, "s-1"]);
+    await replied();
+    expect(page.bodies().map((body) => body.sessionId)).toEqual([undefined, "s-1"]);
   });
 
-  test("a second question waits until the first is answered", async () => {
+  test("a second question waits until the first has a reply", async () => {
     const page = install();
     page.type("Første");
     page.send.click();
@@ -469,19 +474,19 @@ describe("aiAgentHandlers", () => {
     page.send.click();
     expect(page.textarea.value).toBe("Andre");
     expect(page.messages()).toEqual(["Hei!", "Første"]);
-    await answered();
+    await replied();
     expect(page.calls).toHaveLength(1);
   });
 
   test.each([
     ["the request fails", { respond: () => Promise.reject(new Error("offline")) }],
-    ["the server answers with an error", { respond: () => new Response(null, { status: 502 }) }],
+    ["the server replies with an error", { respond: () => new Response(null, { status: 503 }) }],
     ["the drawer has no chat URL", { chat: false }],
   ])("shows the error text when %s", async (_name, options) => {
     const page = install(options);
     page.type("Hei");
     page.send.click();
-    await answered();
+    await replied();
     expect(page.messages()).toEqual(["Hei!", "Hei", "Feil"]);
   });
 
@@ -490,35 +495,35 @@ describe("aiAgentHandlers", () => {
     const page = install({
       respond: () =>
         status === 200
-          ? Response.json({ reply: "Svar", session: "s-1" })
+          ? Response.json({ reply: "Svar", sessionId: "s-1" })
           : new Response(null, { status }),
     });
     page.type("Første");
     page.send.click();
-    await answered();
-    status = 410;
+    await replied();
+    status = 404;
     page.type("Andre");
     page.send.click();
-    await answered();
+    await replied();
     status = 200;
     page.type("Tredje");
     page.send.click();
-    await answered();
-    expect(page.bodies().map((body) => body.session)).toEqual([undefined, "s-1", undefined]);
+    await replied();
+    expect(page.bodies().map((body) => body.sessionId)).toEqual([undefined, "s-1", undefined]);
   });
 
-  test("an answer that arrives after a new chat is not shown", async () => {
+  test("a reply that arrives after a new chat is not shown", async () => {
     const page = install();
     page.type("Gammel");
     page.send.click();
     page.newChat.click();
-    await answered();
+    await replied();
     expect(page.messages()).toEqual(["Hei!"]);
     page.type("Ny");
     page.send.click();
-    await answered();
+    await replied();
     expect(page.messages()).toEqual(["Hei!", "Ny", "Svar"]);
-    expect(page.bodies().map((body) => body.session)).toEqual([undefined, undefined]);
+    expect(page.bodies().map((body) => body.sessionId)).toEqual([undefined, undefined]);
   });
 
   test("Enter sends the question and Shift+Enter does not", () => {
@@ -579,23 +584,23 @@ describe("aiAgentHandlers", () => {
       "<img src=x onerror=alert(1)>",
       "<p><img src=x onerror=alert(1)></p>",
     ],
-  ])("shows the markdown in an answer: %s", async (_name, reply, markup) => {
-    const page = install({ respond: () => Response.json({ reply, session: "s-1" }) });
+  ])("shows the markdown in a reply: %s", async (_name, reply, markup) => {
+    const page = install({ respond: () => Response.json({ reply, sessionId: "s-1" }) });
     page.type("Hei");
     page.send.click();
-    await answered();
+    await replied();
     expect(page.lastBubble()).toBe(markup);
   });
 
-  test("HTML in an answer is added as text, not as elements", async () => {
+  test("HTML in a reply is added as text, not as elements", async () => {
     const page = install({
-      respond: () => Response.json({ reply: "<script>alert(1)</script>", session: "s-1" }),
+      respond: () => Response.json({ reply: "<script>alert(1)</script>", sessionId: "s-1" }),
     });
     page.type("Hei");
     page.send.click();
-    await answered();
-    const answer = page.chatWindow.querySelectorAll(".uniformen-chat-bubble").at(-1);
-    expect(answer?.children.map((child) => child.tagName)).toEqual(["p"]);
-    expect(answer?.children[0]?.children.map((child) => child.tagName)).toEqual(["#text"]);
+    await replied();
+    const reply = page.chatWindow.querySelectorAll(".uniformen-chat-bubble").at(-1);
+    expect(reply?.children.map((child) => child.tagName)).toEqual(["p"]);
+    expect(reply?.children[0]?.children.map((child) => child.tagName)).toEqual(["#text"]);
   });
 });
