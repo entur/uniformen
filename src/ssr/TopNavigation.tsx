@@ -13,7 +13,6 @@ import type { ChatAccessToken } from "../chat/chatProxy";
 import { ChatDrawer } from "../components/ChatDrawer";
 
 const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
-export const AI_AGENT_ENABLED = true; // TODO: remove this when the AI agent is ready for production
 
 const texts = {
   "nb-NO": {
@@ -103,7 +102,7 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
-          {aiAgent && AI_AGENT_ENABLED && (
+          {aiAgent && (
             <>
               <AiButton locale={locale} />
               <ChatDrawer locale={locale} chatAccessToken={chatAccessToken} />

@@ -8,6 +8,14 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-10-12
+
+### Changed
+
+- `aiAgent=true` only shows the AI agent button and chat drawer to signed-in users who
+  have the `ai-agent` feature flag on in PostHog. If PostHog is slow or fails, the bar
+  is rendered without them.
+
 ## 2026-10-06
 
 ### Changed
