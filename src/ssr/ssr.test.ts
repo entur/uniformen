@@ -9,6 +9,7 @@ import {
   signInternalToken,
 } from "../test/authTestKeys";
 import { app } from "../index";
+import { aiAgentFlag } from "./ssr";
 
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
@@ -1012,5 +1013,14 @@ describe("/ssr caching", () => {
     const authed = await app.request("/ssr?app=partner", { headers: bearer(token) });
     const anonymous = await app.request("/ssr?app=partner&loginUrl=/auth/login");
     expect(authed.headers.get("Cache-Control")).not.toBe(anonymous.headers.get("Cache-Control"));
+  });
+});
+
+describe("aiAgentFlag", () => {
+  test("is off for everyone when POSTHOG_API_KEY is not set", async () => {
+    expect(await aiAgentFlag.isOn(undefined)).toBe(false);
+    expect(
+      await aiAgentFlag.isOn({ sub: "auth0|test", email: "a@entur.org", email_verified: true }),
+    ).toBe(false);
   });
 });
