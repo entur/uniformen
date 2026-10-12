@@ -211,6 +211,7 @@ function install({
   button: withButton = true,
   drawer: withDrawer = true,
   chat = true,
+  locations = { "fare-structures": "Prisstrukturer" },
   respond = () => Response.json({ reply: "Svar", session: "s-1" }),
 }: {
   pathname?: string;
@@ -218,6 +219,8 @@ function install({
   drawer?: boolean;
   /** Whether the drawer has a chat URL and token. */
   chat?: boolean;
+  /** The names that the server renders for path parts. */
+  locations?: Record<string, string>;
   /** The answer from `/chat`. */
   respond?: () => Response | Promise<Response>;
 } = {}) {
@@ -244,7 +247,12 @@ function install({
     ? { "data-uniformen-chat-url": "https://uniformen.test/chat", "data-uniformen-chat-token": "t" }
     : {};
   const drawer = new FakeElement(
-    { id: "uniformen-chat-drawer", "data-uniformen-chat-error": "Feil", ...chatAttributes },
+    {
+      id: "uniformen-chat-drawer",
+      "data-uniformen-chat-error": "Feil",
+      "data-uniformen-chat-locations": JSON.stringify(locations),
+      ...chatAttributes,
+    },
     [
       close,
       chatWindow,
@@ -394,10 +402,76 @@ describe("aiAgentHandlers", () => {
     expect(page.button.focused).toBe(0);
   });
 
-  test("opening shows the page's path as the location", () => {
+  test("opening shows the name of the last path part as the location", () => {
     const page = install({ pathname: "/price-and-product/fare-structures/" });
     page.button.click();
-    expect(page.locationName.textContent).toBe("price-and-product, fare-structures");
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("a path part without a name is shown as it is", () => {
+    const page = install({ pathname: "/price-and-product/zones" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("zones");
+  });
+
+  test("a readonly path part is skipped", () => {
+    const page = install({ pathname: "/price-and-product/fare-structures/readonly/" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("the path parts after readonly are skipped too", () => {
+    const page = install({ pathname: "/price-and-product/fare-structures/readonly/123" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("an add path part and the parts after it are skipped", () => {
+    const page = install({ pathname: "/price-and-product/fare-structures/add/step-2" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("an edit path part and the parts after it are skipped", () => {
+    const page = install({ pathname: "/price-and-product/fare-structures/edit/123" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("a create path part and the parts after it are skipped", () => {
+    const page = install({ pathname: "/price-and-product/fare-structures/create" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("a number at the end of the path is skipped", () => {
+    const page = install({ pathname: "/price-and-product/fare-structures/123" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("a number before an edit path part is skipped", () => {
+    const page = install({ pathname: "/price-and-product/fare-structures/123/edit" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("a number in the middle of the path does not change the location", () => {
+    const page = install({ pathname: "/orders/123/zones" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("zones");
+  });
+
+  test("on a readonly path with nothing before it the server-rendered location stays", () => {
+    const page = install({ pathname: "/readonly/123" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("hjemmesiden");
+  });
+
+  test("a path part that matches a method of Object is shown as it is", () => {
+    const page = install({ pathname: "/constructor" });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("constructor");
   });
 
   test("on the root path the server-rendered location stays", () => {
