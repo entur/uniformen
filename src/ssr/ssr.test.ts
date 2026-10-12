@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { userInfoMock } from "../test/authTestSetup";
+import { notificationMock, userInfoMock } from "../test/authTestSetup";
 import { ENTUR_ORGANISATION_ID, ORGANISATION_ID_CLAIM } from "../auth/enturOrganisation";
 import {
   INTERNAL_AUDIENCE,
@@ -42,7 +42,10 @@ async function enturSignedIn(
   return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
 }
 
-beforeEach(() => userInfoMock.reset());
+beforeEach(() => {
+  userInfoMock.reset();
+  notificationMock.reset();
+});
 
 describe("/ssr auth (optional)", () => {
   test("no token returns 200 (public) with empty user slot", async () => {
@@ -342,7 +345,7 @@ describe("/ssr", () => {
   test("the panels share one copy of their behaviour, called once each", async () => {
     const body = await (await app.request("/ssr")).json();
     expect(body.scripts.match(/function panelToggle/g)).toHaveLength(1);
-    expect(body.scripts.match(/panelToggle\("/g)).toHaveLength(4);
+    expect(body.scripts.match(/panelToggle\("/g)).toHaveLength(5);
   });
 
   test("the inline bundle is valid JavaScript", async () => {
@@ -681,16 +684,42 @@ describe("/ssr top bar chrome", () => {
     expect(body.headerHtml).toContain('class="uniformen-logo__app">Partner<');
   });
 
-  // TODO enable this test once the notification panel is wired up
-  test.skip("notifications ride along with the user, not the anonymous bar", async () => {
+  test("notifications ride along with the user, not the anonymous bar", async () => {
     userInfoMock.respond = () =>
       Response.json({ sub: "auth0|test", name: "Hallstein Bronskimlet" });
     const token = await signInternalToken({ sub: "auth0|abc123" });
     const authed = await (await app.request("/ssr", { headers: bearer(token) })).json();
-    expect(authed.headerHtml).toContain('aria-label="Varsler"');
+    expect(authed.headerHtml).toContain("data-uniformen-notifications-menu-toggle");
 
     const anonymous = await (await app.request("/ssr")).json();
-    expect(anonymous.headerHtml).not.toContain('aria-label="Varsler"');
+    expect(anonymous.headerHtml).not.toContain("data-uniformen-notifications-menu-toggle");
+  });
+
+  test("the notifications from the API are rendered in the panel", async () => {
+    userInfoMock.respond = () => Response.json(enturProfile());
+    notificationMock.respond = () =>
+      Response.json([
+        {
+          id: 1010,
+          referenceId: "110",
+          created: "2026-09-16T04:55:37.773752Z",
+          authority: "internal",
+          subject: "auth0|varsler",
+          service: "PERMISSION_ADMIN",
+          type: "ROLE_REQUEST",
+          variant: "INFORMATION",
+          messages: [
+            { language: "nob", title: "Rollesøknad", body: "Ola Nordmann ønsker en rolle" },
+          ],
+        },
+      ]);
+    const { headerHtml } = await signedIn("auth0|varsler");
+    expect(headerHtml).toContain("Ola Nordmann ønsker en rolle");
+    // The link uses referenceId, the request the notification is about, not the
+    // notification's own id.
+    expect(headerHtml).toContain("permission-admin/requests/request/110");
+    expect(headerHtml).not.toContain("permission-admin/requests/request/1010");
+    expect(headerHtml).not.toContain("Ingen nye varsler");
   });
 
   test("the chip panels hang leftwards, so none of them can run off the page", async () => {

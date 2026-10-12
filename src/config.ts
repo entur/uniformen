@@ -61,4 +61,6 @@ const partnerTenant: AuthTenant = {
 export const config = {
   /** Auth0 tenants whose access tokens we accept. */
   tenants: [internalTenant, partnerTenant],
+  /** The notification center endpoint. It serves both tenants. */
+  notificationApiUri: requiredEnv("NOTIFICATION_API_URI"),
 };
