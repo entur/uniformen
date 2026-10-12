@@ -9,7 +9,10 @@
       "package-name": "@entur/uniformen",
       "component": "@entur/uniformen",
       "include-component-in-tag": true,
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "src/version.ts"
+      ]
     }
   },
   "changelog-sections": [
