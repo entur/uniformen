@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, jest } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement, type ReactNode, type ScriptHTMLAttributes } from "react";
+import { clearUniformenLayoutCache } from "./index";
 import { fetchUniformenComponents } from "./reactAdapter";
 
 function mockFetch(data: object, ok = true) {
-  jest.spyOn(globalThis, "fetch").mockResolvedValue({
-    ok,
-    json: () => Promise.resolve(data),
-  } as Response);
+  jest
+    .spyOn(globalThis, "fetch")
+    .mockImplementation((() =>
+      Promise.resolve(
+        new Response(JSON.stringify(data), { status: ok ? 200 : 500 }),
+      )) as unknown as typeof fetch);
 }
 
 const baseLayout = {
@@ -20,6 +23,7 @@ const baseLayout = {
 
 afterEach(() => {
   jest.restoreAllMocks();
+  clearUniformenLayoutCache();
 });
 
 describe("fetchUniformenComponents", () => {
@@ -95,7 +99,7 @@ describe("fetchUniformenComponents", () => {
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "https://uniformen.dev.entur.no/ssr?app=partner",
       {
-        headers: { Authorization: "Bearer abc.def.ghi" },
+        headers: expect.objectContaining({ Authorization: "Bearer abc.def.ghi" }),
         signal: expect.any(AbortSignal),
       },
     );

@@ -35,6 +35,7 @@ const darkFloatingButton = componentVariables.dark.components.button.floating;
 // Colours for form fields in the Entur design system.
 const form = componentVariables.light.components.form.baseForm;
 
+
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
 
@@ -142,18 +143,19 @@ export function buildRootVars(env: Environment): string {
      so this colour is not changed in contrast mode. */
   --uniformen-on-chat: ${drawer.standard.text};
 }
+}
 `;
 }
 
 /**
  * Colours for contrast mode, for a navy bar. They are set on the modifier class, not
- * on `:root`, so they only apply inside a contrast header, including its panels. All
- * values are the design system's `contrast` variants, except the floating button.
+ * on `:root`, so they only apply inside a contrast header, footer and its panels. All
+ * values are the design system's `contrast` variants.
  *
  * The environment badge keeps its colours. It has its own background, so its text
  * contrast does not depend on the bar colour.
  */
-const CONTRAST_VARS = `.uniformen-top-nav--contrast {
+const CONTRAST_VARS = `.uniformen-contrast {
   --uniformen-surface: ${semantic.fill.background.contrast.light};
   --uniformen-surface-hover: ${semantic.fill.background.contrast.lightalt};
   --uniformen-surface-active: ${semantic.fill.selected.hover.contrast};

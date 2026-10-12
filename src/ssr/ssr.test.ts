@@ -10,6 +10,7 @@ import {
 } from "../test/authTestKeys";
 import { app } from "../index";
 import { AI_AGENT_ENABLED } from "./TopNavigation";
+import { aiAgentFlag } from "./ssr";
 
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
@@ -601,14 +602,27 @@ describe("/ssr contrast query param", () => {
 
   test("contrast=true paints the bar with the modifier class", async () => {
     const body = await (await ssr("?contrast=true")).json();
-    expect(body.headerHtml).toContain("uniformen-top-nav uniformen-top-nav--contrast");
+    expect(body.headerHtml).toContain("uniformen-top-nav uniformen-contrast");
   });
 
   test("contrast=false and no param render the light bar", async () => {
     for (const query of ["", "?contrast=false"]) {
       const body = await (await ssr(query)).json();
       expect(body.headerHtml).toContain('class="uniformen-top-nav"');
-      expect(body.headerHtml).not.toContain("uniformen-top-nav--contrast");
+      expect(body.headerHtml).not.toContain("uniformen-contrast");
+    }
+  });
+
+  test("contrast=true paints the footer with the modifier class", async () => {
+    const body = await (await ssr("?contrast=true")).json();
+    expect(body.footerHtml).toContain("uniformen-footer uniformen-contrast");
+  });
+
+  test("contrast=false and no param render the light footer", async () => {
+    for (const query of ["", "?contrast=false"]) {
+      const body = await (await ssr(query)).json();
+      expect(body.footerHtml).toContain('class="uniformen-footer"');
+      expect(body.footerHtml).not.toContain("uniformen-contrast");
     }
   });
 
@@ -623,13 +637,7 @@ describe("/ssr contrast query param", () => {
     const light = await (await ssr()).json();
     expect(contrast.headAssets).toBe(light.headAssets);
     expect(contrast.csp).toEqual(light.csp);
-    expect(contrast.headAssets).toContain(".uniformen-top-nav--contrast");
-  });
-
-  test("the footer is untouched", async () => {
-    const contrast = await (await ssr("?contrast=true")).json();
-    const light = await (await ssr()).json();
-    expect(contrast.footerHtml).toBe(light.footerHtml);
+    expect(contrast.headAssets).toContain(".uniformen-contrast");
   });
 });
 
@@ -873,23 +881,16 @@ describe("/ssr locale", () => {
     const body = await (await app.request("/ssr?loginUrl=/auth/login")).json();
     expect(body.headerHtml).toContain('aria-label="Toppnavigasjon"');
     expect(body.headerHtml).toContain(">Logg inn<");
-    expect(body.footerHtml).toContain(">Informasjon<");
   });
 
-  test("every string in the bar follows the locale, header and footer alike", async () => {
+  test("every string in the bar follows the locale", async () => {
     const en = await (
       await app.request("/ssr?locale=en-GB&sidebar=true&loginUrl=/auth/login")
     ).json();
     expect(en.headerHtml).toContain('aria-label="Top navigation"');
     expect(en.headerHtml).toContain('aria-label="Hide or show side menu"');
     expect(en.headerHtml).toContain(">Log in<");
-    expect(en.footerHtml).toContain(">Information<");
-    expect(en.footerHtml).toContain(">Services<");
     expect(en.headerHtml).not.toContain("Logg inn");
-    expect(en.footerHtml).not.toContain("Tjenester");
-
-    const nn = await (await app.request("/ssr?locale=nn-NO")).json();
-    expect(nn.footerHtml).toContain(">Tenester<");
   });
 
   test("the signed-in half is translated too", async () => {
@@ -1066,5 +1067,14 @@ describe("/ssr caching", () => {
     const authed = await app.request("/ssr?app=partner", { headers: bearer(token) });
     const anonymous = await app.request("/ssr?app=partner&loginUrl=/auth/login");
     expect(authed.headers.get("Cache-Control")).not.toBe(anonymous.headers.get("Cache-Control"));
+  });
+});
+
+describe("aiAgentFlag", () => {
+  test("is off for everyone when POSTHOG_API_KEY is not set", async () => {
+    expect(await aiAgentFlag.isOn(undefined)).toBe(false);
+    expect(
+      await aiAgentFlag.isOn({ sub: "auth0|test", email: "a@entur.org", email_verified: true }),
+    ).toBe(false);
   });
 });

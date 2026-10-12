@@ -1,5 +1,12 @@
-import { describe, it, expect, jest, afterEach } from "bun:test";
-import { fetchUniformenLayout, type FetchUniformenParams } from "./index";
+import { describe, it, expect, jest, afterEach, setSystemTime } from "bun:test";
+import packageJson from "../package.json";
+import {
+  clearUniformenLayoutCache,
+  fetchUniformenLayout,
+  type FetchUniformenParams,
+} from "./index";
+import { cachedLayoutCount, MAX_ENTRIES_PER_CACHE } from "./lib/layoutCache";
+import { PACKAGE_VERSION } from "./version";
 
 /**
  * These tests are checked by `bun run tsc`, not at runtime. If the event map had no
@@ -24,11 +31,17 @@ describe("window event types", () => {
   });
 });
 
-function mockFetch(data: object, ok = true) {
-  jest.spyOn(globalThis, "fetch").mockResolvedValue({
-    ok,
-    json: () => Promise.resolve(data),
-  } as Response);
+/** Returns a fetch mock that makes a new response for each call, because a body can only be read once. */
+function respondWith(makeResponse: () => Response) {
+  return (() => Promise.resolve(makeResponse())) as unknown as typeof fetch;
+}
+
+function mockFetch(data: object, ok = true, headers?: HeadersInit) {
+  return jest
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(
+      respondWith(() => new Response(JSON.stringify(data), { status: ok ? 200 : 500, headers })),
+    );
 }
 
 function suppressConsoleError() {
@@ -39,17 +52,22 @@ function suppressConsoleError() {
  * Mocks a service that accepts the connection and never answers. The request only
  * ends when its signal aborts.
  */
+const silentFetch = ((_url: unknown, init?: { signal?: AbortSignal }) =>
+  new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+  })) as unknown as typeof fetch;
+
 function mockSilentFetch() {
-  const silent = (_url: unknown, init?: { signal?: AbortSignal }) =>
-    new Promise<Response>((_resolve, reject) => {
-      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
-    });
-  jest.spyOn(globalThis, "fetch").mockImplementation(silent as unknown as typeof fetch);
+  jest.spyOn(globalThis, "fetch").mockImplementation(silentFetch);
 }
 
 afterEach(() => {
   jest.restoreAllMocks();
+  clearUniformenLayoutCache();
+  setSystemTime();
 });
+
+const CLIENT_HEADER = { "X-Uniformen-Client": `@entur/uniformen@${PACKAGE_VERSION}` };
 
 describe("fetchUniformenLayout", () => {
   it("returns null when response is not ok", async () => {
@@ -127,7 +145,7 @@ describe("fetchUniformenLayout", () => {
     mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
     await fetchUniformenLayout({ token: "abc.def.ghi" });
     expect(globalThis.fetch).toHaveBeenCalledWith(expect.any(String), {
-      headers: { Authorization: "Bearer abc.def.ghi" },
+      headers: { ...CLIENT_HEADER, Authorization: "Bearer abc.def.ghi" },
       signal: expect.any(AbortSignal),
     });
   });
@@ -136,7 +154,7 @@ describe("fetchUniformenLayout", () => {
     mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
     await fetchUniformenLayout();
     expect(globalThis.fetch).toHaveBeenCalledWith(expect.any(String), {
-      headers: undefined,
+      headers: CLIENT_HEADER,
       signal: expect.any(AbortSignal),
     });
   });
@@ -237,7 +255,7 @@ describe("fetchUniformenLayout", () => {
       mockFetch(emptyLayout);
       await fetchUniformenLayout({ token: "abc.def.ghi", params: { app: "sorvis" } });
       expect(globalThis.fetch).toHaveBeenCalledWith("https://uniformen.entur.no/ssr?app=sorvis", {
-        headers: { Authorization: "Bearer abc.def.ghi" },
+        headers: { ...CLIENT_HEADER, Authorization: "Bearer abc.def.ghi" },
         signal: expect.any(AbortSignal),
       });
     });
@@ -360,15 +378,419 @@ describe("fetchUniformenLayout", () => {
     });
 
     it("passes a signal that is not yet aborted for a service that answers", async () => {
-      const fetchSpy = jest.spyOn(globalThis, "fetch").mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" }),
-      } as Response);
+      const fetchSpy = mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
 
       expect(await fetchUniformenLayout()).not.toBeNull();
       const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;
       expect(init.signal?.aborted).toBe(false);
     });
+  });
+});
+
+describe("client version", () => {
+  it("matches the version in package.json", () => {
+    expect(PACKAGE_VERSION).toBe(packageJson.version);
+  });
+});
+
+describe("retry", () => {
+  const layout = { headerHtml: "<header>ok</header>", footerHtml: "", headAssets: "", scripts: "" };
+
+  it("tries once more after a network error", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockResolvedValueOnce(new Response(JSON.stringify(layout)));
+
+    expect((await fetchUniformenLayout())?.headerHtml).toBe("<header>ok</header>");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("tries once more after a 5xx status", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(layout)));
+
+    expect((await fetchUniformenLayout())?.headerHtml).toBe("<header>ok</header>");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after the second failure", async () => {
+    suppressConsoleError();
+    const fetchSpy = mockFetch({}, false);
+
+    expect(await fetchUniformenLayout()).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a 4xx status", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(respondWith(() => new Response("", { status: 400 })));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses one time budget for both attempts", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockImplementationOnce(silentFetch);
+
+    expect(await fetchUniformenLayout({ timeoutMs: 20 })).toBeNull();
+    const [first, second] = fetchSpy.mock.calls.map(([, init]) => init?.signal);
+    expect(second).toBe(first);
+    expect(second?.aborted).toBe(true);
+  });
+
+  it("cancels the body of a failed response", async () => {
+    suppressConsoleError();
+    let cancelled = 0;
+    const failedResponse = () =>
+      new Response(new ReadableStream({ cancel: () => void cancelled++ }), { status: 503 });
+    jest.spyOn(globalThis, "fetch").mockImplementation(respondWith(failedResponse));
+
+    await fetchUniformenLayout();
+    expect(cancelled).toBe(2);
+  });
+
+  it("does not retry a 200 whose body is not JSON", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(respondWith(() => new Response("<html>proxy page</html>")));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry a 4xx status when cancelling the body fails", async () => {
+    suppressConsoleError();
+    const failingCancel = () =>
+      new Response(
+        new ReadableStream({
+          cancel: () => {
+            throw new Error("cancel failed");
+          },
+        }),
+        { status: 400 },
+      );
+    const fetchSpy = jest.spyOn(globalThis, "fetch").mockImplementation(respondWith(failingCancel));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry after the timeout", async () => {
+    suppressConsoleError();
+    mockSilentFetch();
+
+    expect(await fetchUniformenLayout({ timeoutMs: 20 })).toBeNull();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("invalid input", () => {
+  it("returns null for a timeoutMs the runtime rejects, without an unhandled rejection", async () => {
+    suppressConsoleError();
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      expect(await fetchUniformenLayout({ timeoutMs: Number.NaN })).toBeNull();
+      expect(await fetchUniformenLayout({ timeoutMs: -1 })).toBeNull();
+      await Bun.sleep(0);
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
+  it("returns null for a body that is JSON null", async () => {
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockImplementation(respondWith(() => new Response("null")));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+  });
+
+  it("uses an empty value for a field with the wrong type", async () => {
+    mockFetch({ headerHtml: 42, footerHtml: null, headAssets: "<style></style>", csp: null });
+
+    expect(await fetchUniformenLayout()).toEqual({
+      headerHtml: "",
+      footerHtml: "",
+      headAssets: "<style></style>",
+      scripts: "",
+      csp: {},
+    });
+  });
+
+  it("keeps only lists of strings in csp", async () => {
+    mockFetch({ csp: { "script-src": ["'self'", 1], "style-src": "'self'" } });
+
+    expect((await fetchUniformenLayout())?.csp).toEqual({ "script-src": ["'self'"] });
+  });
+});
+
+describe("cache", () => {
+  const layout = {
+    headerHtml: "<header>first</header>",
+    footerHtml: "",
+    headAssets: "",
+    scripts: "",
+  };
+  const cacheable = { "Cache-Control": "public, max-age=60" };
+
+  it("uses an anonymous layout for the max-age the service gives", async () => {
+    setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    const fetchSpy = mockFetch(layout, true, cacheable);
+    await fetchUniformenLayout({ params: { app: "partner" } });
+
+    setSystemTime(new Date("2026-01-01T12:00:59Z"));
+    expect((await fetchUniformenLayout({ params: { app: "partner" } }))?.headerHtml).toBe(
+      "<header>first</header>",
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    setSystemTime(new Date("2026-01-01T12:01:01Z"));
+    await fetchUniformenLayout({ params: { app: "partner" } });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps a separate entry for each set of params", async () => {
+    const fetchSpy = mockFetch(layout, true, cacheable);
+    await fetchUniformenLayout({ params: { app: "partner" } });
+    await fetchUniformenLayout({ params: { app: "cleos" } });
+    await fetchUniformenLayout({ environment: "dev", params: { app: "partner" } });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not use a layout without max-age while the service answers", async () => {
+    const fetchSpy = mockFetch(layout);
+    await fetchUniformenLayout();
+    await fetchUniformenLayout();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns the last anonymous layout when the fetch fails", async () => {
+    mockFetch(layout);
+    await fetchUniformenLayout({ params: { app: "partner" } });
+
+    jest.restoreAllMocks();
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+
+    expect((await fetchUniformenLayout({ params: { app: "partner" } }))?.headerHtml).toBe(
+      "<header>first</header>",
+    );
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("stops using a failed anonymous layout after a day", async () => {
+    setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    mockFetch(layout);
+    await fetchUniformenLayout();
+
+    jest.restoreAllMocks();
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+    setSystemTime(new Date("2026-01-02T12:00:01Z"));
+
+    expect(await fetchUniformenLayout()).toBeNull();
+  });
+
+  it("always fetches a signed-in layout while the service answers", async () => {
+    const fetchSpy = mockFetch(layout, true, cacheable);
+    await fetchUniformenLayout({ token: "user-a" });
+    await fetchUniformenLayout({ token: "user-a" });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns the last signed-in layout for the same token when the fetch fails", async () => {
+    mockFetch({ ...layout, headerHtml: "<header>Ada</header>" });
+    await fetchUniformenLayout({ token: "user-a" });
+
+    jest.restoreAllMocks();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+
+    expect((await fetchUniformenLayout({ token: "user-a" }))?.headerHtml).toBe(
+      "<header>Ada</header>",
+    );
+    expect(await fetchUniformenLayout({ token: "user-b" })).toBeNull();
+    expect(await fetchUniformenLayout()).toBeNull();
+  });
+
+  it("stops using a failed signed-in layout after an hour", async () => {
+    setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    mockFetch(layout);
+    await fetchUniformenLayout({ token: "user-a" });
+
+    jest.restoreAllMocks();
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+    setSystemTime(new Date("2026-01-01T13:00:01Z"));
+
+    expect(await fetchUniformenLayout({ token: "user-a" })).toBeNull();
+  });
+
+  it("evicts the least recently used signed-in layout when the cache is full", async () => {
+    mockFetch(layout);
+    for (let i = 0; i <= MAX_ENTRIES_PER_CACHE; i++) {
+      await fetchUniformenLayout({ token: `user-${i}` });
+    }
+    expect(cachedLayoutCount()).toBe(MAX_ENTRIES_PER_CACHE);
+
+    jest.restoreAllMocks();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+
+    expect(await fetchUniformenLayout({ token: "user-0" })).toBeNull();
+    expect(await fetchUniformenLayout({ token: `user-${MAX_ENTRIES_PER_CACHE}` })).not.toBeNull();
+  });
+
+  it("keeps anonymous layouts when many signed-in users arrive", async () => {
+    mockFetch(layout);
+    await fetchUniformenLayout({ params: { app: "partner" } });
+    for (let i = 0; i <= MAX_ENTRIES_PER_CACHE; i++) {
+      await fetchUniformenLayout({ token: `user-${i}` });
+    }
+
+    jest.restoreAllMocks();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    suppressConsoleError();
+    jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+
+    expect(await fetchUniformenLayout({ params: { app: "partner" } })).not.toBeNull();
+  });
+
+  it("removes expired layouts on the next write, even if nobody reads them", async () => {
+    setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    mockFetch(layout);
+    await fetchUniformenLayout({ token: "user-a" });
+    await fetchUniformenLayout({ token: "user-b" });
+    expect(cachedLayoutCount()).toBe(2);
+
+    setSystemTime(new Date("2026-01-01T13:00:01Z"));
+    await fetchUniformenLayout();
+
+    expect(cachedLayoutCount()).toBe(1);
+  });
+
+  it("gives each caller its own copy of the csp lists", async () => {
+    mockFetch({ ...layout, csp: { "script-src": ["'sha256-a'"] } }, true, cacheable);
+    const first = await fetchUniformenLayout();
+    first?.csp["script-src"]?.push("'self'");
+
+    const second = await fetchUniformenLayout();
+    expect(second?.csp).toEqual({ "script-src": ["'sha256-a'"] });
+  });
+
+  it("does not write back a layout from a request that started before a clear", async () => {
+    let answer: (res: Response) => void = () => {};
+    jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(
+        (() => new Promise<Response>((resolve) => (answer = resolve))) as unknown as typeof fetch,
+      );
+    const running = fetchUniformenLayout();
+    // Let the call reach `fetch` before the cache is cleared.
+    await Bun.sleep(0);
+
+    clearUniformenLayoutCache();
+    answer(new Response(JSON.stringify(layout), { headers: cacheable }));
+    await running;
+
+    expect(cachedLayoutCount()).toBe(0);
+  });
+
+  it("gives up on a request that ignores its abort signal", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce((() => new Promise<Response>(() => {})) as unknown as typeof fetch);
+
+    expect(await fetchUniformenLayout({ timeoutMs: 20 })).toBeNull();
+
+    fetchSpy.mockImplementation(respondWith(() => new Response(JSON.stringify(layout))));
+    expect((await fetchUniformenLayout({ timeoutMs: 20 }))?.headerHtml).toBe(
+      "<header>first</header>",
+    );
+  });
+
+  it("does not cache a signed-in layout when the runtime cannot hash the token", async () => {
+    const originalCrypto = globalThis.crypto;
+    // A browser page that is not served over HTTPS has `crypto` without `subtle`.
+    Object.defineProperty(globalThis, "crypto", { value: {}, configurable: true });
+    try {
+      mockFetch(layout);
+      expect(await fetchUniformenLayout({ token: "user-a" })).not.toBeNull();
+
+      jest.restoreAllMocks();
+      suppressConsoleError();
+      jest.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+      expect(await fetchUniformenLayout({ token: "user-a" })).toBeNull();
+    } finally {
+      Object.defineProperty(globalThis, "crypto", { value: originalCrypto, configurable: true });
+    }
+  });
+
+  it("sends one request for calls with the same options at the same time", async () => {
+    const fetchSpy = mockFetch(layout, true, cacheable);
+    const layouts = await Promise.all([
+      fetchUniformenLayout({ params: { app: "partner" } }),
+      fetchUniformenLayout({ params: { app: "partner" } }),
+      fetchUniformenLayout({ params: { app: "partner" } }),
+    ]);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(layouts.map((l) => l?.headerHtml)).toEqual(Array(3).fill("<header>first</header>"));
+  });
+
+  it("does not share a request between different tokens", async () => {
+    const fetchSpy = mockFetch(layout);
+    await Promise.all([
+      fetchUniformenLayout({ token: "user-a" }),
+      fetchUniformenLayout({ token: "user-b" }),
+    ]);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends a new request after a shared request fails", async () => {
+    suppressConsoleError();
+    const fetchSpy = jest
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockRejectedValueOnce(new Error("network error"));
+    const failed = await Promise.all([fetchUniformenLayout(), fetchUniformenLayout()]);
+    expect(failed).toEqual([null, null]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    fetchSpy.mockImplementation(respondWith(() => new Response(JSON.stringify(layout))));
+    expect((await fetchUniformenLayout())?.headerHtml).toBe("<header>first</header>");
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("fetches again after the cache is cleared", async () => {
+    const fetchSpy = mockFetch(layout, true, cacheable);
+    await fetchUniformenLayout();
+    clearUniformenLayoutCache();
+    await fetchUniformenLayout();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

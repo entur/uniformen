@@ -135,6 +135,9 @@ the release is tagged and the package is published to npm.
 You only need to write a correct commit subject. Do not change `version` or the
 package changelog.
 
+The package is published with [entur/gha-npmjs](https://github.com/entur/gha-npmjs)
+using npm trusted publishing, so there is no npm token.
+
 The service is not released this way. It is deployed from `main` when a pull request
 is merged.
 

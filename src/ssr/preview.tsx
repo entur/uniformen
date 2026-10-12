@@ -18,6 +18,12 @@ import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 const PREVIEW_BASE_CSS = `
                     @font-face {
                       font-family: "Nationale";
+                      font-weight: 300;
+                      src: url("/static/fonts/Entur-Nationale-Light.woff2") format("woff2");
+                    }
+
+                    @font-face {
+                      font-family: "Nationale";
                       font-weight: 500;
                       src: url("/static/fonts/Entur-Nationale-Medium.woff2") format("woff2");
                     }
@@ -546,7 +552,7 @@ export function previewRoutes(server: OpenAPIHono): void {
                     ${sidebar}
                     ${await renderComponentToString(<PreviewControls query={query} />)}
                 </main>
-                ${await renderComponentToString(<Footer locale={navProps.locale} />)}
+                ${await renderComponentToString(<Footer contrast={navProps.contrast} />)}
                 ${renderUniformenScripts()}
                 <script>${PREVIEW_SCRIPT}</script>
             </body>
