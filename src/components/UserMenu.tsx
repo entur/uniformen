@@ -67,7 +67,10 @@ export function UserMenu({
 }) {
   const txt = texts[locale];
   return (
-    <div class="uniformen-user-menu">
+    // PostHog autocapture skips elements with `ph-no-capture` and everything inside
+    // them. Apps that embed the bar would otherwise send the user's name and email
+    // to PostHog when the user clicks in this menu.
+    <div class="uniformen-user-menu ph-no-capture">
       {/* No aria-label, because the name inside the button is its accessible name.
           At mobile widths the name is only hidden visually, so screen readers still read it. */}
       <button
