@@ -16,6 +16,13 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   have the `ai-agent` feature flag on in PostHog. If PostHog is slow or fails, the bar
   is rendered without them.
 
+### Added
+
+- `app=partner` shows the AI agent button and its chat drawer, also without
+  `aiAgent=true`, to the same users. The button is only shown where chat is
+  configured, which is dev for now. When the drawer gets a chat token, the `csp` field
+  also has `connect-src` for the chat proxy, so the browser can send questions to it.
+
 ## 2026-10-06
 
 ### Changed

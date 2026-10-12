@@ -53,7 +53,8 @@ export const uniformenQuerySchema = z
       )
       .optional(),
     // Shows the AI agent button and its chat drawer. In `/ssr`, only a signed-in user
-    // with the `ai-agent` feature flag on in PostHog sees them.
+    // with the `ai-agent` feature flag on in PostHog sees them, and only where chat is
+    // configured.
     aiAgent: z.enum(["true", "false"]).optional(),
   })
   // These checks use two fields, so they cannot be on the field itself. A repeated

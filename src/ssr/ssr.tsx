@@ -1,6 +1,7 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { chatProxyConfig, issueChatToken } from "../chat/chatProxy";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
+import type { PortalApplicationId } from "../components/portalApplications";
 import { optionalAuth } from "../auth/optionalAuth";
 import { type UserInfo, userInfoService } from "../auth/userInfo";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
@@ -81,6 +82,10 @@ export const aiAgentFlag = {
     return request;
   },
 };
+
+// These apps get the AI agent button without sending `aiAgent=true`. Add an app here
+// to give it the button too.
+const AI_AGENT_APPS: ReadonlySet<PortalApplicationId> = new Set(["partner"]);
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
@@ -163,8 +168,13 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         }
       : undefined;
 
-    // PostHog is only called when the app asks for the agent.
-    const aiAgent = navProps.aiAgent && (await aiAgentFlag.isOn(info));
+    // Without a chat proxy config, which Helm only sets in some environments, the
+    // button would only show the error text. So it is not rendered at all. PostHog
+    // is only called when the app asks for the agent and chat is configured.
+    const aiAgent =
+      (navProps.aiAgent || (query.app !== undefined && AI_AGENT_APPS.has(query.app))) &&
+      chatProxyConfig !== undefined &&
+      (await aiAgentFlag.isOn(info));
 
     // Only a user with a profile gets a chat token. This keeps machine tokens out,
     // but it also means a signed-in user has no chat while userinfo fails. Without
@@ -201,9 +211,9 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         headerHtml: await renderComponentToString(
           <TopNavigation
             {...navProps}
+            aiAgent={aiAgent}
             user={user}
             isEnturUser={isEnturOrganisation(info)}
-            aiAgent={aiAgent}
             chatAccessToken={chatAccessToken}
           />,
         ),
@@ -212,6 +222,8 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         csp: {
           "style-src": [uniformenCssHash],
           "script-src": [uniformenHeadScriptHash, uniformenScriptsHash],
+          // The chat drawer sends questions to the chat proxy from the browser.
+          ...(chatAccessToken && { "connect-src": [new URL(chatAccessToken.url).origin] }),
         },
       },
       200,
