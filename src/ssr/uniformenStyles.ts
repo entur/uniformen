@@ -142,7 +142,6 @@ export function buildRootVars(env: Environment): string {
      so this colour is not changed in contrast mode. */
   --uniformen-on-chat: ${drawer.standard.text};
 }
-}
 `;
 }
 
