@@ -1,4 +1,5 @@
 import type { Locale } from "../types";
+import { locationNames } from "./chatLocations";
 import { ChatMessage } from "./ChatMessage";
 import { ChatTextArea } from "./ChatTextArea";
 import { CloseIcon } from "./icons/CloseIcon";
@@ -67,6 +68,7 @@ export function ChatDrawer({
       data-uniformen-chat-url={chat?.url}
       data-uniformen-chat-token={chat?.token}
       data-uniformen-chat-error={txt.error}
+      data-uniformen-chat-locations={JSON.stringify(locationNames[locale])}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"
