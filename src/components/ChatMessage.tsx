@@ -33,7 +33,9 @@ export function ChatMessage(
   const { name, icon } = senders[sender];
   return (
     <article
-      class={`uniformen-chat-message uniformen-chat-message--${sender}`}
+      // `ph-no-capture` stops PostHog from recording the text of questions and answers.
+      // The example questions are fixed text, so clicks on them are still recorded.
+      class={`uniformen-chat-message uniformen-chat-message--${sender}${sender === "system" ? "" : " ph-no-capture"}`}
       // The browser hides the example questions after the first question. See `aiAgentHandlers`.
       data-uniformen-chat-examples={"questions" in props ? true : undefined}
     >

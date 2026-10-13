@@ -201,7 +201,9 @@ export default function aiAgentHandlers() {
    */
   async function fetchReply(query: string, count: number): Promise<string> {
     const url = drawer?.getAttribute("data-uniformen-chat-proxy-url");
-    const token = drawer?.getAttribute("data-uniformen-chat-token");
+    const token = drawer
+      ?.querySelector("[data-uniformen-chat-token]")
+      ?.getAttribute("data-uniformen-chat-token");
     const errorText = drawer?.getAttribute("data-uniformen-chat-error-text") ?? "";
     if (!url || !token) return errorText;
     try {

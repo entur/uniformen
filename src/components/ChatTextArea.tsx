@@ -12,8 +12,10 @@ export function ChatTextArea({ locale }: { locale: Locale }) {
   const txt = texts[locale];
   return (
     <div class="uniformen-chat-textarea__wrapper">
+      {/* `ph-no-capture` stops PostHog from recording what the user types, also in
+          apps that turn off input masking in session replay. */}
       <textarea
-        class="uniformen-chat-textarea"
+        class="uniformen-chat-textarea ph-no-capture"
         rows={3}
         placeholder={txt.label}
         aria-label={txt.label}

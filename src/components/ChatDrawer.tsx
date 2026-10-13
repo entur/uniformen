@@ -63,13 +63,18 @@ export function ChatDrawer({
       hidden
       id="uniformen-chat-drawer"
       data-uniformen-chat-proxy-url={chatAccessToken?.url}
-      data-uniformen-chat-token={chatAccessToken?.token}
       data-uniformen-chat-error-text={txt.error}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"
       class="uniformen-chat-drawer"
     >
+      {/* `ph-no-capture` stops PostHog session replay from recording the token. The
+          class must not be on the drawer, because autocapture should still record
+          clicks on the drawer's buttons. */}
+      {chatAccessToken && (
+        <div hidden class="ph-no-capture" data-uniformen-chat-token={chatAccessToken.token} />
+      )}
       <button
         type="button"
         class="uniformen-icon-button uniformen-chat-drawer__close"

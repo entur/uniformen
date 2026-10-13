@@ -241,14 +241,12 @@ function install({
   locationName.textContent = "hjemmesiden";
 
   const chatAttributes: Record<string, string> = chat
-    ? {
-        "data-uniformen-chat-proxy-url": "https://uniformen.test/chat-proxy",
-        "data-uniformen-chat-token": "t",
-      }
+    ? { "data-uniformen-chat-proxy-url": "https://uniformen.test/chat-proxy" }
     : {};
   const drawer = new FakeElement(
     { id: "uniformen-chat-drawer", "data-uniformen-chat-error-text": "Feil", ...chatAttributes },
     [
+      ...(chat ? [new FakeElement({ "data-uniformen-chat-token": "t" })] : []),
       close,
       chatWindow,
       new FakeTemplate(
