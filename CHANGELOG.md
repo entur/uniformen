@@ -27,6 +27,15 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   configured, which is dev for now. When the drawer gets a chat token, the `csp` field
   also has `connect-src` for the chat proxy, so the browser can send questions to it.
 
+
+## 2026-10-09
+
+### Changed
+
+- The user menu has the `ph-no-capture` class. PostHog autocapture no longer records
+  clicks in the menu, so the user's name and email are not sent to PostHog. Clicks in
+  the rest of the bar are still captured.
+
 ## 2026-10-06
 
 ### Changed
