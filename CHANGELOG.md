@@ -12,21 +12,20 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
 ### Added
 
-- `aiAgent=true` renders an AI agent button in the bar. It is shown only to a
-  signed-in user who has the `ai-agent` feature flag on in PostHog. If PostHog is
-  slow or fails, the bar is rendered without it. The preview page shows it without
-  checking the flag.
-- The button opens a chat drawer. The user can send questions and start a new chat.
-  The questions go through the service's `POST /chat-proxy` endpoint to the AI agent
-  backend.
-
-### Added
-
-- `app=partner` shows the AI agent button and its chat drawer, also without
-  `aiAgent=true`, to the same users. The button is only shown where chat is
-  configured, which is dev for now. When the drawer gets a chat token, the `csp` field
-  also has `connect-src` for the chat proxy, so the browser can send questions to it.
-
+- An AI agent button in the bar, for a signed-in user who has the `ai-agent` feature
+  flag on in PostHog. It is shown with `aiAgent=true`, and only with `app=partner`.
+  It is only shown where the service is connected to the AI agent backend, which is
+  dev for now. If PostHog is slow or fails, the bar is rendered without the button.
+  The preview page shows the button without checking the flag.
+- The button opens a chat drawer with example questions. The user can send questions,
+  and start a new chat. Enter sends a question and Shift+Enter adds a new line. 
+  Clicking the X button (in UI) or Escape closes the drawer.
+- The drawer shows the page the user is on. Replies can have paragraphs, lists, headings
+  and bold text. Links in a reply are shown as plain text.
+- The drawer sends questions from the browser to the service's `POST /chat-proxy`
+  endpoint. When the bar has the drawer, the `csp` field also has a `connect-src`
+  entry with the service's address. The app's Content-Security-Policy must include
+  it, or the browser blocks the questions.
 
 ## 2026-10-09
 
