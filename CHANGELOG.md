@@ -8,13 +8,17 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
-## 2026-10-12
+## 2026-10-13
 
-### Changed
+### Added
 
-- `aiAgent=true` only shows the AI agent button and chat drawer to signed-in users who
-  have the `ai-agent` feature flag on in PostHog. If PostHog is slow or fails, the bar
-  is rendered without them.
+- `aiAgent=true` renders an AI agent button in the bar. It is shown only to a
+  signed-in user who has the `ai-agent` feature flag on in PostHog. If PostHog is
+  slow or fails, the bar is rendered without it. The preview page shows it without
+  checking the flag.
+- The button opens a chat drawer. The user can send questions and start a new chat.
+  The questions go through the service's `POST /chat-proxy` endpoint to the AI agent
+  backend.
 
 ### Added
 
