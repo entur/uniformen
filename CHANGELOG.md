@@ -26,6 +26,11 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   endpoint. When the bar has the drawer, the `csp` field also has a `connect-src`
   entry with the service's address. The app's Content-Security-Policy must include
   it, or the browser blocks the questions.
+## 2026-10-14
+
+### Added
+
+- Varslingssenter is in the app switcher, and `app=varslingssenter` is accepted.
 
 ## 2026-10-09
 

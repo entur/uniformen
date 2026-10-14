@@ -15,5 +15,5 @@ on:
 jobs:
   code-scan:
     name: Code Scan
-    uses: entur/gha-security/.github/workflows/code-scan.yml@aafa20a94ac3b2fbafb2951747b92a570e9e8542 # v2.16.0
+    uses: entur/gha-security/.github/workflows/code-scan.yml@89ffce329b85b10d285defb50bb58c35227d4305 # v2.17.0
     secrets: inherit
