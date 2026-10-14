@@ -684,6 +684,23 @@ describe("/ssr aiAgent query param", () => {
     isOn.mockRestore();
   });
 
+  test("the chat token, messages and text field are hidden from PostHog", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
+    const html: string = (await signedIn("auth0|agent-no-capture", "?aiAgent=true")).headerHtml;
+    expect(html.match(/data-uniformen-chat-token=/g)).toHaveLength(1);
+    expect(html).toMatch(/class="ph-no-capture" data-uniformen-chat-token="[^"]+"/);
+    expect(html).toContain(
+      'class="uniformen-chat-message uniformen-chat-message--agent ph-no-capture"',
+    );
+    expect(html).toContain(
+      'class="uniformen-chat-message uniformen-chat-message--user ph-no-capture"',
+    );
+    expect(html).toContain('class="uniformen-chat-message uniformen-chat-message--system"');
+    expect(html).toContain('class="uniformen-chat-textarea ph-no-capture"');
+    expect(html).not.toMatch(/class="uniformen-chat-drawer[^"]*ph-no-capture/);
+    isOn.mockRestore();
+  });
+
   test("a signed-in user with the flag off gets no AI agent", async () => {
     const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
     const body = await signedIn("auth0|agent-flag-off", "?aiAgent=true");
