@@ -12,7 +12,15 @@ export type FetchUniformenParams = {
    * next to the Entur logo. An unknown value makes the service answer `400`, and the
    * call returns `null`.
    */
-  app?: "bedrift" | "cleos" | "nplan" | "ops-center" | "partner" | "skoleskyss" | "sorvis";
+  app?:
+    | "bedrift"
+    | "cleos"
+    | "nplan"
+    | "ops-center"
+    | "partner"
+    | "skoleskyss"
+    | "sorvis"
+    | "varslingssenter";
 
   /**
    * The language of the header and footer. The default is `nb-NO`. App names and
