@@ -1048,7 +1048,7 @@
    with the background. A white fill sets it apart. The text uses the drawer text
    colour, like the map icon. In contrast mode the drawer is navy, and the design
    system's contrast secondary button is used without changes. */
-.uniformen-top-nav:not(.uniformen-top-nav--contrast) .uniformen-new-chat-button {
+.uniformen-top-nav:not(.uniformen-contrast) .uniformen-new-chat-button {
   --uniformen-secondary: var(--uniformen-color-brand-white);
   --uniformen-on-secondary: var(--uniformen-on-drawer);
 }
@@ -1119,4 +1119,5 @@
 
 .uniformen-chat-example:hover {
   background: var(--uniformen-secondary-hover);
+  color: var(--uniformen-on-secondary);
 }
