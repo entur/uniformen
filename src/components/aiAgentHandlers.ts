@@ -264,12 +264,27 @@ export default function aiAgentHandlers() {
   }
 
   /**
-   * Returns the parts of the page's path, separated by commas. For
-   * `/price-and-product/fare-structures` it returns
-   * "price-and-product, fare-structures".
+   * Returns the name of the last part of the page's path, in the drawer's language.
+   * Returns the path part itself when it has no name, and "" on the root path.
+   * When the path has a `readonly`, `add`, `edit` or `create` or number part,
+   * it uses the part before it
    */
   function findLocation() {
-    return window.location.pathname.split("/").filter(Boolean).join(", ");
+    const parts = window.location.pathname.split("/").filter(Boolean);
+    // `readonly`, `add`, `edit` and `create` are not pages. They show a page in
+    // another mode. When one of them is in the path, use the part before it, and skip
+    // the parts after it.
+    const modes = new Set(["readonly", "add", "edit", "create"]);
+    const stop = parts.findIndex((part) => modes.has(part));
+    const pageParts = stop === -1 ? parts : parts.slice(0, stop);
+    // A number at the end of the path is usually the id of one item, like the 123 in
+    // `/turnover/123`. Skip it and use the part before it.
+    const last = pageParts.findLast((part) => !/^\d+$/.test(part)) ?? "";
+    const names: Record<string, string> = JSON.parse(
+      drawer?.getAttribute("data-uniformen-chat-locations") ?? "{}",
+    );
+    // hasOwn, so a path like `/constructor` does not find a method of Object.
+    return Object.hasOwn(names, last) ? names[last] : last;
   }
 
   /** Shows the example questions when `visible` is true, and hides them when it is false. */
