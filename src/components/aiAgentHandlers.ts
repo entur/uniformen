@@ -16,6 +16,10 @@ export default function aiAgentHandlers() {
   if (!drawer) return;
 
   const textarea = () => drawer.querySelector<HTMLTextAreaElement>(".uniformen-chat-textarea");
+  const locationName = drawer.querySelector(".uniformen-chat-drawer__location-name");
+  // The location text that the server rendered. It is shown again when the path has
+  // no part to show, for example after a navigation to the root path.
+  const defaultLocation = locationName?.textContent ?? "";
 
   /** Moves the drawer so it is below the bar and above the footer. */
   function placeDrawer() {
@@ -30,6 +34,16 @@ export default function aiAgentHandlers() {
   // scrolling stays smooth.
   window.addEventListener("scroll", placeDrawer, { passive: true });
   window.addEventListener("resize", placeDrawer);
+
+  // A single-page app changes the path without loading a new page, so the location
+  // is updated on every navigation, also while the drawer is open. The Navigation API
+  // also sees `history.pushState`. Browsers without it only update on back and forward.
+  const navigation = (window as { navigation?: EventTarget }).navigation;
+  if (navigation) {
+    navigation.addEventListener("currententrychange", displayLocation);
+  } else {
+    window.addEventListener("popstate", displayLocation);
+  }
 
   button.addEventListener("click", () => setDrawerOpen(Boolean(drawer.hidden)));
 
@@ -257,10 +271,7 @@ export default function aiAgentHandlers() {
 
   /** Shows the user's current place in the app at the bottom of the drawer. */
   function displayLocation() {
-    const locationName = drawer?.querySelector(".uniformen-chat-drawer__location-name");
-    const location = findLocation();
-    // When the path is empty, keep the server-rendered text.
-    if (locationName && location) locationName.textContent = location;
+    if (locationName) locationName.textContent = findLocation() || defaultLocation;
   }
 
   /**

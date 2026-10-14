@@ -178,14 +178,32 @@ class FakeDocument {
   }
 }
 
-class FakeWindow {
-  readonly listened: string[] = [];
+/** Keeps its listeners, so a test can fire `popstate` or `currententrychange`. */
+class FakeEventTarget {
+  private readonly listeners = new Map<string, Listener[]>();
+
+  /** The event types that listeners were added for, in order. */
+  get listened(): string[] {
+    return [...this.listeners.keys()];
+  }
+
+  addEventListener(type: string, listener: Listener): void {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  fire(type: string, event: unknown = {}): void {
+    for (const listener of this.listeners.get(type) ?? []) listener(event);
+  }
+}
+
+class FakeWindow extends FakeEventTarget {
   readonly innerHeight = 800;
 
-  constructor(readonly location: { pathname: string }) {}
-
-  addEventListener(type: string): void {
-    this.listened.push(type);
+  constructor(
+    readonly location: { pathname: string },
+    readonly navigation?: FakeEventTarget,
+  ) {
+    super();
   }
 }
 
@@ -212,9 +230,12 @@ function install({
   drawer: withDrawer = true,
   chat = true,
   locations = { "fare-structures": "Prisstrukturer" },
+  navigation = false,
   respond = () => Response.json({ reply: "Svar", sessionId: "s-1" }),
 }: {
   pathname?: string;
+  /** Whether the browser has the Navigation API. */
+  navigation?: boolean;
   button?: boolean;
   drawer?: boolean;
   /** Whether the drawer has a chat URL and token. */
@@ -283,7 +304,7 @@ function install({
   for (const element of [button, textarea]) {
     element.onFocus = (focused) => (doc.activeElement = focused);
   }
-  const win = new FakeWindow({ pathname });
+  const win = new FakeWindow({ pathname }, navigation ? new FakeEventTarget() : undefined);
   globals["Element"] = FakeElement;
   globals["HTMLElement"] = FakeElement;
   globals["document"] = doc;
@@ -359,8 +380,38 @@ describe("aiAgentHandlers", () => {
     }
   });
 
-  test("listens for scroll and resize when the drawer is in the page", () => {
-    expect(install().win.listened).toEqual(["scroll", "resize"]);
+  test("listens for scroll, resize and popstate when the drawer is in the page", () => {
+    expect(install().win.listened).toEqual(["scroll", "resize", "popstate"]);
+  });
+
+  test("with the Navigation API, listens for navigations instead of popstate", () => {
+    const page = install({ navigation: true });
+    expect(page.win.listened).toEqual(["scroll", "resize"]);
+    expect(page.win.navigation?.listened).toEqual(["currententrychange"]);
+  });
+
+  test("a navigation updates the location, also while the drawer is closed", () => {
+    const page = install({ pathname: "/price-and-product/zones", navigation: true });
+    page.win.location.pathname = "/price-and-product/fare-structures";
+    page.win.navigation?.fire("currententrychange");
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("back and forward update the location when there is no Navigation API", () => {
+    const page = install({ pathname: "/price-and-product/zones" });
+    page.button.click();
+    page.win.location.pathname = "/price-and-product/fare-structures";
+    page.win.fire("popstate");
+    expect(page.locationName.textContent).toBe("Prisstrukturer");
+  });
+
+  test("a navigation to the root path shows the server-rendered location again", () => {
+    const page = install({ pathname: "/price-and-product/zones", navigation: true });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("zones");
+    page.win.location.pathname = "/";
+    page.win.navigation?.fire("currententrychange");
+    expect(page.locationName.textContent).toBe("hjemmesiden");
   });
 
   test("the button opens and closes the drawer, and keeps aria-expanded in sync", () => {
