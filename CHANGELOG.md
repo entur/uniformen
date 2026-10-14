@@ -8,11 +8,31 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
-## 2026-10-07
+## 2026-10-14
 
 ### Added
 
 - Varslingssenter is in the app switcher, and `app=varslingssenter` is accepted.
+
+## 2026-10-09
+
+### Changed
+
+- The user menu has the `ph-no-capture` class. PostHog autocapture no longer records
+  clicks in the menu, so the user's name and email are not sent to PostHog. Clicks in
+  the rest of the bar are still captured.
+
+## 2026-10-06
+
+### Changed
+
+- The footer is one line: the copyright and a link to entur.no on the left, Facebook,
+  Instagram and LinkedIn on the right. The three columns and the blue background are
+  gone.
+- `contrast=true` paints the footer too.
+- `locale` no longer changes the footer. Nothing in it is translated now.
+- The contrast class is `uniformen-contrast` on both the bar and the footer, replacing
+  `uniformen-top-nav--contrast`.
 
 ## 2026-09-24
 

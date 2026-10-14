@@ -47,6 +47,8 @@ const server = Bun.serve({
 });
 
 afterAll(() => server.stop());
+// Bun loads .env before this file runs. Remove the PostHog key so no test calls PostHog.
+delete process.env["POSTHOG_API_KEY"];
 process.env["ENVIRONMENT"] = "dev";
 process.env["AUTH0_INTERNAL_AUDIENCE"] = INTERNAL_AUDIENCE;
 process.env["AUTH0_INTERNAL_ISSUER"] = INTERNAL_ISSUER;

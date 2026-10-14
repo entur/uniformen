@@ -15,3 +15,6 @@ common:
       AUTH0_PARTNER_ISSUER: https://partner.dev.entur.org/
       AUTH0_PARTNER_JWKS_URI: https://partner.dev.entur.org/.well-known/jwks.json
       AUTH0_PARTNER_USERINFO_URI: https://partner.dev.entur.org/userinfo
+  secrets:
+    posthog-credentials:
+      - POSTHOG_API_KEY

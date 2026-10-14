@@ -85,10 +85,7 @@ export function TopNavigation({
   // Also narrows the type, because `LocaleSwitcher` needs a defined list.
   const hasLocales = availableLocales !== undefined && availableLocales.length > 0;
   return (
-    <header
-      id="top-navigation"
-      class={`uniformen-top-nav${contrast ? " uniformen-top-nav--contrast" : ""}`}
-    >
+    <header id="top-navigation" class={`uniformen-top-nav${contrast ? " uniformen-contrast" : ""}`}>
       <nav class="uniformen-top-nav__nav" aria-label={txt.toppnavigasjon}>
         <div class="uniformen-top-nav__left">
           {sidebar && <SidebarToggle locale={locale} />}

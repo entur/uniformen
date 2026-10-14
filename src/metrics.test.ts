@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "./index";
+import { clientVersionLabel, MAX_CLIENT_VERSIONS } from "./metrics";
 
 /**
  * Returns the lines of the Prometheus scrape output. It requests the app, not the
@@ -70,5 +71,42 @@ describe("ssr request metric", () => {
     expect(seriesFor(await metricLines(), "uniformen_ssr_requests")).not.toContainEqual(
       expect.stringContaining("not-an-app"),
     );
+  });
+});
+
+describe("client version label", () => {
+  test("records the version the package sends", async () => {
+    await app.request("/ssr", { headers: { "X-Uniformen-Client": "@entur/uniformen@0.16.0" } });
+
+    const series = seriesFor(await metricLines(), "uniformen_ssr_requests");
+    expect(series).toContainEqual(expect.stringContaining('client_version="0.16.0"'));
+  });
+
+  test("a request without the header is counted as none", async () => {
+    await app.request("/ssr");
+
+    const series = seriesFor(await metricLines(), "uniformen_ssr_requests");
+    expect(series).toContainEqual(expect.stringContaining('client_version="none"'));
+  });
+
+  test("a header in another format is counted as unknown", () => {
+    expect(clientVersionLabel("curl/8.0")).toBe("unknown");
+    expect(clientVersionLabel("@entur/uniformen@1.0.0 extra")).toBe("unknown");
+    expect(clientVersionLabel("@entur/uniformen@1.0")).toBe("unknown");
+  });
+
+  test("stops adding versions to the label after the limit", async () => {
+    for (let i = 0; i < MAX_CLIENT_VERSIONS + 20; i++) {
+      await app.request("/ssr", { headers: { "X-Uniformen-Client": `@entur/uniformen@9.9.${i}` } });
+    }
+
+    const versions = new Set(
+      seriesFor(await metricLines(), "uniformen_ssr_requests").map(
+        (line) => /client_version="([^"]*)"/.exec(line)?.[1],
+      ),
+    );
+    // "none", "unknown" and "other" can also be present.
+    expect(versions.size).toBeLessThanOrEqual(MAX_CLIENT_VERSIONS + 3);
+    expect(versions).toContain("other");
   });
 });
