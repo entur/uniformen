@@ -150,7 +150,14 @@ const chatProxyRoute = createRoute({
     200: {
       content: {
         "application/json": {
-          schema: z.object({ reply: z.string(), sessionId: z.string() }),
+          schema: z.object({
+            reply: z.string(),
+            sessionId: z.string(),
+            restarted: z.boolean().openapi({
+              description:
+                "True when sporai no longer knew the session from the request, so the proxy started a new session. The agent does not remember the earlier messages.",
+            }),
+          }),
         },
       },
       description: "The reply, and the session to send with the next question.",
@@ -160,7 +167,9 @@ const chatProxyRoute = createRoute({
       content: { "text/plain": { schema: z.string() } },
       description: "The chat token is missing, invalid or expired.",
     },
-    404: problemResponse("Sporai does not know the session, for example because it expired."),
+    404: problemResponse(
+      "Sporai did not recognise the chat session, even after the proxy started a new one.",
+    ),
     413: problemResponse("The request body is larger than 8 KiB."),
     503: problemResponse("Sporai could not answer, or too many questions are open right now."),
   },
@@ -240,19 +249,24 @@ export function chatProxyRoutes(
         sessionId = created.sessionId;
       }
 
-      const result = await client.chat(
-        {
-          sessionId,
-          query,
-          // Leave out a location that sporai would reject, so the question still gets a reply.
-          location:
-            location !== undefined && LOCATION_PATTERN.test(location) ? location : undefined,
-        },
-        signal,
-      );
-      if (result.kind === "sessionGone") return problem(c, 404, "Not Found");
+      // Leave out a location that sporai would reject, so the question still gets a reply.
+      const safeLocation =
+        location !== undefined && LOCATION_PATTERN.test(location) ? location : undefined;
+        
+      let result = await client.chat({ sessionId, query, location: safeLocation }, signal);
+      // Sporai deletes a session when TTL has expired. 
+      // Start a new session and ask again. Only do this for a session from the request,
+      // so a session created above is never retried.
+      const restarted = result.kind === "sessionGone" && requestSessionId !== undefined;
+      if (restarted) {
+        const created = await client.createSession(signal);
+        if (created.kind !== "ok") return problem(c, 503, "Service Unavailable");
+        sessionId = created.sessionId;
+        result = await client.chat({ sessionId, query, location: safeLocation }, signal);
+      }
+      if (result.kind === "sessionGone") return problem(c, 404, "Chat session not found");
       if (result.kind === "error") return problem(c, 503, "Service Unavailable");
-      return c.json({ reply: result.reply, sessionId }, 200);
+      return c.json({ reply: result.reply, sessionId, restarted }, 200);
     },
     // The shared app has no default hook, so the route sets its own answer for a body
     // that fails validation.
