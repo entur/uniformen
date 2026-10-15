@@ -17,6 +17,8 @@ export function ChatTextArea({ locale }: { locale: Locale }) {
       <textarea
         class="uniformen-chat-textarea ph-no-capture"
         rows={3}
+        // Same limit as the query schema in chatProxy.ts.
+        maxlength={1000}
         placeholder={txt.label}
         aria-label={txt.label}
       />
