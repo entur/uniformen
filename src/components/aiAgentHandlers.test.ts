@@ -262,7 +262,7 @@ function install({
   const close = new FakeElement({ "data-uniformen-chat-drawer-close": "" });
   const newChat = new FakeElement({ "data-uniformen-new-chat": "" });
   const locationName = new FakeElement({ class: "uniformen-chat-drawer__location-name" });
-  locationName.textContent = "hjemmesiden";
+  locationName.textContent = "Hjemmesiden";
 
   const chatAttributes: Record<string, string> = chat
     ? { "data-uniformen-chat-proxy-url": "https://uniformen.test/chat-proxy" }
@@ -408,10 +408,10 @@ describe("aiAgentHandlers", () => {
   test("a navigation to the root path shows the server-rendered location again", () => {
     const page = install({ pathname: "/price-and-product/zones", navigation: true });
     page.button.click();
-    expect(page.locationName.textContent).toBe("zones");
+    expect(page.locationName.textContent).toBe("Zones");
     page.win.location.pathname = "/";
     page.win.navigation?.fire("currententrychange");
-    expect(page.locationName.textContent).toBe("hjemmesiden");
+    expect(page.locationName.textContent).toBe("Hjemmesiden");
   });
 
   test("the button opens and closes the drawer, and keeps aria-expanded in sync", () => {
@@ -463,7 +463,7 @@ describe("aiAgentHandlers", () => {
   test("a path part without a name is shown as it is", () => {
     const page = install({ pathname: "/price-and-product/zones" });
     page.button.click();
-    expect(page.locationName.textContent).toBe("zones");
+    expect(page.locationName.textContent).toBe("Zones");
   });
 
   test("a readonly path part is skipped", () => {
@@ -511,25 +511,25 @@ describe("aiAgentHandlers", () => {
   test("a number in the middle of the path does not change the location", () => {
     const page = install({ pathname: "/orders/123/zones" });
     page.button.click();
-    expect(page.locationName.textContent).toBe("zones");
+    expect(page.locationName.textContent).toBe("Zones");
   });
 
   test("on a readonly path with nothing before it the server-rendered location stays", () => {
     const page = install({ pathname: "/readonly/123" });
     page.button.click();
-    expect(page.locationName.textContent).toBe("hjemmesiden");
+    expect(page.locationName.textContent).toBe("Hjemmesiden");
   });
 
   test("a path part that matches a method of Object is shown as it is", () => {
     const page = install({ pathname: "/constructor" });
     page.button.click();
-    expect(page.locationName.textContent).toBe("constructor");
+    expect(page.locationName.textContent).toBe("Constructor");
   });
 
   test("on the root path the server-rendered location stays", () => {
     const page = install();
     page.button.click();
-    expect(page.locationName.textContent).toBe("hjemmesiden");
+    expect(page.locationName.textContent).toBe("Hjemmesiden");
   });
 
   test("sending adds the question, hides the examples, shows typing and empties the field", () => {

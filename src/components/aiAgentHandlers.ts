@@ -277,6 +277,7 @@ export default function aiAgentHandlers() {
   /**
    * Returns the name of the last part of the page's path, in the drawer's language.
    * Returns the path part itself when it has no name, and "" on the root path.
+   * The first letter is always a capital letter.
    * When the path has a `readonly`, `add`, `edit` or `create` or number part,
    * it uses the part before it
    */
@@ -295,7 +296,8 @@ export default function aiAgentHandlers() {
       drawer?.getAttribute("data-uniformen-chat-locations") ?? "{}",
     );
     // hasOwn, so a path like `/constructor` does not find a method of Object.
-    return Object.hasOwn(names, last) ? names[last] : last;
+    const name = (Object.hasOwn(names, last) && names[last]) || last;
+    return name.charAt(0).toUpperCase() + name.slice(1);
   }
 
   /** Shows the example questions when `visible` is true, and hides them when it is false. */

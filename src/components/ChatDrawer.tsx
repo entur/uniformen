@@ -12,7 +12,7 @@ const texts = {
     close: "Lukk skuff",
     agentWelcomeText: "Hei! Hva lurer du på?",
     userLocation: "Du er her: ",
-    unspecifiedLocation: "hjemmesiden",
+    unspecifiedLocation: "Hjemmesiden",
     error: "Beklager, jeg kunne ikke svare nå. Prøv igjen litt senere.",
     examples: [
       "Hvor ser jeg mine avtaler?",
@@ -24,7 +24,7 @@ const texts = {
     close: "Lukk skuff",
     agentWelcomeText: "Hei! Kva lurer du på?",
     userLocation: "Du er her: ",
-    unspecifiedLocation: "heimesida",
+    unspecifiedLocation: "Heimesida",
     error: "Beklagar, eg kunne ikkje svare no. Prøv igjen litt seinare.",
     examples: [
       "Kvar ser eg avtalene mine?",
@@ -36,7 +36,7 @@ const texts = {
     close: "Close drawer",
     agentWelcomeText: "Hi! What would you like to know?",
     userLocation: "You are here: ",
-    unspecifiedLocation: "homepage",
+    unspecifiedLocation: "Homepage",
     error: "Sorry, I could not answer right now. Please try again later.",
     examples: [
       "Where can I see my agreements?",
