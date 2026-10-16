@@ -36,10 +36,10 @@ const ENV_PALETTES = {
     text: primitive.canary._90,
   },
   production: {
-    strip: primitive.coral._40,
-    tint: primitive.coral._20,
-    border: primitive.coral._40,
-    text: primitive.coral._80,
+    strip: primitive.blue._60,
+    tint: colors.brand.white,
+    border: primitive.blue._60,
+    text: colors.brand.blue,
   },
 } satisfies Record<Environment, Record<string, string>>;
 
