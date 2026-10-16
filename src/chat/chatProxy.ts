@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
@@ -8,6 +8,13 @@ import { jwtVerify, SignJWT } from "jose";
 import { config, environment, type Environment } from "../config";
 import { SporaiClient } from "./sporaiClient";
 
+declare module "hono" {
+  interface ContextVariableMap {
+    /** The `sub` of the verified chat token. Only set on `/chat-proxy`. */
+    chatUser: string;
+  }
+}
+
 const CHAT_PROXY_URLS: Record<Environment, string> = {
   local: "http://localhost:4123/chat-proxy",
   dev: "https://uniformen.dev.entur.no/chat-proxy",
@@ -16,14 +23,14 @@ const CHAT_PROXY_URLS: Record<Environment, string> = {
 };
 
 const CHAT_TOKEN_AUDIENCE = "uniformen-chat";
-const CHAT_TOKEN_LIFETIME = "60m";
+const CHAT_TOKEN_LIFETIME = "8h";
 // The number of calls to sporai that one pod runs at the same time. A slow sporai
 // must not use up the connections that `/ssr` also needs.
 const MAX_ACTIVE_SPORAI_CALLS = 10;
 // The same pattern as sporai's. Sporai rejects any other `location` with a 400.
 const LOCATION_PATTERN = /^[a-zA-Z0-9/_-]{0,100}$/;
 
-export type ChatProxyConfig = { client: SporaiClient; key: Uint8Array };
+export type ChatProxyConfig = { client: SporaiClient; key: Uint8Array; sessionKey: Uint8Array };
 
 /** The chat proxy URL that the browser sends questions to, and the token it sends with them. */
 export type ChatAccessToken = { url: string; token: string };
@@ -61,7 +68,10 @@ export function loadChatProxyConfig(
   // The chat token key is made from the client secret, so no new secret is needed.
   // When the client secret changes, all chat tokens stop working.
   const key = createHmac("sha256", clientSecret).update("uniformen-chat-token").digest();
-  return { client, key };
+  // A separate key for session ids, so a signed session id can never pass as a chat
+  // token.
+  const sessionKey = createHmac("sha256", clientSecret).update("uniformen-chat-session").digest();
+  return { client, key, sessionKey };
 }
 
 /** The chat settings for this process, or `undefined` when chat is off. */
@@ -117,6 +127,33 @@ const problemResponse = (description: string) => ({
   description,
 });
 
+/**
+ * Returns the session id that the browser gets: the sporai session id and a
+ * signature, separated by a dot. Only `user` can use it.
+ */
+export function signSessionId(sessionKey: Uint8Array, user: string, sessionId: string): string {
+  const signature = createHmac("sha256", sessionKey)
+    .update(JSON.stringify([user, sessionId]))
+    .digest("base64url");
+  return `${sessionId}.${signature}`;
+}
+
+/**
+ * Returns the sporai session id in `signed` if the signature is valid for `user`, or
+ * `undefined` if not. This stops one user from using another user's session.
+ */
+function verifySessionId(sessionKey: Uint8Array, user: string, signed: string): string | undefined {
+  const dot = signed.lastIndexOf(".");
+  if (dot < 0) return undefined;
+  const sessionId = signed.slice(0, dot);
+  const given = Buffer.from(signed);
+  const expected = Buffer.from(signSessionId(sessionKey, user, sessionId));
+  // `timingSafeEqual` throws for buffers of different length, so check that first.
+  return given.length === expected.length && timingSafeEqual(given, expected)
+    ? sessionId
+    : undefined;
+}
+
 /** Returns an RFC 9457 problem response with only `title` and `status`. */
 function problem(c: Context, status: 400 | 404 | 413 | 503, title: string) {
   return c.json({ title, status }, status, { "Content-Type": "application/problem+json" });
@@ -135,8 +172,9 @@ const chatProxyRoute = createRoute({
             query: z.string().trim().min(1).max(1000).openapi({
               description: "The user's question.",
             }),
-            sessionId: z.uuid().optional().openapi({
-              description: "The session from the previous reply. Leave it out to start a new chat.",
+            sessionId: z.string().max(200).optional().openapi({
+              description:
+                "The session from the previous reply. Leave it out to start a new chat. It only works for the user who started the chat.",
             }),
             location: z.string().optional().openapi({
               description: "The path of the page the user is on.",
@@ -160,7 +198,9 @@ const chatProxyRoute = createRoute({
       content: { "text/plain": { schema: z.string() } },
       description: "The chat token is missing, invalid or expired.",
     },
-    404: problemResponse("Sporai does not know the session, for example because it expired."),
+    404: problemResponse(
+      "The session belongs to another user, or sporai does not know it, for example because it expired.",
+    ),
     413: problemResponse("The request body is larger than 8 KiB."),
     503: problemResponse("Sporai could not answer, or too many questions are open right now."),
   },
@@ -176,7 +216,7 @@ export function chatProxyRoutes(
   env: Environment,
 ): void {
   if (!proxyConfig) return;
-  const { client, key } = proxyConfig;
+  const { client, key, sessionKey } = proxyConfig;
 
   server.openAPIRegistry.registerComponent("securitySchemes", "ChatToken", {
     type: "http",
@@ -204,11 +244,12 @@ export function chatProxyRoutes(
       const token = /^Bearer (\S+)$/i.exec(c.req.header("Authorization") ?? "")?.[1];
       try {
         if (!token) throw new Error("no token");
-        await jwtVerify(token, key, {
+        const { payload } = await jwtVerify(token, key, {
           algorithms: ["HS256"],
           audience: CHAT_TOKEN_AUDIENCE,
           requiredClaims: ["sub"],
         });
+        c.set("chatUser", payload.sub!);
       } catch {
         return c.text("Unauthorized", 401, { "WWW-Authenticate": 'Bearer error="invalid_token"' });
       }
@@ -228,13 +269,19 @@ export function chatProxyRoutes(
   server.openapi(
     chatProxyRoute,
     async (c) => {
-      const { query, location, sessionId: requestSessionId } = c.req.valid("json");
+      const { query, location, sessionId: signedSessionId } = c.req.valid("json");
+      const user = c.get("chatUser");
       c.header("Cache-Control", "no-store");
       // Stop the call to sporai when the browser goes away.
       const signal = c.req.raw.signal;
 
-      let sessionId = requestSessionId;
-      if (!sessionId) {
+      let sessionId: string | undefined;
+      if (signedSessionId !== undefined) {
+        // Stop here, before sporai is called, when the session belongs to another
+        // user or the value has been changed.
+        sessionId = verifySessionId(sessionKey, user, signedSessionId);
+        if (!sessionId) return problem(c, 404, "Not Found");
+      } else {
         const created = await client.createSession(signal);
         if (created.kind !== "ok") return problem(c, 503, "Service Unavailable");
         sessionId = created.sessionId;
@@ -252,7 +299,10 @@ export function chatProxyRoutes(
       );
       if (result.kind === "sessionGone") return problem(c, 404, "Not Found");
       if (result.kind === "error") return problem(c, 503, "Service Unavailable");
-      return c.json({ reply: result.reply, sessionId }, 200);
+      return c.json(
+        { reply: result.reply, sessionId: signSessionId(sessionKey, user, sessionId) },
+        200,
+      );
     },
     // The shared app has no default hook, so the route sets its own answer for a body
     // that fails validation.

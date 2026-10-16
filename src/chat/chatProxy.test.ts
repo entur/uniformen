@@ -9,6 +9,7 @@ import {
   chatProxyRoutes,
   issueChatToken,
   loadChatProxyConfig,
+  signSessionId,
 } from "./chatProxy";
 
 const ORIGIN = "https://partner.dev.entur.org";
@@ -52,7 +53,11 @@ describe("POST /chat-proxy", () => {
     const res = await ask({ query: " Hva er en rolle? ", location: "/price-and-product" });
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(await res.json()).toEqual({ reply: "svar", sessionId: SPORAI_SESSION_ID });
+    const body = await res.json();
+    expect(body.reply).toBe("svar");
+    expect(body.sessionId).toBe(
+      signSessionId(proxyConfig.sessionKey, "internal|user-1", SPORAI_SESSION_ID),
+    );
     expect(sent).toEqual({
       sessionId: SPORAI_SESSION_ID,
       query: "Hva er en rolle?",
@@ -67,8 +72,9 @@ describe("POST /chat-proxy", () => {
       return new Response("svar");
     };
     const sessionId = crypto.randomUUID();
-    const res = await ask({ query: "Og så?", sessionId });
-    expect(await res.json()).toEqual({ reply: "svar", sessionId });
+    const signed = signSessionId(proxyConfig.sessionKey, "internal|user-1", sessionId);
+    const res = await ask({ query: "Og så?", sessionId: signed });
+    expect(await res.json()).toEqual({ reply: "svar", sessionId: signed });
     expect(sent).toEqual({ sessionId, query: "Og så?" });
   });
 
@@ -85,10 +91,36 @@ describe("POST /chat-proxy", () => {
 
   test("returns 404 when sporai does not know the session", async () => {
     sporaiMock.respond = () => new Response(null, { status: 404 });
-    const res = await ask({ query: "Hei", sessionId: crypto.randomUUID() });
+    const sessionId = signSessionId(proxyConfig.sessionKey, "internal|user-1", crypto.randomUUID());
+    const res = await ask({ query: "Hei", sessionId });
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toBe("application/problem+json");
     expect(await res.json()).toEqual({ title: "Not Found", status: 404 });
+    expect(sporaiMock.calls).toBe(1);
+  });
+
+  test("returns 404 for another user's session and does not call sporai", async () => {
+    const sessionOfA = signSessionId(proxyConfig.sessionKey, "internal|user-a", SPORAI_SESSION_ID);
+    const res = await ask({ query: "Hva spurte A om?", sessionId: sessionOfA });
+    expect(res.status).toBe(404);
+    expect(sporaiMock.calls).toBe(0);
+  });
+
+  test.each([
+    ["a bare sporai session id", SPORAI_SESSION_ID],
+    ["a changed signature", `${SPORAI_SESSION_ID}.AAAA`],
+    [
+      "a session id from another key",
+      signSessionId(new Uint8Array(32), "internal|user-1", SPORAI_SESSION_ID),
+    ],
+    [
+      "a changed session id with the old signature",
+      `${crypto.randomUUID()}.${signSessionId(loadChatProxyConfig()!.sessionKey, "internal|user-1", SPORAI_SESSION_ID).split(".")[1]}`,
+    ],
+  ])("returns 404 for %s and does not call sporai", async (_name, sessionId) => {
+    const res = await ask({ query: "Hei", sessionId });
+    expect(res.status).toBe(404);
+    expect(sporaiMock.calls).toBe(0);
   });
 
   test("returns 503 when sporai fails", async () => {
@@ -101,7 +133,7 @@ describe("POST /chat-proxy", () => {
   test.each([
     ["an empty query", { query: "   " }],
     ["a query that is too long", { query: "a".repeat(1001) }],
-    ["a session id that is not a UUID", { query: "Hei", sessionId: "abc" }],
+    ["a session id that is too long", { query: "Hei", sessionId: "a".repeat(201) }],
     ["the old field name text", { text: "Hei" }],
   ])("returns 400 for %s", async (_name, body) => {
     const res = await ask(body);
@@ -149,8 +181,8 @@ describe("chat token", () => {
     expect(sporaiMock.calls).toBe(0);
   });
 
-  test("expires after 60 minutes", async () => {
-    setSystemTime(new Date(Date.now() + 61 * 60 * 1000));
+  test("expires after 8 hours", async () => {
+    setSystemTime(new Date(Date.now() + 8 * 60 * 60 * 1000 + 60 * 1000));
     const res = await ask({ query: "Hei" });
     expect(res.status).toBe(401);
   });
