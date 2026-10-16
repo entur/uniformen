@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, spyOn,test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { notificationMock, userInfoMock } from "../test/authTestSetup";
 import { ENTUR_ORGANISATION_ID, ORGANISATION_ID_CLAIM } from "../auth/enturOrganisation";
 import {

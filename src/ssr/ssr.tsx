@@ -221,12 +221,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
             user={user}
             isEnturUser={isEnturOrganisation(info)}
             notifications={notifications}
-          />,
-          <TopNavigation
-            {...navProps}
             aiAgent={aiAgent}
-            user={user}
-            isEnturUser={isEnturOrganisation(info)}
             chatAccessToken={chatAccessToken}
           />,
         ),

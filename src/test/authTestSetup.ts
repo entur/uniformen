@@ -24,7 +24,7 @@ export const userInfoMock = {
 };
 
 const machineTokenResponse = () =>
-    Response.json({ access_token: "machine-token", expires_in: 3600, token_type: "Bearer" });
+  Response.json({ access_token: "machine-token", expires_in: 3600, token_type: "Bearer" });
 
 /**
  * A mock of the internal Auth0 token endpoint, which gives uniformen a machine
@@ -54,7 +54,6 @@ export const sporaiMock = {
 
 /** The session id the fake sporai returns. Sporai uses UUIDs. */
 export const SPORAI_SESSION_ID = "0b6f1f5e-3c2a-4d8e-9a71-5f2c8e4b1d07";
-
 
 /**
  * A mock of the notification center endpoint. It works the same way as
