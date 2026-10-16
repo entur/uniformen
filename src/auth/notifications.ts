@@ -2,6 +2,11 @@ import { config, type AuthTenant } from "../config";
 import { CachedLookup } from "./cachedLookup";
 import type { NotificationList } from "../types";
 
+/**
+ * Path to get user notifications
+ */
+const MESSAGES_PATH = "/v1/messages";
+
 /** One notification text in one language. `language` is an ISO 639-3 code, e.g. "nob". */
 export type LocalisedMessage = {
   language: string;
@@ -70,13 +75,13 @@ export type NotificationServiceOptions = {
  * than for userinfo, because a notification list goes out of date quickly.
  */
 export class NotificationServiceImpl implements NotificationService {
+  private readonly notificationMessagesUri: string;
   private readonly timeoutMs: number;
   private readonly cache: CachedLookup<NotificationResponse>;
 
-  constructor(
-    private readonly apiUri: string,
-    options: NotificationServiceOptions = {},
-  ) {
+  /** `apiBaseUri` is the notification center without a path, e.g. `https://api.dev.entur.io/notification-center`. */
+  constructor(apiBaseUri: string, options: NotificationServiceOptions = {}) {
+    this.notificationMessagesUri = apiBaseUri + MESSAGES_PATH;
     this.timeoutMs = options.timeoutMs ?? 1_000;
     this.cache = new CachedLookup({
       positiveTtlMs: options.positiveTtlMs ?? 30_000,
@@ -101,7 +106,7 @@ export class NotificationServiceImpl implements NotificationService {
 
   private async fetchNotifications(token: string): Promise<NotificationResponse | undefined> {
     try {
-      const res = await fetch(this.apiUri, {
+      const res = await fetch(this.notificationMessagesUri, {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         signal: AbortSignal.timeout(this.timeoutMs),
       });
@@ -129,7 +134,7 @@ export class NotificationServiceImpl implements NotificationService {
  * and `jwtPayload.sub`.
  */
 export const notificationService: NotificationService = new NotificationServiceImpl(
-  config.notificationApiUri,
+  config.notificationApiBaseUri,
 );
 
 /**
