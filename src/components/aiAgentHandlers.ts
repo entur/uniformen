@@ -138,6 +138,10 @@ export default function aiAgentHandlers() {
     const reply = addMessage("[data-uniformen-chat-agent-template]");
     const replyBubble = reply?.querySelector(".uniformen-chat-bubble");
     if (replyBubble) renderMarkdown(replyBubble, replyText ?? errorText);
+    // Scroll again after the text is added. `addMessage` scrolled while the bubble
+    // was empty and much shorter.
+    const chatWindow = reply?.parentElement;
+    if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 
   /**
