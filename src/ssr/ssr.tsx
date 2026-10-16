@@ -4,6 +4,7 @@ import { isEnturOrganisation } from "../auth/enturOrganisation";
 import type { PortalApplicationId } from "../components/portalApplications";
 import { optionalAuth } from "../auth/optionalAuth";
 import { type UserInfo, userInfoService } from "../auth/userInfo";
+import { notificationService } from "../auth/notifications";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
@@ -149,15 +150,21 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     const payload = ctx.get("jwtPayload");
     const token = ctx.get("authToken");
     const tenant = ctx.get("authTenant");
-    // Get the user's profile from the tenant's userinfo endpoint (cached). If that
-    // fails, render the anonymous header. Never show the raw `sub`.
-    const info =
-      payload?.sub && token && tenant
-        ? await userInfoService.getUserInfo(tenant, token, payload.sub)
-        : undefined;
-
     const query = ctx.req.valid("query");
     const navProps = topNavigationProps(query);
+
+    // Get the user's profile and notifications from the tenant's userinfo endpoint and notification-center (cached).
+    // If the userinfo call fails, render the anonymous header. Never show the raw `sub`.
+    const auth = payload?.sub && token && tenant ? { tenant, token, sub: payload.sub } : undefined;
+    const [info, notifications] = auth
+      ? await Promise.all([
+          userInfoService.getUserInfo(auth.tenant, auth.token, auth.sub),
+          navProps.simple
+            ? Promise.resolve(undefined)
+            : notificationService.getNotifications(auth.tenant, auth.token, auth.sub),
+        ])
+      : [undefined, undefined];
+
     // Only signed-in users get a user menu. If the profile has no name, show the
     // email instead, or a placeholder if there is no email either. The email is only
     // shown as a second line when there is a name, so it is not shown twice.
@@ -209,6 +216,12 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         // Put `user`, `isEnturUser` and `aiAgent` after `navProps` so the query cannot
         // override them. They depend on the verified token, never only on the URL.
         headerHtml: await renderComponentToString(
+          <TopNavigation
+            {...navProps}
+            user={user}
+            isEnturUser={isEnturOrganisation(info)}
+            notifications={notifications}
+          />,
           <TopNavigation
             {...navProps}
             aiAgent={aiAgent}

@@ -24,7 +24,7 @@ export const userInfoMock = {
 };
 
 const machineTokenResponse = () =>
-  Response.json({ access_token: "machine-token", expires_in: 3600, token_type: "Bearer" });
+    Response.json({ access_token: "machine-token", expires_in: 3600, token_type: "Bearer" });
 
 /**
  * A mock of the internal Auth0 token endpoint, which gives uniformen a machine
@@ -55,6 +55,20 @@ export const sporaiMock = {
 /** The session id the fake sporai returns. Sporai uses UUIDs. */
 export const SPORAI_SESSION_ID = "0b6f1f5e-3c2a-4d8e-9a71-5f2c8e4b1d07";
 
+
+/**
+ * A mock of the notification center endpoint. It works the same way as
+ * `userInfoMock`.
+ */
+export const notificationMock = {
+  calls: 0,
+  respond: (_req: Request): Response | Promise<Response> => Response.json([]),
+  reset(): void {
+    this.calls = 0;
+    this.respond = (_req) => Response.json([]);
+  },
+};
+
 /**
  * Starts a local server with the test JWKS and userinfo endpoints for each tenant,
  * and sets the Auth0 env vars to point at it. bunfig.toml preloads this file, so
@@ -73,6 +87,10 @@ const server = Bun.serve({
     if (pathname === "/internal/userinfo" || pathname === "/partner/userinfo") {
       userInfoMock.calls++;
       return userInfoMock.respond(req);
+    }
+    if (pathname === "/notification-center/messages") {
+      notificationMock.calls++;
+      return notificationMock.respond(req);
     }
     // The machine token endpoint and the fake sporai. Sporai has no auth check here.
     if (pathname === "/internal/oauth/token") {
@@ -109,3 +127,5 @@ process.env["AUTH0_PARTNER_ISSUER"] = PARTNER_ISSUER;
 process.env["AUTH0_PARTNER_JWKS_URI"] =
   `http://localhost:${server.port}/partner/.well-known/jwks.json`;
 process.env["AUTH0_PARTNER_USERINFO_URI"] = `http://localhost:${server.port}/partner/userinfo`;
+process.env["NOTIFICATION_API_URI"] =
+  `http://localhost:${server.port}/notification-center/messages`;

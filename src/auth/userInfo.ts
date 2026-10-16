@@ -1,4 +1,5 @@
 import { config, type AuthTenant } from "../config";
+import { CachedLookup } from "./cachedLookup";
 
 /**
  * The Auth0 userinfo response. It has the standard OIDC profile claims and custom
@@ -46,12 +47,6 @@ export type UserInfoServiceOptions = {
 const isUserInfo = (body: unknown): body is UserInfo =>
   typeof body === "object" && body !== null && "sub" in body && typeof body.sub === "string";
 
-type CacheEntry = {
-  /** The fetched userinfo, or `null` if the lookup failed. */
-  value: UserInfo | null;
-  expiresAt: number;
-};
-
 /**
  * Fetches userinfo and caches it in memory.
  *
@@ -61,20 +56,18 @@ type CacheEntry = {
  * same user share one request.
  */
 export class UserInfoServiceImpl implements UserInfoService {
-  private readonly positiveTtlMs: number;
-  private readonly negativeTtlMs: number;
   private readonly timeoutMs: number;
-  private readonly maxEntries: number;
   private readonly endpoints: Map<AuthTenant["name"], string>;
-  private readonly cache = new Map<string, CacheEntry>();
-  private readonly inFlight = new Map<string, Promise<UserInfo | undefined>>();
+  private readonly cache: CachedLookup<UserInfo>;
 
   constructor(tenants: AuthTenant[], options: UserInfoServiceOptions = {}) {
-    this.positiveTtlMs = options.positiveTtlMs ?? 10 * 60_000;
-    this.negativeTtlMs = options.negativeTtlMs ?? 60_000;
     this.timeoutMs = options.timeoutMs ?? 5_000;
-    this.maxEntries = options.maxEntries ?? 5_000;
     this.endpoints = new Map(tenants.map((tenant) => [tenant.name, tenant.userInfoUri]));
+    this.cache = new CachedLookup({
+      positiveTtlMs: options.positiveTtlMs ?? 10 * 60_000,
+      negativeTtlMs: options.negativeTtlMs ?? 60_000,
+      maxEntries: options.maxEntries ?? 5_000,
+    });
   }
 
   async getUserInfo(
@@ -85,35 +78,9 @@ export class UserInfoServiceImpl implements UserInfoService {
     const userInfoUri = this.endpoints.get(tenantName);
     if (!userInfoUri) return undefined;
 
-    const key = `${tenantName}|${sub}`;
-    const cached = this.cache.get(key);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.value ?? undefined;
-    }
-
-    const pending = this.inFlight.get(key);
-    if (pending) return pending;
-
-    const lookup = this.fetchUserInfo(tenantName, userInfoUri, token)
-      .then((info) => {
-        this.store(key, info ?? null);
-        return info;
-      })
-      .finally(() => this.inFlight.delete(key));
-    this.inFlight.set(key, lookup);
-    return lookup;
-  }
-
-  private store(key: string, value: UserInfo | null): void {
-    // `Map` keeps keys in insertion order, so the first key is the oldest entry.
-    if (this.cache.size >= this.maxEntries && !this.cache.has(key)) {
-      const oldest = this.cache.keys().next().value;
-      if (oldest !== undefined) this.cache.delete(oldest);
-    }
-    this.cache.set(key, {
-      value,
-      expiresAt: Date.now() + (value === null ? this.negativeTtlMs : this.positiveTtlMs),
-    });
+    return this.cache.get(`${tenantName}|${sub}`, () =>
+      this.fetchUserInfo(tenantName, userInfoUri, token),
+    );
   }
 
   private async fetchUserInfo(

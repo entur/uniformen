@@ -15,6 +15,7 @@ common:
       AUTH0_PARTNER_ISSUER: https://partner.staging.entur.org/
       AUTH0_PARTNER_JWKS_URI: https://partner.staging.entur.org/.well-known/jwks.json
       AUTH0_PARTNER_USERINFO_URI: https://partner.staging.entur.org/userinfo
+      NOTIFICATION_API_URI: https://api.staging.entur.io/notification-center/messages
   secrets:
     posthog-credentials:
       - POSTHOG_API_KEY
