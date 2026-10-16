@@ -8,6 +8,13 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-10-16
+
+### Changed
+
+- The PROD environment badge is neutral: white with a dark blue text and a grey-blue
+  border, instead of red.
+
 ## 2026-10-14
 
 ### Added
