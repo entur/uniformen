@@ -15,7 +15,7 @@ common:
       AUTH0_PARTNER_ISSUER: https://partner.entur.org/
       AUTH0_PARTNER_JWKS_URI: https://partner.entur.org/.well-known/jwks.json
       AUTH0_PARTNER_USERINFO_URI: https://partner.entur.org/userinfo
-      NOTIFICATION_API_URI: https://api.entur.io/notification-center/messages
+      NOTIFICATION_API_BASE_URI: https://api.entur.io/notification-center
   secrets:
     posthog-credentials:
       - POSTHOG_API_KEY

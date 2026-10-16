@@ -17,7 +17,7 @@ const notification = {
 };
 
 function service(options = {}) {
-  return new NotificationServiceImpl(config.notificationApiUri, options);
+  return new NotificationServiceImpl(config.notificationApiBaseUri, options);
 }
 
 beforeEach(() => notificationMock.reset());

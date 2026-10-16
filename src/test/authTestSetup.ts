@@ -87,7 +87,7 @@ const server = Bun.serve({
       userInfoMock.calls++;
       return userInfoMock.respond(req);
     }
-    if (pathname === "/notification-center/messages") {
+    if (pathname === "/notification-center/v1/messages") {
       notificationMock.calls++;
       return notificationMock.respond(req);
     }
@@ -126,5 +126,4 @@ process.env["AUTH0_PARTNER_ISSUER"] = PARTNER_ISSUER;
 process.env["AUTH0_PARTNER_JWKS_URI"] =
   `http://localhost:${server.port}/partner/.well-known/jwks.json`;
 process.env["AUTH0_PARTNER_USERINFO_URI"] = `http://localhost:${server.port}/partner/userinfo`;
-process.env["NOTIFICATION_API_URI"] =
-  `http://localhost:${server.port}/notification-center/messages`;
+process.env["NOTIFICATION_API_BASE_URI"] = `http://localhost:${server.port}/notification-center`;
