@@ -202,13 +202,37 @@ describe("CORS", () => {
     expect(res.headers.get("Access-Control-Allow-Headers")).toBe("Authorization,Content-Type");
   });
 
+  test("rejects a preflight from localhost in staging", async () => {
+    const staging = new OpenAPIHono();
+    chatProxyRoutes(staging, proxyConfig, "staging");
+    const res = await staging.request("/chat-proxy", {
+      method: "OPTIONS",
+      headers: { Origin: "http://localhost:3000", "Access-Control-Request-Method": "POST" },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
+
   test.each([
     ["https://partner.entur.org", "dev", true],
     ["https://uniformen.dev.entur.no", "dev", true],
     ["https://evilentur.org", "dev", false],
     ["https://entur.org.evil.com", "dev", false],
     ["http://partner.entur.org", "dev", false],
-    ["http://localhost:3000", "dev", false],
+    ["http://localhost:3000", "dev", true],
+    ["http://localhost:5173", "dev", true],
+    ["https://localhost:5173", "dev", true],
+    ["http://127.0.0.1:3000", "dev", true],
+    ["http://localhost:3000", "staging", false],
+    ["http://localhost:3000", "production", false],
+    ["http://127.0.0.1:3000", "staging", false],
+    ["http://localhost.evil.com", "dev", false],
+    ["http://localhost.:3000", "dev", false],
+    ["http://[::1]:3000", "dev", false],
+    ["ws://localhost:3000", "dev", false],
+    ["http://evillocalhost", "dev", false],
+    ["http://localhost:3000@evil.com", "dev", false],
+    ["https://127.0.0.1:3000", "local", true],
     ["http://localhost:3000", "local", true],
     ["not a url", "dev", false],
   ] as const)("%s in %s is allowed: %p", (origin, env, allowed) => {
