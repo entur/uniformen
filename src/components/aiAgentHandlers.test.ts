@@ -95,6 +95,14 @@ class FakeElement {
       .join("");
   }
 
+  /** Moves `node` into this element's parent, just before this element. */
+  before(node: FakeElement): void {
+    if (!this.parent) return;
+    node.remove();
+    node.parent = this.parent;
+    this.parent.children.splice(this.parent.children.indexOf(this), 0, node);
+  }
+
   remove(): void {
     if (!this.parent) return;
     this.parent.children.splice(this.parent.children.indexOf(this), 1);
@@ -263,6 +271,8 @@ function install({
   const newChat = new FakeElement({ "data-uniformen-new-chat": "" });
   const locationName = new FakeElement({ class: "uniformen-chat-drawer__location-name" });
   locationName.textContent = "Hjemmesiden";
+  const restartedDivider = new FakeElement({ class: "uniformen-chat-restarted" });
+  restartedDivider.textContent = "Ny økt";
 
   const chatAttributes: Record<string, string> = chat
     ? { "data-uniformen-chat-proxy-url": "https://uniformen.test/chat-proxy" }
@@ -286,6 +296,7 @@ function install({
         "data-uniformen-chat-agent-template",
         new FakeElement({ class: "uniformen-chat-message" }, [bubble()]),
       ),
+      new FakeTemplate("data-uniformen-chat-restarted-template", restartedDivider),
       new FakeTemplate(
         "data-uniformen-chat-typing-template",
         new FakeElement({ class: "uniformen-chat-message" }, [
@@ -339,6 +350,8 @@ function install({
     messages,
     type,
     typing: () => chatWindow.querySelectorAll("[data-uniformen-chat-typing]").length,
+    /** The text of each element in the chat window, in order. */
+    chatEntries: () => chatWindow.children.map((child) => child.textContent),
     escape: () => doc.fire("keydown", { key: "Escape" }),
     /** Presses a key in the text field. Returns whether the default action was stopped. */
     press: (key: string, shiftKey = false) => {
@@ -613,7 +626,37 @@ describe("aiAgentHandlers", () => {
     expect(page.messages()).toEqual(["Hei!", "Hei", "Feil"]);
   });
 
-  test("an expired session is forgotten", async () => {
+  test("an expired session shows a divider and asks the question again", async () => {
+    const replies = [200, 404, 200];
+    const page = install({
+      respond: () =>
+        replies.shift() === 404
+          ? new Response(null, { status: 404 })
+          : Response.json({ reply: "Svar", sessionId: "s-1" }),
+    });
+    page.type("Første");
+    page.send.click();
+    await replied();
+    page.type("Andre");
+    page.send.click();
+    await replied();
+    expect(page.bodies().map((body) => body.sessionId)).toStrictEqual([
+      undefined,
+      "s-1",
+      undefined,
+    ]);
+    expect(page.chatEntries()).toEqual([
+      "Hei!",
+      "Hvordan endrer jeg passord?",
+      "Første",
+      "Svar",
+      "Ny økt",
+      "Andre",
+      "Svar",
+    ]);
+  });
+
+  test("shows the error text when the new session also gets a 404", async () => {
     let status = 200;
     const page = install({
       respond: () =>
@@ -628,11 +671,34 @@ describe("aiAgentHandlers", () => {
     page.type("Andre");
     page.send.click();
     await replied();
-    status = 200;
-    page.type("Tredje");
+    expect(page.bodies().map((body) => body.sessionId)).toStrictEqual([
+      undefined,
+      "s-1",
+      undefined,
+    ]);
+    expect(page.messages()).toEqual(["Hei!", "Første", "Svar", "Andre", "Feil"]);
+    expect(page.chatEntries().filter((entry) => entry === "Ny økt")).toHaveLength(1);
+  });
+
+  test("a new chat during the second request removes the divider and hides the reply", async () => {
+    let answer = (_response: Response) => {};
+    const replies: (() => Response | Promise<Response>)[] = [
+      () => Response.json({ reply: "Svar", sessionId: "s-1" }),
+      () => new Response(null, { status: 404 }),
+      () => new Promise<Response>((resolve) => (answer = resolve)),
+    ];
+    const page = install({ respond: () => replies.shift()!() });
+    page.type("Første");
     page.send.click();
     await replied();
-    expect(page.bodies().map((body) => body.sessionId)).toEqual([undefined, "s-1", undefined]);
+    page.type("Andre");
+    page.send.click();
+    await replied();
+    expect(page.calls).toHaveLength(3);
+    page.newChat.click();
+    answer(Response.json({ reply: "Sent svar", sessionId: "s-2" }));
+    await replied();
+    expect(page.chatEntries()).toEqual(["Hei!", "Hvordan endrer jeg passord?"]);
   });
 
   test("a reply that arrives after a new chat is not shown", async () => {
@@ -646,7 +712,7 @@ describe("aiAgentHandlers", () => {
     page.send.click();
     await replied();
     expect(page.messages()).toEqual(["Hei!", "Ny", "Svar"]);
-    expect(page.bodies().map((body) => body.sessionId)).toEqual([undefined, undefined]);
+    expect(page.bodies().map((body) => body.sessionId)).toStrictEqual([undefined, undefined]);
   });
 
   test("Enter sends the question and Shift+Enter does not", () => {
