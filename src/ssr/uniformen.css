@@ -1088,6 +1088,18 @@
   align-items: flex-end;
 }
 
+/* The divider above the first question of a restarted chat. The line is above the
+   text and goes across the whole chat window, so a narrow window does not hide it.
+   `currentColor` keeps the line visible in both modes. */
+.uniformen-chat-restarted {
+  margin: 0;
+  padding-top: var(--uniformen-space-xs);
+  border-top: 1px solid currentColor;
+  color: var(--uniformen-on-chat);
+  font-size: var(--uniformen-font-sm);
+  text-align: center;
+}
+
 /* `display: flex` on the message would otherwise show it when it has `hidden`. */
 .uniformen-chat-message[hidden] {
   display: none;

@@ -14,6 +14,8 @@ const texts = {
     userLocation: "Du er her: ",
     unspecifiedLocation: "hjemmesiden",
     error: "Beklager, jeg kunne ikke svare nå. Prøv igjen litt senere.",
+    restarted:
+      "Samtalen ble tidsavbrutt og startet på nytt. Assistenten husker ikke meldingene over.",
     examples: [
       "Hvor ser jeg mine avtaler?",
       "Hvor kan jeg se terminalrapporter?",
@@ -26,6 +28,8 @@ const texts = {
     userLocation: "Du er her: ",
     unspecifiedLocation: "heimesida",
     error: "Beklagar, eg kunne ikkje svare no. Prøv igjen litt seinare.",
+    restarted:
+      "Samtalen vart tidsavbroten og starta på nytt. Assistenten hugsar ikkje meldingane over.",
     examples: [
       "Kvar ser eg avtalene mine?",
       "Kvar kan eg sjå terminalrapportar?",
@@ -38,6 +42,8 @@ const texts = {
     userLocation: "You are here: ",
     unspecifiedLocation: "homepage",
     error: "Sorry, I could not answer right now. Please try again later.",
+    restarted:
+      "The conversation timed out and was restarted. The assistant does not remember the messages above.",
     examples: [
       "Where can I see my agreements?",
       "Where can I see terminal reports?",
@@ -101,6 +107,9 @@ export function ChatDrawer({
       </template>
       <template data-uniformen-chat-typing-template>
         <ChatMessage sender="agent" typing locale={locale} />
+      </template>
+      <template data-uniformen-chat-restarted-template>
+        <p class="uniformen-chat-restarted">{txt.restarted}</p>
       </template>
       <ChatTextArea locale={locale} />
       <div class="uniformen-chat-drawer__footer">
