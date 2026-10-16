@@ -8,6 +8,24 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-10-13
+
+### Added
+
+- An AI agent button in the bar, for a signed-in user who has the `ai-agent` feature
+  flag on in PostHog. It is shown with `aiAgent=true`, and only with `app=partner`.
+  It is only shown where the service is connected to the AI agent backend, which is
+  dev for now. If PostHog is slow or fails, the bar is rendered without the button.
+  The preview page shows the button without checking the flag.
+- The button opens a chat drawer with example questions. The user can send questions,
+  and start a new chat. Enter sends a question and Shift+Enter adds a new line. 
+  Clicking the X button (in UI) or Escape closes the drawer.
+- The drawer shows the page the user is on. Replies can have paragraphs, lists, headings
+  and bold text. Links in a reply are shown as plain text.
+- The drawer sends questions from the browser to the service's `POST /chat-proxy`
+  endpoint. When the bar has the drawer, the `csp` field also has a `connect-src`
+  entry with the service's address. The app's Content-Security-Policy must include
+  it, or the browser blocks the questions.
 ## 2026-10-14
 
 ### Added

@@ -1,4 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
+import { type ChatAccessToken, chatProxyConfig, issueChatToken } from "../chat/chatProxy";
 import { environment as runningEnvironment, type Environment } from "../config";
 import type { UserMenuUser } from "../components/UserMenu";
 import { Footer } from "./Footer";
@@ -511,6 +512,20 @@ export function previewIsEnturUser(
   return environment !== "production" && debugEnturUser === "true";
 }
 
+/**
+ * Returns a chat token for the preview page, so the chat can be tested on a local
+ * machine. Only in local development, with `debugUser` and `aiAgent=true`. The
+ * preview page is public on dev and staging, and `debugUser` is only a query
+ * parameter, so a token there would let anyone use the chat.
+ */
+export async function previewChatAccessToken(
+  { debugUser, aiAgent }: Pick<PreviewQuery, "debugUser" | "aiAgent">,
+  environment: Environment = runningEnvironment,
+): Promise<ChatAccessToken | undefined> {
+  if (environment !== "local" || !debugUser || aiAgent !== "true") return undefined;
+  return issueChatToken(chatProxyConfig, `preview|${debugUser}`);
+}
+
 export function previewRoutes(server: OpenAPIHono): void {
   const previewRoute = createRoute({
     method: "get",
@@ -555,6 +570,7 @@ export function previewRoutes(server: OpenAPIHono): void {
                     user={user}
                     notifications={notifications}
                     isEnturUser={previewIsEnturUser(query)}
+                    chatAccessToken={await previewChatAccessToken(query)}
                   />,
                 )}
                 <main>
