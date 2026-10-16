@@ -52,11 +52,7 @@ describe("POST /chat-proxy", () => {
     const res = await ask({ query: " Hva er en rolle? ", location: "/price-and-product" });
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(await res.json()).toEqual({
-      reply: "svar",
-      sessionId: SPORAI_SESSION_ID,
-      restarted: false,
-    });
+    expect(await res.json()).toEqual({ reply: "svar", sessionId: SPORAI_SESSION_ID });
     expect(sent).toEqual({
       sessionId: SPORAI_SESSION_ID,
       query: "Hva er en rolle?",
@@ -72,7 +68,7 @@ describe("POST /chat-proxy", () => {
     };
     const sessionId = crypto.randomUUID();
     const res = await ask({ query: "Og så?", sessionId });
-    expect(await res.json()).toEqual({ reply: "svar", sessionId, restarted: false });
+    expect(await res.json()).toEqual({ reply: "svar", sessionId });
     expect(sent).toEqual({ sessionId, query: "Og så?" });
   });
 
@@ -87,40 +83,12 @@ describe("POST /chat-proxy", () => {
     expect(sent).toEqual({ sessionId: SPORAI_SESSION_ID, query: "Hei" });
   });
 
-  test("starts a new session and asks again when sporai does not know the session", async () => {
-    const sent: unknown[] = [];
-    sporaiMock.respond = async (req) => {
-      sent.push(await req.json());
-      return sporaiMock.calls === 1 ? new Response(null, { status: 404 }) : new Response("svar");
-    };
-    const old = crypto.randomUUID();
-    const res = await ask({ query: "Og så?", sessionId: old, location: "/price-and-product" });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      reply: "svar",
-      sessionId: SPORAI_SESSION_ID,
-      restarted: true,
-    });
-    expect(sent).toEqual([
-      { sessionId: old, query: "Og så?", location: "/price-and-product" },
-      { sessionId: SPORAI_SESSION_ID, query: "Og så?", location: "/price-and-product" },
-    ]);
-  });
-
-  test("does not ask again when sporai does not know a session it just created", async () => {
-    sporaiMock.respond = () => new Response(null, { status: 404 });
-    const res = await ask({ query: "Hei" });
-    expect(res.status).toBe(404);
-    expect(sporaiMock.calls).toBe(1);
-  });
-
-  test("returns 404 when sporai does not know the new session either", async () => {
+  test("returns 404 when sporai does not know the session", async () => {
     sporaiMock.respond = () => new Response(null, { status: 404 });
     const res = await ask({ query: "Hei", sessionId: crypto.randomUUID() });
     expect(res.status).toBe(404);
-    expect(sporaiMock.calls).toBe(2);
     expect(res.headers.get("Content-Type")).toBe("application/problem+json");
-    expect(await res.json()).toEqual({ title: "Chat session not found", status: 404 });
+    expect(await res.json()).toEqual({ title: "Not Found", status: 404 });
   });
 
   test("returns 503 when sporai fails", async () => {
