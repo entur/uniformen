@@ -156,10 +156,7 @@ const chatProxyRoute = createRoute({
     200: {
       content: {
         "application/json": {
-          schema: z.object({ 
-            reply: z.string(),
-            sessionId: z.string() 
-          }),
+          schema: z.object({ reply: z.string(), sessionId: z.string() }),
         },
       },
       description: "The reply, and the session to send with the next question.",
@@ -169,7 +166,7 @@ const chatProxyRoute = createRoute({
       content: { "text/plain": { schema: z.string() } },
       description: "The chat token is missing, invalid or expired.",
     },
-    404: problemResponse("Sporai did not recognise the chat session, even after the proxy started a new one."),
+    404: problemResponse("Sporai does not know the session, for example because it expired."),
     413: problemResponse("The request body is larger than 8 KiB."),
     503: problemResponse("Sporai could not answer, or too many questions are open right now."),
   },
