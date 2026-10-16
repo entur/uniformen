@@ -49,6 +49,7 @@ app.doc("/doc", {
 // without starting a server.
 if (import.meta.main) {
   const server = Bun.serve({ port: PORT, fetch: app.fetch });
+  console.info(`Uniformen is running on ${server.url}`);
 
   /**
    * Fails readiness, keeps serving for `SHUTDOWN_DRAIN_MS`, then stops accepting
