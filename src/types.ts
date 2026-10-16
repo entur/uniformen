@@ -3,6 +3,8 @@ export const LOCALES = ["nb-NO", "nn-NO", "en-GB"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
+export type NotificationList = { referenceId: string | null; date: string; message: string }[];
+
 /**
  * The label of the language control. It is not translated, so a user who cannot
  * read the current language can still find it. Bokmål and nynorsk both use

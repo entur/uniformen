@@ -98,8 +98,10 @@ export async function issueChatToken(
 
 /**
  * Returns `origin` if a browser on that origin may call `/chat-proxy`, or `undefined`
- * if not. Allows https on Entur's domains, and localhost only in local
- * development.
+ * if not. Allows https on subdomains of entur.org, entur.io and entur.no. In local and
+ * dev, it also allows http and https on localhost and 127.0.0.1, so an app on a
+ * developer's machine can use the chat in dev. This is safe because every request
+ * must have a valid chat token, and CORS does not allow cookies.
  */
 export function allowedOrigin(origin: string, env: Environment): string | undefined {
   let url: URL;
@@ -108,7 +110,11 @@ export function allowedOrigin(origin: string, env: Environment): string | undefi
   } catch {
     return undefined;
   }
-  if (env === "local" && url.protocol === "http:" && url.hostname === "localhost") {
+  if (
+    (env === "local" || env === "dev") &&
+    (url.protocol === "http:" || url.protocol === "https:") &&
+    (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+  ) {
     return origin;
   }
   // The leading dot stops a host like `evilentur.org` from matching.

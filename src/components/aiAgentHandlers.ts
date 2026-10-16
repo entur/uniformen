@@ -101,6 +101,7 @@ export default function aiAgentHandlers() {
   // an older question, so it is not shown.
   let questionCount = 0;
   let awaitingReply = false;
+  const errorText = drawer.getAttribute("data-uniformen-chat-error-text") ?? "";
 
   /**
    * Adds the question in the text field to the chat, empties the field and adds the
@@ -123,13 +124,24 @@ export default function aiAgentHandlers() {
 
     awaitingReply = true;
     const count = ++questionCount;
-    const replyText = await fetchReply(question, count);
+    let replyText = await fetchReply(question, count);
+    // Sporai deletes a session that has not been used for a while.
+    // Show the divider above the question, and ask again in a new session.
+    if (replyText === null && count === questionCount) {
+      const divider = addMessage("[data-uniformen-chat-restarted-template]");
+      if (divider) message?.before(divider);
+      replyText = await fetchReply(question, count);
+    }
     if (count !== questionCount) return;
     awaitingReply = false;
     hideTyping();
     const reply = addMessage("[data-uniformen-chat-agent-template]");
     const replyBubble = reply?.querySelector(".uniformen-chat-bubble");
-    if (replyBubble) renderMarkdown(replyBubble, replyText);
+    if (replyBubble) renderMarkdown(replyBubble, replyText ?? errorText);
+    // Scroll again after the text is added. `addMessage` scrolled while the bubble
+    // was empty and much shorter.
+    const chatWindow = reply?.parentElement;
+    if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 
   /**
@@ -210,16 +222,18 @@ export default function aiAgentHandlers() {
 
   /**
    * Sends the question to the chat proxy URL on the drawer, and returns the reply.
-   * Returns the drawer's error text when the request fails or the drawer has no chat
-   * proxy URL. Only updates the session when `count` is still the newest question.
+   * Returns `null` when sporai does not know the session that the request sent.
+   * Returns the drawer's error
+   * text when the request fails or the drawer has no chat proxy URL. Only updates the
+   * session when `count` is still the newest question.
    */
-  async function fetchReply(query: string, count: number): Promise<string> {
+  async function fetchReply(query: string, count: number): Promise<string | null> {
     const url = drawer?.getAttribute("data-uniformen-chat-proxy-url");
     const token = drawer
       ?.querySelector("[data-uniformen-chat-token]")
       ?.getAttribute("data-uniformen-chat-token");
-    const errorText = drawer?.getAttribute("data-uniformen-chat-error-text") ?? "";
     if (!url || !token) return errorText;
+    const sentSessionId = sessionId;
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -228,10 +242,18 @@ export default function aiAgentHandlers() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         // Send the raw path. Sporai rejects the comma-separated text that
         // `findLocation` makes.
-        body: JSON.stringify({ query, sessionId, location: window.location.pathname }),
+        body: JSON.stringify({
+          query,
+          sessionId: sentSessionId,
+          location: window.location.pathname,
+        }),
       });
-      // 404 means sporai does not know the session, so the next question starts a new one.
-      if (res.status === 404 && count === questionCount) sessionId = undefined;
+      // 404 means sporai does not know the session, so the next request starts a new one.
+      // A 404 for a request without a session has another cause, so it is an error.
+      if (res.status === 404 && sentSessionId) {
+        if (count === questionCount) sessionId = undefined;
+        return null;
+      }
       if (!res.ok) return errorText;
       const body: { reply: string; sessionId: string } = await res.json();
       if (count === questionCount) sessionId = body.sessionId;
@@ -277,6 +299,7 @@ export default function aiAgentHandlers() {
   /**
    * Returns the name of the last part of the page's path, in the drawer's language.
    * Returns the path part itself when it has no name, and "" on the root path.
+   * The first letter is always a capital letter.
    * When the path has a `readonly`, `add`, `edit` or `create` or number part,
    * it uses the part before it
    */
@@ -295,7 +318,8 @@ export default function aiAgentHandlers() {
       drawer?.getAttribute("data-uniformen-chat-locations") ?? "{}",
     );
     // hasOwn, so a path like `/constructor` does not find a method of Object.
-    return Object.hasOwn(names, last) ? names[last] : last;
+    const name = (Object.hasOwn(names, last) && names[last]) || last;
+    return name.charAt(0).toUpperCase() + name.slice(1);
   }
 
   /** Shows the example questions when `visible` is true, and hides them when it is false. */

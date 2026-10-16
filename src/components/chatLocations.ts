@@ -14,7 +14,7 @@ export const locationNames: Record<Locale, Record<string, string>> = {
     entitlements: "Tilleggsrettigheter",
     "journey-patterns": "Strekninger og reisemønstre",
     roundings: "Avrunding",
-    facilities: "fasiliteter",
+    facilities: "Fasiliteter",
     "luggage-allowance": "Bagasje",
     charging: "Gebyr og betaling",
     "temporal-validity": "Tidsbegrensninger",

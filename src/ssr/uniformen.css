@@ -36,6 +36,8 @@
 
 .uniformen-top-nav__nav {
   display: flex;
+  /* For the notifications menu to use screen width as placement base */
+  position: relative;
   justify-content: space-between;
   align-items: center;
   flex: 1;
@@ -527,6 +529,8 @@
   align-items: center;
 }
 
+[data-uniformen-notifications-menu-toggle][aria-expanded="false"]
+  + .uniformen-notifications-menu__panel,
 [data-uniformen-user-menu-toggle][aria-expanded="false"] + .uniformen-user-menu__panel,
 [data-uniformen-locale-switcher-toggle][aria-expanded="false"] + .uniformen-locale-switcher__panel {
   display: none;
@@ -561,6 +565,140 @@
   border-radius: 0.75rem;
   box-shadow: var(--uniformen-shadow-panel);
   overflow: hidden;
+}
+
+.uniformen-notifications-menu {
+  display: flex;
+  align-items: center;
+}
+
+.uniformen-notifications-menu__panel {
+  position: absolute;
+  top: calc(50% + var(--top-nav-height) / 2 + var(--uniformen-space-xs2));
+  padding-left: var(--uniformen-space-medium);
+  right: var(--uniformen-space-medium);
+  box-sizing: border-box;
+  min-width: min(25rem, calc(100vw - 2 * var(--uniformen-space-medium)));
+  max-width: min(35rem, calc(100vw - 2 * var(--uniformen-space-medium)));
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+  font-family: Nationale, sans-serif;
+  z-index: calc(var(--uniformen-z-popover) + 1);
+}
+
+.uniformen-notifications-menu__surface {
+  background: var(--uniformen-panel);
+  border-radius: 0.75rem;
+  box-shadow: var(--uniformen-shadow-panel);
+  overflow: hidden;
+}
+
+.uniformen-notifications-menu__header {
+  display: flex;
+  gap: var(--uniformen-space-small);
+  padding: var(--uniformen-space-medium);
+  user-select: none;
+}
+
+.uniformen-notifications-menu__title {
+  font-size: var(--uniformen-font-lg);
+  margin: 0;
+}
+
+.uniformen-notifications-menu__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.uniformen-notifications-menu__item {
+  display: flex;
+  border-top: 1px solid var(--uniformen-color-blue-70);
+  padding: var(--uniformen-space-medium);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.uniformen-notifications-menu__item:hover,
+.uniformen-notifications-menu__footer:hover {
+  background: var(--uniformen-surface-hover);
+}
+
+.uniformen-notifications-menu__item:visited,
+.uniformen-notifications-menu__footer:visited {
+  color: inherit;
+}
+
+.uniformen-notifications-button__badge {
+  position: relative;
+}
+
+.uniformen-notifications-button__badge::before,
+.uniformen-notifications-menu__item-badge {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background-color: var(--uniformen-color-brand-coral);
+}
+
+.uniformen-notifications-button__badge::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--uniformen-space-xs) + 0.75rem);
+  z-index: 1;
+}
+
+.uniformen-notifications-menu__item-badge {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-right: var(--uniformen-space-small);
+}
+
+.uniformen-notifications-menu__item-text {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--uniformen-space-small);
+  width: 100%;
+}
+
+.uniformen-notifications-menu__item-text span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uniformen-notifications-menu__item .uniformen-icon__forward {
+  align-self: center;
+  margin-left: var(--uniformen-space-small);
+}
+
+.uniformen-notifications-menu__empty {
+  padding: var(--uniformen-space-large);
+  border-top: 1px solid var(--uniformen-color-blue-70);
+  margin: 0;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.uniformen-notifications-menu__footer {
+  display: flex;
+  font-size: var(--uniformen-font-md);
+  font-weight: bold;
+  border-top: 1px solid var(--uniformen-color-blue-70);
+  padding: var(--uniformen-space-medium);
+  justify-content: center;
+  text-decoration: none;
+}
+
+.uniformen-notifications-menu__footer .uniformen-icon__forward {
+  margin-left: var(--uniformen-space-xs);
 }
 
 .uniformen-user-menu__identity {
@@ -633,6 +771,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .uniformen-user-menu__item {
+    transition: none;
+  }
+  .uniformen-notifications-menu__item {
     transition: none;
   }
 }
@@ -1086,6 +1227,18 @@
 .uniformen-chat-message--system {
   align-self: flex-end;
   align-items: flex-end;
+}
+
+/* The divider above the first question of a restarted chat. The line is above the
+   text and goes across the whole chat window, so a narrow window does not hide it.
+   `currentColor` keeps the line visible in both modes. */
+.uniformen-chat-restarted {
+  margin: 0;
+  padding-top: var(--uniformen-space-xs);
+  border-top: 1px solid currentColor;
+  color: var(--uniformen-on-chat);
+  font-size: var(--uniformen-font-sm);
+  text-align: center;
 }
 
 /* `display: flex` on the message would otherwise show it when it has `hidden`. */

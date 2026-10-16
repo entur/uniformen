@@ -1,7 +1,7 @@
 import { AppSwitcher } from "../components/AppSwitcher";
+import type { Locale, NotificationList } from "../types";
 import { portalApplicationPath, type PortalApplicationId } from "../components/portalApplications";
-import type { Locale } from "../types";
-import { NotificationsButton } from "../components/NotificationsButton";
+import { NotificationsMenu } from "../components/NotificationsMenu";
 import { SidebarToggle } from "../components/SidebarToggle";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { LogInIcon } from "../components/icons/LogInIcon";
@@ -11,8 +11,6 @@ import { NavigationLogo } from "./NavigationLogo";
 import { AiButton } from "../components/AiButton";
 import type { ChatAccessToken } from "../chat/chatProxy";
 import { ChatDrawer } from "../components/ChatDrawer";
-
-const NOTIFICATIONS_ENABLED = false; // TODO: remove this when the notifications is ready for production
 
 const texts = {
   "nb-NO": {
@@ -41,6 +39,7 @@ export function TopNavigation({
   availableLocales,
   loginUrl,
   logoutUrl,
+  notifications,
   aiAgent,
   chatAccessToken,
 }: {
@@ -79,6 +78,8 @@ export function TopNavigation({
   contrast?: boolean;
   /** The language every string in the bar is rendered in. */
   locale: Locale;
+  /** Notifications to display */
+  notifications?: NotificationList;
   /**
    * The languages to offer, in this order. Without it, or when it is empty, there is
    * no language switcher. For a signed-in user it is a section in the user menu. For
@@ -115,7 +116,7 @@ export function TopNavigation({
           )}
           {user && (
             <>
-              {!simple && NOTIFICATIONS_ENABLED && <NotificationsButton locale={locale} />}
+              {!simple && <NotificationsMenu locale={locale} notifications={notifications} />}
               <UserMenu
                 user={user}
                 simple={simple}

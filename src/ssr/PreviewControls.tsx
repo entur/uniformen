@@ -140,33 +140,57 @@ export function PreviewControls({
           <Group where="right">
             {/* Hidden in production, because production ignores these parameters. */}
             {environment === "production" ? null : (
-              <Field
-                label="debugUser / debugEmail"
-                hint="Bare forhåndsvisningen — kommer fra tokenet."
-              >
-                <label class="preview-controls__check">
-                  <span class="preview-controls__name">debugUser</span>
-                  <input
-                    class="preview-controls__text"
-                    type="text"
-                    name="debugUser"
-                    value={query.debugUser}
-                    placeholder="Navn Navnesen"
-                    maxlength={120}
-                  />
-                </label>
-                <label class="preview-controls__check">
-                  <span class="preview-controls__name">debugEmail</span>
-                  <input
-                    class="preview-controls__text"
-                    type="text"
-                    name="debugEmail"
-                    value={query.debugEmail}
-                    placeholder="navn.navnesen@entur.org"
-                    maxlength={120}
-                  />
-                </label>
-              </Field>
+              <>
+                <Field
+                  label="debugNotifications"
+                  hint="Bare i forhåndsvisningen — leses inn om bruker er logget inn."
+                >
+                  <div class="preview-controls__row">
+                    {["none", "some", "all"].map((notificationOption) => (
+                      <label class="preview-controls__check">
+                        <input
+                          type="radio"
+                          name="debugNotifications"
+                          value={notificationOption}
+                          checked={(query.debugNotifications ?? "all") === notificationOption}
+                        />
+                        {notificationOption === "all"
+                          ? "alle"
+                          : notificationOption === "some"
+                            ? "noen"
+                            : "ingen"}
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+                <Field
+                  label="debugUser / debugEmail"
+                  hint="Bare i forhåndsvisningen — kommer fra tokenet."
+                >
+                  <label class="preview-controls__check">
+                    <span class="preview-controls__name">debugUser</span>
+                    <input
+                      class="preview-controls__text"
+                      type="text"
+                      name="debugUser"
+                      value={query.debugUser}
+                      placeholder="Navn Navnesen"
+                      maxlength={120}
+                    />
+                  </label>
+                  <label class="preview-controls__check">
+                    <span class="preview-controls__name">debugEmail</span>
+                    <input
+                      class="preview-controls__text"
+                      type="text"
+                      name="debugEmail"
+                      value={query.debugEmail}
+                      placeholder="navn.navnesen@entur.org"
+                      maxlength={120}
+                    />
+                  </label>
+                </Field>
+              </>
             )}
 
             <Field label="loginUrl" hint="Hvor «Logg inn» peker. Tom gir ingen lenke.">
@@ -195,34 +219,36 @@ export function PreviewControls({
               label="availableLocales"
               hint="Språkene appen selv tilbyr, som velger i brukermenyen. Ingen gir ingen velger; språket under er alltid med."
             >
-              {LOCALES.map((locale) =>
-                locale === query.locale ? (
-                  /* The current locale is always checked and cannot be unchecked,
+              <div class="preview-controls__row">
+                {LOCALES.map((locale) =>
+                  locale === query.locale ? (
+                    /* The current locale is always checked and cannot be unchecked,
                      because a list without it gets a 400. A disabled checkbox is not
                      submitted, so a hidden input sends the value instead. The page
                      script updates or removes it on submit. */
-                  <label class="preview-controls__check">
-                    <input type="checkbox" checked disabled />
-                    <input
-                      type="hidden"
-                      name="availableLocales"
-                      value={locale}
-                      data-preview-locale
-                    />
-                    {locale}
-                  </label>
-                ) : (
-                  <label class="preview-controls__check">
-                    <input
-                      type="checkbox"
-                      name="availableLocales"
-                      value={locale}
-                      checked={query.availableLocales?.includes(locale)}
-                    />
-                    {locale}
-                  </label>
-                ),
-              )}
+                    <label class="preview-controls__check">
+                      <input type="checkbox" checked disabled />
+                      <input
+                        type="hidden"
+                        name="availableLocales"
+                        value={locale}
+                        data-preview-locale
+                      />
+                      {locale}
+                    </label>
+                  ) : (
+                    <label class="preview-controls__check">
+                      <input
+                        type="checkbox"
+                        name="availableLocales"
+                        value={locale}
+                        checked={query.availableLocales?.includes(locale)}
+                      />
+                      {locale}
+                    </label>
+                  ),
+                )}
+              </div>
             </Field>
 
             <Field

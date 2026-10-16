@@ -30,6 +30,12 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
 ### Added
 
+- The bell button in the bar opens a notifications menu. It lists the signed-in user's
+  five newest notifications, each linking to the request it is about, and a link to see
+  them all. A user with no notifications sees "Ingen nye varsler". The bell has a badge
+  when there is something to read. `simple=true` still hides the whole button.
+- On the preview page, `debugNotifications` chooses how many notifications to render.
+
 - Varslingssenter is in the app switcher, and `app=varslingssenter` is accepted.
 
 ## 2026-10-09
