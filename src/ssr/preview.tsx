@@ -11,6 +11,9 @@ import { renderUniformenScripts, uniformenScriptsHash } from "./uniformenScripts
 import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenHeadScript";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
+import notificationsDummyData from "./notificationsDummyData.json";
+import { notificationService, toNotificationList } from "../auth/notifications";
+import type { NotificationList } from "../types";
 
 // Base styles for the preview page: fonts and layout. It is a constant so its exact
 // text can be hashed for the CSP `style-src` directive.
@@ -457,6 +460,7 @@ const previewQuerySchema = uniformenQuerySchema.extend({
   // Whether to render the bar for an Entur user. In `/ssr` this comes from the token.
   // The preview page has no token, so it is a parameter here.
   debugEnturUser: z.enum(["true", "false"]).optional(),
+  debugNotifications: z.enum(["none", "some", "all"]).optional(),
 });
 
 export type PreviewQuery = z.infer<typeof previewQuerySchema>;
@@ -475,6 +479,24 @@ export function previewUser(
 ): UserMenuUser | undefined {
   if (environment === "production" || !debugUser) return undefined;
   return { name: debugUser, email: debugEmail };
+}
+
+export async function previewNotifications({
+  debugNotifications,
+}: Pick<PreviewQuery, "debugNotifications">): Promise<NotificationList | undefined> {
+  if (debugNotifications === "none") {
+    return [];
+  }
+
+  const notifications = process.env["DEV_ACCESS_TOKEN"]
+    ? await notificationService.getNotifications(
+        "internal",
+        process.env["DEV_ACCESS_TOKEN"],
+        "debugUser",
+      )
+    : toNotificationList(notificationsDummyData);
+
+  return debugNotifications === "some" ? notifications?.slice(0, 3) : notifications;
 }
 
 /**
@@ -514,6 +536,8 @@ export function previewRoutes(server: OpenAPIHono): void {
     // With `?sidebar=true`, also render the example sidebar, so the collapse button
     // has something to collapse.
     const sidebar = navProps.sidebar ? await renderComponentToString(<PreviewSidebar />) : "";
+    const notifications = user && navProps.simple ? undefined : await previewNotifications(query);
+
     // The locale codes are valid BCP 47 language tags.
     return ctx.html(`
         <html lang="${navProps.locale}">
@@ -529,6 +553,7 @@ export function previewRoutes(server: OpenAPIHono): void {
                   <TopNavigation
                     {...navProps}
                     user={user}
+                    notifications={notifications}
                     isEnturUser={previewIsEnturUser(query)}
                   />,
                 )}
