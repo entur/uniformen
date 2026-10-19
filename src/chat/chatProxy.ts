@@ -61,8 +61,7 @@ export function loadChatProxyConfig(
     tokenUri: env["AUTH0_INTERNAL_TOKEN_URI"]!,
     clientId: env["MNG_AUTH0_INT_CLIENT_ID"]!,
     clientSecret,
-    // Sporai accepts any token from the internal tenant and does not check the
-    // audience. We ask for the first internal audience.
+    // We ask for the first internal audience.
     audience: [internal.audience].flat()[0]!,
   });
   // The chat token key is made from the client secret, so no new secret is needed.

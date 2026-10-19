@@ -5,7 +5,7 @@ export type SporaiConfig = {
   tokenUri: string;
   clientId: string;
   clientSecret: string;
-  /** The audience to ask Auth0 for. Sporai does not check it. */
+  /** The audience to ask Auth0 for. */
   audience: string;
 };
 
