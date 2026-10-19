@@ -14,6 +14,7 @@ const texts = {
     userLocation: "Du er her: ",
     unspecifiedLocation: "Hjemmesiden",
     error: "Beklager, jeg kunne ikke svare nå. Prøv igjen litt senere.",
+    errorRefresh: "Samtalen har vært åpen for lenge. Last inn nettsiden på nytt og prøv igjen.",
     restarted:
       "Samtalen ble tidsavbrutt og startet på nytt. Assistenten husker ikke meldingene over.",
     examples: [
@@ -28,6 +29,7 @@ const texts = {
     userLocation: "Du er her: ",
     unspecifiedLocation: "Heimesida",
     error: "Beklagar, eg kunne ikkje svare no. Prøv igjen litt seinare.",
+    errorRefresh: "Samtalen har vore open for lenge. Last inn nettsida på nytt og prøv igjen.",
     restarted:
       "Samtalen vart tidsavbroten og starta på nytt. Assistenten hugsar ikkje meldingane over.",
     examples: [
@@ -42,6 +44,7 @@ const texts = {
     userLocation: "You are here: ",
     unspecifiedLocation: "Homepage",
     error: "Sorry, I could not answer right now. Please try again later.",
+    errorRefresh: "The conversation has been open for too long. Please refresh the website and try again.",
     restarted:
       "The conversation timed out and was restarted. The assistant does not remember the messages above.",
     examples: [
@@ -71,6 +74,7 @@ export function ChatDrawer({
       id="uniformen-chat-drawer"
       data-uniformen-chat-proxy-url={chatAccessToken?.url}
       data-uniformen-chat-error-text={txt.error}
+      data-uniformen-chat-error-text-refresh={txt.errorRefresh}
       data-uniformen-chat-locations={JSON.stringify(locationNames[locale])}
       role="dialog"
       aria-modal="false"

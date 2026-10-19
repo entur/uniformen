@@ -102,6 +102,7 @@ export default function aiAgentHandlers() {
   let questionCount = 0;
   let awaitingReply = false;
   const errorText = drawer.getAttribute("data-uniformen-chat-error-text") ?? "";
+  const errorTextRefresh = drawer.getAttribute("data-uniformen-chat-error-text-refresh") ?? "";
 
   /**
    * Adds the question in the text field to the chat, empties the field and adds the
@@ -253,6 +254,9 @@ export default function aiAgentHandlers() {
       if (res.status === 404 && sentSessionId) {
         if (count === questionCount) sessionId = undefined;
         return null;
+      }
+      if (res.status === 401 && sentSessionId) {
+        return errorTextRefresh
       }
       if (!res.ok) return errorText;
       const body: { reply: string; sessionId: string } = await res.json();
