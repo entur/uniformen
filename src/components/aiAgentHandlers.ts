@@ -255,9 +255,7 @@ export default function aiAgentHandlers() {
         if (count === questionCount) sessionId = undefined;
         return null;
       }
-      if (res.status === 401 && sentSessionId) {
-        return errorTextRefresh
-      }
+      if (res.status === 401) return errorTextRefresh;
       if (!res.ok) return errorText;
       const body: { reply: string; sessionId: string } = await res.json();
       if (count === questionCount) sessionId = body.sessionId;

@@ -44,7 +44,8 @@ const texts = {
     userLocation: "You are here: ",
     unspecifiedLocation: "Homepage",
     error: "Sorry, I could not answer right now. Please try again later.",
-    errorRefresh: "The conversation has been open for too long. Please refresh the website and try again.",
+    errorRefresh:
+      "The conversation has been open for too long. Please refresh the website and try again.",
     restarted:
       "The conversation timed out and was restarted. The assistant does not remember the messages above.",
     examples: [

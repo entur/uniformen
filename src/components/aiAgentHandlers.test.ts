@@ -281,6 +281,7 @@ function install({
     {
       id: "uniformen-chat-drawer",
       "data-uniformen-chat-error-text": "Feil",
+      "data-uniformen-chat-error-text-refresh": "Last inn på nytt",
       "data-uniformen-chat-locations": JSON.stringify(locations),
       ...chatAttributes,
     },
@@ -624,6 +625,14 @@ describe("aiAgentHandlers", () => {
     page.send.click();
     await replied();
     expect(page.messages()).toEqual(["Hei!", "Hei", "Feil"]);
+  });
+
+  test("shows the refresh text when the token has expired", async () => {
+    const page = install({ respond: () => new Response(null, { status: 401 }) });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.messages()).toEqual(["Hei!", "Hei", "Last inn på nytt"]);
   });
 
   test("an expired session shows a divider and asks the question again", async () => {
