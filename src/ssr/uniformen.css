@@ -910,6 +910,11 @@
   animation: uniformen-slide-in-right 0.1s ease-out;
 }
 
+/* The drawer only gets focus from a click, so it does not need a focus ring. */
+.uniformen-chat-drawer:focus {
+  outline: none;
+}
+
 /* `display: flex` above would otherwise show the drawer when it has `hidden`. */
 .uniformen-chat-drawer[hidden] {
   display: none;

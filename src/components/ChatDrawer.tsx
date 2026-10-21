@@ -90,6 +90,9 @@ export function ChatDrawer({
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"
       class="uniformen-chat-drawer"
+      // A click on text or empty space in the drawer then puts focus on the drawer,
+      // so Escape still closes it.
+      tabindex={-1}
     >
       {/* `ph-no-capture` stops PostHog session replay from recording the token. The
           class must not be on the drawer, because autocapture should still record
