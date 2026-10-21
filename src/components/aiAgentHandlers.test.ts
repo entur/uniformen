@@ -40,6 +40,12 @@ class FakeElement {
     this.children.length = 0;
   }
 
+  readonly scrolledIntoView: unknown[] = [];
+
+  scrollIntoView(options: unknown): void {
+    this.scrolledIntoView.push(options);
+  }
+
   getAttribute(name: string): string | null {
     return this.attributes.get(name) ?? null;
   }
@@ -840,6 +846,14 @@ describe("aiAgentHandlers", () => {
     await replied();
     const reply = page.chatWindow.querySelectorAll(".uniformen-chat-bubble").at(-1);
     expect(reply?.children.map((list) => list.getAttribute("start"))).toEqual(["1", "2"]);
+  });
+
+  test("scrolls to the start of the reply", async () => {
+    const page = install({ respond: () => Response.json({ reply: "Hei", sessionId: "s-1" }) });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.chatWindow.children.at(-1)?.scrolledIntoView).toEqual([{ block: "start" }]);
   });
 
   test("HTML in a reply is added as text, not as elements", async () => {
