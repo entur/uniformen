@@ -19,6 +19,7 @@ class FakeElement {
   value = "";
   scrollTop = 0;
   scrollHeight = 100;
+  clientHeight = 100;
   focused = 0;
   readonly style: Record<string, string> = {};
   text = "";
@@ -854,6 +855,27 @@ describe("aiAgentHandlers", () => {
     page.send.click();
     await replied();
     expect(page.chatWindow.children.at(-1)?.scrolledIntoView).toEqual([{ block: "start" }]);
+  });
+
+  test("scrolls down to a new message when the chat is at the bottom", async () => {
+    const page = install({ respond: () => Response.json({ reply: "Hei", sessionId: "s-1" }) });
+    page.chatWindow.scrollHeight = 1000;
+    page.chatWindow.scrollTop = 850;
+    page.type("Hei");
+    page.send.click();
+    expect(page.chatWindow.scrollTop).toBe(1000);
+    await replied();
+  });
+
+  test("does not scroll when the user has scrolled far up in the chat", async () => {
+    const page = install({ respond: () => Response.json({ reply: "Hei", sessionId: "s-1" }) });
+    page.chatWindow.scrollHeight = 1000;
+    page.chatWindow.scrollTop = 200;
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.chatWindow.scrollTop).toBe(200);
+    expect(page.chatWindow.children.at(-1)?.scrolledIntoView).toEqual([]);
   });
 
   test("HTML in a reply is added as text, not as elements", async () => {

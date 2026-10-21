@@ -139,13 +139,16 @@ export default function aiAgentHandlers() {
     if (count !== questionCount) return;
     awaitingReply = false;
     hideTyping();
+    const chatWindow = drawer?.querySelector<HTMLElement>(".uniformen-chat-window");
+    const followReply = !chatWindow || isNearBottom(chatWindow);
     const reply = addMessage("[data-uniformen-chat-agent-template]");
     const replyBubble = reply?.querySelector(".uniformen-chat-bubble");
     if (replyBubble) renderMarkdown(replyBubble, replyText ?? errorText);
     // `addMessage` scrolled to the bottom while the bubble was empty. Scroll again
     // after the text is added, so the user reads a long reply from its start. A short
-    // reply still ends at the bottom, because the chat cannot scroll further.
-    reply?.scrollIntoView({ block: "start" });
+    // reply still ends at the bottom, because the chat cannot scroll further. Do not
+    // scroll when the user has scrolled up to read something older.
+    if (followReply) reply?.scrollIntoView({ block: "start" });
   }
 
   /**
@@ -355,10 +358,16 @@ export default function aiAgentHandlers() {
     if (examples) examples.hidden = !visible;
   }
 
+  /** Returns true when the chat is scrolled to the bottom, or less than 100 pixels from it. */
+  function isNearBottom(chatWindow: HTMLElement) {
+    return chatWindow.scrollHeight - chatWindow.scrollTop - chatWindow.clientHeight < 100;
+  }
+
   /**
    * Copies the message in the template that matches `templateSelector` to the end of
-   * the chat, and scrolls the chat down to it. Returns the new message, or `null` when
-   * the template or the chat window is missing.
+   * the chat. Scrolls the chat down to it, but only when the user was already near the
+   * bottom. Returns the new message, or `null` when the template or the chat window
+   * is missing.
    */
   function addMessage(templateSelector: string) {
     const template = drawer?.querySelector<HTMLTemplateElement>(templateSelector);
@@ -367,8 +376,10 @@ export default function aiAgentHandlers() {
     if (!chatWindow || !(message instanceof HTMLElement)) return null;
     // `startNewChat` removes the messages that have this attribute.
     message.setAttribute("data-uniformen-chat-added", "");
+    // Measure before the message is added, because the message makes the chat taller.
+    const followMessage = isNearBottom(chatWindow);
     chatWindow.append(message);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
+    if (followMessage) chatWindow.scrollTop = chatWindow.scrollHeight;
     return message;
   }
 
