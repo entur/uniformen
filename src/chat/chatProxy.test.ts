@@ -202,23 +202,29 @@ describe("chat token", () => {
   });
 });
 
-test("answers 503 when too many questions are open in the pod", async () => {
+test("answers 503 when one user has too many questions open, and not other users", async () => {
   let release!: () => void;
   const waiting = new Promise<void>((resolve) => (release = resolve));
   sporaiMock.respond = async () => {
     await waiting;
     return new Response("svar");
   };
-  const open = Array.from({ length: 10 }, async () => ask({ query: "Hei" }));
-  // Wait until all ten calls have reached sporai.
-  while (sporaiMock.calls < 10) await Bun.sleep(5);
+  const open = Array.from({ length: 2 }, async () => ask({ query: "Hei" }));
+  // Wait until both calls have reached sporai.
+  while (sporaiMock.calls < 2) await Bun.sleep(5);
 
   const busy = await ask({ query: "Hei" });
   expect(busy.status).toBe(503);
   expect(busy.headers.get("Retry-After")).toBe("5");
 
+  // Another user can still ask.
+  const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;
+  const otherOpen = ask({ query: "Hei" }, other);
+  while (sporaiMock.calls < 3) await Bun.sleep(5);
+
   release();
-  expect((await Promise.all(open)).map((res) => res.status)).toEqual(Array(10).fill(200));
+  const statuses = (await Promise.all([...open, otherOpen])).map((res) => res.status);
+  expect(statuses).toEqual(Array(3).fill(200));
   // The counter goes down again when the calls end.
   expect((await ask({ query: "Hei" })).status).toBe(200);
 });

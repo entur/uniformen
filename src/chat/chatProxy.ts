@@ -24,9 +24,10 @@ const CHAT_PROXY_URLS: Record<Environment, string> = {
 
 const CHAT_TOKEN_AUDIENCE = "uniformen-chat";
 const CHAT_TOKEN_LIFETIME = "8h";
-// The number of calls to sporai that one pod runs at the same time. A slow sporai
-// must not use up the connections that `/ssr` also needs.
-const MAX_ACTIVE_SPORAI_CALLS = 10;
+
+// The number of calls to sporai that one user can have open at the same time in one pod.
+const MAX_ACTIVE_SPORAI_CALLS_PER_USER = 2;
+
 // The same pattern as sporai's. Sporai rejects any other `location` with a 400.
 const LOCATION_PATTERN = /^[a-zA-Z0-9/_-]{0,100}$/;
 
@@ -229,7 +230,8 @@ export function chatProxyRoutes(
     bearerFormat: "JWT",
   });
 
-  let activeSporaiCalls = 0;
+  // The number of open sporai calls for each user. The key is the `sub` of the chat token.
+  const activeCallsPerUser = new Map<string, number>();
 
   server.use(
     "/chat-proxy",
@@ -258,15 +260,20 @@ export function chatProxyRoutes(
       } catch {
         return c.text("Unauthorized", 401, { "WWW-Authenticate": 'Bearer error="invalid_token"' });
       }
-      if (activeSporaiCalls >= MAX_ACTIVE_SPORAI_CALLS) {
+      const user = c.get("chatUser");
+      const active = activeCallsPerUser.get(user) ?? 0;
+      if (active >= MAX_ACTIVE_SPORAI_CALLS_PER_USER) {
         c.header("Retry-After", "5");
         return problem(c, 503, "Service Unavailable");
       }
-      activeSporaiCalls++;
+      activeCallsPerUser.set(user, active + 1);
       try {
         return await next();
       } finally {
-        activeSporaiCalls--;
+        // Remove the user at 0, so the map does not grow for the life of the pod.
+        const callsLeft = activeCallsPerUser.get(user)! - 1;
+        if (callsLeft === 0) activeCallsPerUser.delete(user);
+        else activeCallsPerUser.set(user, callsLeft);
       }
     }),
   );
