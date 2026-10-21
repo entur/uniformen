@@ -28,6 +28,10 @@ const CHAT_TOKEN_LIFETIME = "8h";
 // The number of calls to sporai that one user can have open at the same time in one pod.
 const MAX_ACTIVE_SPORAI_CALLS_PER_USER = 2;
 
+// The number of questions that one user can send to sporai in 60 seconds in one pod.
+const MAX_SPORAI_CALLS_PER_MINUTE_PER_USER = 10;
+const RATE_WINDOW_MS = 60_000;
+
 // The same pattern as sporai's. Sporai rejects any other `location` with a 400.
 const LOCATION_PATTERN = /^[a-zA-Z0-9/_-]{0,100}$/;
 
@@ -161,7 +165,7 @@ function verifySessionId(sessionKey: Uint8Array, user: string, signed: string): 
 }
 
 /** Returns an RFC 9457 problem response with only `title` and `status`. */
-function problem(c: Context, status: 400 | 404 | 413 | 503, title: string) {
+function problem(c: Context, status: 400 | 404 | 413 | 429 | 503, title: string) {
   return c.json({ title, status }, status, { "Content-Type": "application/problem+json" });
 }
 
@@ -208,6 +212,9 @@ const chatProxyRoute = createRoute({
       "The session belongs to another user, or sporai does not know it, for example because it expired.",
     ),
     413: problemResponse("The request body is larger than 8 KiB."),
+    429: problemResponse(
+      "The user has sent too many questions to sporai in the last minute. The `Retry-After` header says how many seconds to wait.",
+    ),
     503: problemResponse("Sporai could not answer, or too many questions are open right now."),
   },
 });
@@ -232,6 +239,10 @@ export function chatProxyRoutes(
 
   // The number of open sporai calls for each user. The key is the `sub` of the chat token.
   const activeCallsPerUser = new Map<string, number>();
+
+  // The times of each user's latest calls to sporai, from the last 60 seconds.
+  // A user's entry is only cleaned up when that user sends a new question.
+  const recentCallsPerUser = new Map<string, number[]>();
 
   server.use(
     "/chat-proxy",
@@ -293,7 +304,20 @@ export function chatProxyRoutes(
         // user or the value has been changed.
         sessionId = verifySessionId(sessionKey, user, signedSessionId);
         if (!sessionId) return problem(c, 404, "Not Found");
-      } else {
+      }
+
+      // Only a question that will reach sporai counts, so the checks above do not use
+      // up the user's calls.
+      const now = Date.now();
+      const recent = (recentCallsPerUser.get(user) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+      if (recent.length >= MAX_SPORAI_CALLS_PER_MINUTE_PER_USER) {
+        recentCallsPerUser.set(user, recent);
+        c.header("Retry-After", String(Math.ceil((recent[0]! + RATE_WINDOW_MS - now) / 1000)));
+        return problem(c, 429, "Too Many Requests");
+      }
+      recentCallsPerUser.set(user, [...recent, now]);
+
+      if (sessionId === undefined) {
         const created = await client.createSession(signal);
         if (created.kind !== "ok") return problem(c, 503, "Service Unavailable");
         sessionId = created.sessionId;

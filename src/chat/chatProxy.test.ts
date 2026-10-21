@@ -229,6 +229,36 @@ test("answers 503 when one user has too many questions open, and not other users
   expect((await ask({ query: "Hei" })).status).toBe(200);
 });
 
+describe("rate limit", () => {
+  test("answers 429 after 10 calls to sporai in a minute, and allows calls again later", async () => {
+    setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
+
+    setSystemTime(new Date("2026-01-01T12:00:20Z"));
+    const calls = sporaiMock.calls;
+    const limited = await ask({ query: "Hei" });
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Retry-After")).toBe("40");
+    expect(await limited.json()).toEqual({ title: "Too Many Requests", status: 429 });
+    expect(sporaiMock.calls).toBe(calls);
+
+    // Another user is not affected.
+    const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;
+    expect((await ask({ query: "Hei" }, other)).status).toBe(200);
+
+    setSystemTime(new Date("2026-01-01T12:01:01Z"));
+    expect((await ask({ query: "Hei" })).status).toBe(200);
+  });
+
+  test("does not count a question that never reaches sporai", async () => {
+    const foreign = signSessionId(proxyConfig.sessionKey, "internal|user-2", "s-1");
+    for (let i = 0; i < 10; i++) {
+      expect((await ask({ query: "Hei", sessionId: foreign })).status).toBe(404);
+    }
+    expect((await ask({ query: "Hei" })).status).toBe(200);
+  });
+});
+
 describe("CORS", () => {
   test("allows a preflight from an Entur origin", async () => {
     const res = await app.request("/chat-proxy", {

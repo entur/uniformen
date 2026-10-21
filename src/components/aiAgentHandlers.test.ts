@@ -282,6 +282,7 @@ function install({
       id: "uniformen-chat-drawer",
       "data-uniformen-chat-error-text": "Feil",
       "data-uniformen-chat-error-text-refresh": "Last inn på nytt",
+      "data-uniformen-chat-error-text-rate-limit": "For raskt",
       "data-uniformen-chat-locations": JSON.stringify(locations),
       ...chatAttributes,
     },
@@ -633,6 +634,14 @@ describe("aiAgentHandlers", () => {
     page.send.click();
     await replied();
     expect(page.messages()).toEqual(["Hei!", "Hei", "Last inn på nytt"]);
+  });
+
+  test("shows the rate limit text when the user sends questions too fast", async () => {
+    const page = install({ respond: () => new Response(null, { status: 429 }) });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.messages()).toEqual(["Hei!", "Hei", "For raskt"]);
   });
 
   test("an expired session shows a divider and asks the question again", async () => {
