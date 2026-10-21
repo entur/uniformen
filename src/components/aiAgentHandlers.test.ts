@@ -831,6 +831,17 @@ describe("aiAgentHandlers", () => {
     expect(page.lastBubble()).toBe(markup);
   });
 
+  test("numbered items split by a blank line keep their numbers", async () => {
+    const page = install({
+      respond: () => Response.json({ reply: "1. A\n\n2. B", sessionId: "s-1" }),
+    });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    const reply = page.chatWindow.querySelectorAll(".uniformen-chat-bubble").at(-1);
+    expect(reply?.children.map((list) => list.getAttribute("start"))).toEqual(["1", "2"]);
+  });
+
   test("HTML in a reply is added as text, not as elements", async () => {
     const page = install({
       respond: () => Response.json({ reply: "<script>alert(1)</script>", sessionId: "s-1" }),

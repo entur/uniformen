@@ -172,6 +172,8 @@ export default function aiAgentHandlers() {
         const tag = item[1] ? "ol" : "ul";
         if (!list || listTag !== tag) {
           list = document.createElement(tag);
+          // Use the number from the text, so a list that a blank line split still counts up.
+          if (item[1]) list.setAttribute("start", item[1]);
           listTag = tag;
           target.append(list);
         }
