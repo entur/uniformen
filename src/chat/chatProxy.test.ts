@@ -202,7 +202,7 @@ describe("chat token", () => {
   });
 });
 
-test("answers 503 when one user has too many questions open, and not other users", async () => {
+test("answers 429 when one user has too many questions open, and not other users", async () => {
   let release!: () => void;
   const waiting = new Promise<void>((resolve) => (release = resolve));
   sporaiMock.respond = async () => {
@@ -214,8 +214,9 @@ test("answers 503 when one user has too many questions open, and not other users
   while (sporaiMock.calls < 2) await Bun.sleep(5);
 
   const busy = await ask({ query: "Hei" });
-  expect(busy.status).toBe(503);
+  expect(busy.status).toBe(429);
   expect(busy.headers.get("Retry-After")).toBe("5");
+  expect(await busy.json()).toEqual({ title: "Too Many Open Chats", status: 429 });
 
   // Another user can still ask.
   const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;

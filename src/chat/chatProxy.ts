@@ -213,9 +213,9 @@ const chatProxyRoute = createRoute({
     ),
     413: problemResponse("The request body is larger than 8 KiB."),
     429: problemResponse(
-      "The user has sent too many questions to sporai in the last minute. The `Retry-After` header says how many seconds to wait.",
+      "The user has sent too many questions to sporai in the last minute (title `Too Many Requests`), or has too many questions open at the same time (title `Too Many Open Chats`). The `Retry-After` header says how many seconds to wait.",
     ),
-    503: problemResponse("Sporai could not answer, or too many questions are open right now."),
+    503: problemResponse("Sporai could not answer."),
   },
 });
 
@@ -275,7 +275,8 @@ export function chatProxyRoutes(
       const active = activeCallsPerUser.get(user) ?? 0;
       if (active >= MAX_ACTIVE_SPORAI_CALLS_PER_USER) {
         c.header("Retry-After", "5");
-        return problem(c, 503, "Service Unavailable");
+        // The browser tells this apart from the rate limit by the title.
+        return problem(c, 429, "Too Many Open Chats");
       }
       activeCallsPerUser.set(user, active + 1);
       try {

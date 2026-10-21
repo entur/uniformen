@@ -104,6 +104,8 @@ export default function aiAgentHandlers() {
   const errorText = drawer.getAttribute("data-uniformen-chat-error-text") ?? "";
   const errorTextRefresh = drawer.getAttribute("data-uniformen-chat-error-text-refresh") ?? "";
   const errorTextRateLimit = drawer.getAttribute("data-uniformen-chat-error-text-rate-limit") ?? "";
+  const errorTextTooManyChats =
+    drawer.getAttribute("data-uniformen-chat-error-text-too-many-chats") ?? "";
 
   /**
    * Adds the question in the text field to the chat, empties the field and adds the
@@ -247,7 +249,7 @@ export default function aiAgentHandlers() {
         body: JSON.stringify({
           query,
           sessionId: sentSessionId,
-          location: window.location.pathname,
+          location: readPath(),
         }),
       });
       // 404 means sporai does not know the session, so the next request starts a new one.
@@ -257,7 +259,11 @@ export default function aiAgentHandlers() {
         return null;
       }
       if (res.status === 401) return errorTextRefresh;
-      if (res.status === 429) return errorTextRateLimit;
+      if (res.status === 429) {
+        // The title says which limit the user hit. Neither text names a wait time.
+        const body: { title?: string } = await res.json().catch(() => ({}));
+        return body.title === "Too Many Open Chats" ? errorTextTooManyChats : errorTextRateLimit;
+      }
       if (!res.ok) return errorText;
       const body: { reply: string; sessionId: string } = await res.json();
       if (count === questionCount) sessionId = body.sessionId;
@@ -293,6 +299,21 @@ export default function aiAgentHandlers() {
     if (!field) return;
     field.value = "";
     field.focus();
+  }
+
+  /**
+   * Returns the page's path, or the drawer's name for the homepage on the root path,
+   * for example "Hjemmesiden". Returns "location-not-found" when the path cannot be
+   * read. Sporai only accepts path characters, so the values cannot contain spaces.
+   */
+  function readPath() {
+    try {
+      const path = window.location.pathname;
+      if (typeof path !== "string" || !path) return "location-not-found";
+      return path === "/" ? defaultLocation || "homepage" : path;
+    } catch {
+      return "location-not-found";
+    }
   }
 
   /** Shows the user's current place in the app at the bottom of the drawer. */

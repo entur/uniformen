@@ -283,6 +283,7 @@ function install({
       "data-uniformen-chat-error-text": "Feil",
       "data-uniformen-chat-error-text-refresh": "Last inn på nytt",
       "data-uniformen-chat-error-text-rate-limit": "For raskt",
+      "data-uniformen-chat-error-text-too-many-chats": "For mange samtaler",
       "data-uniformen-chat-locations": JSON.stringify(locations),
       ...chatAttributes,
     },
@@ -593,6 +594,27 @@ describe("aiAgentHandlers", () => {
     ]);
   });
 
+  test("sends the drawer's name for the homepage on the root path", async () => {
+    const page = install({ pathname: "/" });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.bodies()).toEqual([{ query: "Hei", location: "Hjemmesiden" }]);
+  });
+
+  test("sends location-not-found when the path cannot be read", async () => {
+    const page = install();
+    Object.defineProperty(page.win.location, "pathname", {
+      get() {
+        throw new Error("blocked");
+      },
+    });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.bodies()).toEqual([{ query: "Hei", location: "location-not-found" }]);
+  });
+
   test("the next question uses the session from the reply", async () => {
     const page = install();
     page.type("Første");
@@ -642,6 +664,16 @@ describe("aiAgentHandlers", () => {
     page.send.click();
     await replied();
     expect(page.messages()).toEqual(["Hei!", "Hei", "For raskt"]);
+  });
+
+  test("shows the too many chats text when the user has too many chats open", async () => {
+    const page = install({
+      respond: () => Response.json({ title: "Too Many Open Chats", status: 429 }, { status: 429 }),
+    });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.messages()).toEqual(["Hei!", "Hei", "For mange samtaler"]);
   });
 
   test("an expired session shows a divider and asks the question again", async () => {
