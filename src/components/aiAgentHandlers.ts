@@ -76,10 +76,12 @@ export default function aiAgentHandlers() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !drawer.hidden) {
-      setDrawerOpen(false);
-      button.focus();
-    }
+    if (event.key !== "Escape" || event.defaultPrevented || drawer.hidden) return;
+    // Ignore Escape from the rest of the page, such as a modal in the app.
+    const active = document.activeElement;
+    if (!drawer.contains(active) && !button.contains(active)) return;
+    setDrawerOpen(false);
+    button.focus();
   });
 
   /** Opens or closes the drawer, and updates the button to match. */

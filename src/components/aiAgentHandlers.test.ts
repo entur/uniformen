@@ -64,6 +64,10 @@ class FakeElement {
     return this.attributes.has(attribute);
   }
 
+  contains(node: unknown): boolean {
+    return node === this || this.children.some((child) => child.contains(node));
+  }
+
   closest(selector: string): FakeElement | null {
     if (this.matches(selector)) return this;
     return this.parent?.closest(selector) ?? null;
@@ -362,7 +366,7 @@ function install({
     typing: () => chatWindow.querySelectorAll("[data-uniformen-chat-typing]").length,
     /** The text of each element in the chat window, in order. */
     chatEntries: () => chatWindow.children.map((child) => child.textContent),
-    escape: () => doc.fire("keydown", { key: "Escape" }),
+    escape: (event: object = {}) => doc.fire("keydown", { key: "Escape", ...event }),
     /** Presses a key in the text field. Returns whether the default action was stopped. */
     press: (key: string, shiftKey = false) => {
       let prevented = false;
@@ -469,6 +473,29 @@ describe("aiAgentHandlers", () => {
     page.escape();
     expect(page.drawer.hidden).toBe(true);
     expect(page.doc.activeElement).toBe(page.button);
+  });
+
+  test("Escape closes the drawer when focus is on the button", () => {
+    const page = install();
+    page.button.click();
+    page.button.focus();
+    page.escape();
+    expect(page.drawer.hidden).toBe(true);
+  });
+
+  test("Escape does nothing when focus is outside the chat", () => {
+    const page = install();
+    page.button.click();
+    page.doc.activeElement = new FakeElement();
+    page.escape();
+    expect(page.drawer.hidden).toBe(false);
+  });
+
+  test("Escape does nothing when another handler already used it", () => {
+    const page = install();
+    page.button.click();
+    page.escape({ defaultPrevented: true });
+    expect(page.drawer.hidden).toBe(false);
   });
 
   test("Escape does nothing when the drawer is closed", () => {
