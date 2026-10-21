@@ -248,9 +248,11 @@ export default function aiAgentHandlers() {
         method: "POST",
         // The token is the only credential. Cookies for the page must not be sent.
         credentials: "omit",
+        // Stop waiting after 45 seconds. The catch below then shows the error text.
+        signal: AbortSignal.timeout(45_000),
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        // Send the raw path. Sporai rejects the comma-separated text that
-        // `findLocation` makes.
+        // Send the path, not the name that is shown. The proxy leaves out a location
+        // that sporai would reject.
         body: JSON.stringify({
           query,
           sessionId: sentSessionId,
@@ -330,8 +332,6 @@ export default function aiAgentHandlers() {
    * Returns the name of the last part of the page's path, in the drawer's language.
    * Returns the path part itself when it has no name, and "" on the root path.
    * The first letter is always a capital letter.
-   * When the path has a `readonly`, `add`, `edit` or `create` or number part,
-   * it uses the part before it
    */
   function findLocation() {
     const parts = window.location.pathname.split("/").filter(Boolean);
