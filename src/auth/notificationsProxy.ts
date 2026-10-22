@@ -126,6 +126,9 @@ async function deleteNotification(
       signal: AbortSignal.timeout(DELETE_TIMEOUT_MS),
     });
 
+    // A 404 means the notification is already gone, which is what the user wanted. Treat it as success.
+    if (response.status === 404) return true;
+
     // A 401 means the token is no longer accepted, so throw it away and get a new
     // one next time. A 403 means the machine user is missing a permission, and a new
     // token would be refused in the same way.

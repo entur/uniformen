@@ -57,7 +57,7 @@ export type NotificationServiceOptions = {
   positiveTtlMs?: number;
   /** How long a failed lookup is cached. Default 30 seconds. */
   negativeTtlMs?: number;
-  /** Timeout for the request. Default 5 seconds. */
+  /** Timeout for the request. Defaults to 1 second. */
   timeoutMs?: number;
   /** Maximum number of cached users. When the cache is full, the oldest entry is removed. Default 5000. */
   maxEntries?: number;
@@ -139,7 +139,7 @@ export const notificationService: NotificationService = new NotificationServiceI
 );
 
 /**
- * Transform raw Notification response to Notifactions type.
+ * Transform raw Notification response to Notifications type.
  * Temporary till Notification Service has been rewritten
  *
  */
@@ -147,20 +147,25 @@ async function transformNotificationResponse(
   response: NotificationResponse | undefined,
   sub: string,
 ): Promise<Notifications | undefined> {
-  try {
-    if (!response) return undefined;
-    const filteredItems = response.filter((r) => Array.isArray(r?.messages) && r.messages[0]);
+  if (!response) return undefined;
+  const filteredItems = response.filter((r) => Array.isArray(r?.messages) && r.messages[0]);
 
-    const notifications = await Promise.all(
-      filteredItems.slice(0, 5).map(async (item) => ({
+  const notifications = await Promise.all(
+    filteredItems.slice(0, 5).map(async (item) => {
+      let markAsReadToken: string | undefined;
+      try {
+        markAsReadToken = await createReadNotificationToken(sub, item.id);
+      } catch (error) {
+        console.warn("failed to create markAsReadToken:", error);
+      }
+
+      return {
         referenceId: item.referenceId,
         date: item.created,
         message: item.messages[0]!.body,
-        markAsReadToken: await createReadNotificationToken(sub, item.id),
-      })),
-    );
-    return { items: notifications, totalCount: filteredItems.length };
-  } catch {
-    return undefined;
-  }
+        markAsReadToken,
+      };
+    }),
+  );
+  return { items: notifications, totalCount: filteredItems.length };
 }

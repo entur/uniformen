@@ -98,6 +98,15 @@ describe("deleting", () => {
     expect(notificationDeleteMock.ids).toEqual(["42"]);
   });
 
+  test("answers 204 when deleting an already deleted message", async () => {
+    notificationDeleteMock.respond = () => new Response(null, { status: 404 });
+
+    const res = await withToken("auth0|test", 42);
+
+    expect(res.status).toBe(204);
+    expect(notificationDeleteMock.ids).toEqual(["42"]);
+  });
+
   test("calls the notification center as the machine user", async () => {
     const authorization: (string | null)[] = [];
     notificationDeleteMock.respond = (req) => {
