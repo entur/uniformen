@@ -331,27 +331,59 @@ export default function aiAgentHandlers() {
   }
 
   /**
-   * Returns the name of the last part of the page's path, in the drawer's language.
-   * Returns the path part itself when it has no name, and "" on the root path.
-   * The first letter is always a capital letter.
+   * Returns a readable name for the page the user is on, based on the URL path.
+   * The name is in the drawer's language and starts with a capital letter.
+   *
+   * It works in four steps:
+   * 1. Cut the path at a mode word (`edit`, `add`, `create`, `readonly`).
+   * 2. Skip numeric ids at the end.
+   * 3. Look up the last path part in the drawer's location names. Use the part itself
+   *    when there is no name for it.
+   * 4. For a generic page like `users`, put the name of the part before it first.
+   *
+   * Examples, when `users` is a generic page:
+   * - `/turnover/123/edit` returns "Turnover"
+   * - `/settings/users` returns "Settings - Users"
+   *
+   * Returns "" when the path has no usable part, for example on the root path.
+   * `displayLocation` then shows the default location, which is the homepage.
    */
   function findLocation() {
     const parts = window.location.pathname.split("/").filter(Boolean);
-    // `readonly`, `add`, `edit` and `create` are not pages. They show a page in
-    // another mode. When one of them is in the path, use the part before it, and skip
-    // the parts after it.
+    // Step 1: `readonly`, `add`, `edit` and `create` are not pages. They show a page
+    // in another mode. Keep only the parts before the first one of them.
     const modes = new Set(["readonly", "add", "edit", "create"]);
     const stop = parts.findIndex((part) => modes.has(part));
     const pageParts = stop === -1 ? parts : parts.slice(0, stop);
-    // A number at the end of the path is usually the id of one item, like the 123 in
-    // `/turnover/123`. Skip it and use the part before it.
-    const last = pageParts.findLast((part) => !/^\d+$/.test(part)) ?? "";
+    // Step 2: A number is usually the id of one item, like the 123 in `/turnover/123`.
+    // Find the last part that is not a number.
+    const isId = (part: string) => /^\d+$/.test(part);
+    const lastIndex = pageParts.findLastIndex((part) => !isId(part));
+    if (lastIndex === -1) return "";
     const names: Record<string, string> = JSON.parse(
       drawer?.getAttribute("data-uniformen-chat-locations") ?? "{}",
     );
-    // hasOwn, so a path like `/constructor` does not find a method of Object.
-    const name = (Object.hasOwn(names, last) && names[last]) || last;
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    // Step 3: Turns a path part into its display name. hasOwn makes sure a path like
+    // `/constructor` does not find a method of Object.
+    const display = (part: string) => {
+      const name = (Object.hasOwn(names, part) && names[part]) || part;
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    };
+    const last = pageParts[lastIndex];
+    if (last === undefined) return "";
+    // Step 4: Pages like `users` and `help` could exist in several parts of the app, so the
+    // name alone does not tell the user where they are. Add the part before it, if
+    // there is one.
+    const genericPages: string[] = JSON.parse(
+      drawer?.getAttribute("data-uniformen-chat-generic-pages") ?? "[]",
+    );
+    const parent = pageParts.slice(0, lastIndex).findLast((part) => !isId(part));
+    const parentName = parent && display(parent);
+    const lastName = display(last);
+    // Skip the parent when both names are the same, like `/help/help`.
+    return genericPages.includes(last) && parentName && parentName !== lastName
+      ? `${parentName} - ${lastName}`
+      : lastName;
   }
 
   /** Shows the example questions when `visible` is true, and hides them when it is false. */

@@ -1,6 +1,6 @@
 import type { ChatAccessToken } from "../chat/chatProxy";
 import type { Locale } from "../types";
-import { locationNames } from "./chatLocations";
+import { genericPages, locationNames } from "./chatLocations";
 import { ChatMessage } from "./ChatMessage";
 import { ChatTextArea } from "./ChatTextArea";
 import { CloseIcon } from "./icons/CloseIcon";
@@ -86,6 +86,7 @@ export function ChatDrawer({
       data-uniformen-chat-error-text-rate-limit={txt.errorRateLimit}
       data-uniformen-chat-error-text-too-many-chats={txt.errorTooManyChats}
       data-uniformen-chat-locations={JSON.stringify(locationNames[locale])}
+      data-uniformen-chat-generic-pages={JSON.stringify(genericPages)}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"

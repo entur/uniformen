@@ -249,6 +249,7 @@ function install({
   drawer: withDrawer = true,
   chat = true,
   locations = { "fare-structures": "Prisstrukturer" },
+  genericPages = ["users", "help"],
   navigation = false,
   respond = () => Response.json({ reply: "Svar", sessionId: "s-1" }),
 }: {
@@ -261,6 +262,8 @@ function install({
   chat?: boolean;
   /** The names that the server renders for path parts. */
   locations?: Record<string, string>;
+  /** The path parts that get the name of their parent part in front. */
+  genericPages?: string[];
   /** The reply from `/chat-proxy`. */
   respond?: () => Response | Promise<Response>;
 } = {}) {
@@ -296,6 +299,7 @@ function install({
       "data-uniformen-chat-error-text-rate-limit": "For raskt",
       "data-uniformen-chat-error-text-too-many-chats": "For mange samtaler",
       "data-uniformen-chat-locations": JSON.stringify(locations),
+      "data-uniformen-chat-generic-pages": JSON.stringify(genericPages),
       ...chatAttributes,
     },
     [
@@ -502,6 +506,147 @@ describe("aiAgentHandlers", () => {
     const page = install();
     page.escape();
     expect(page.button.focused).toBe(0);
+  });
+
+  test("a generic page name gets its parent part in front", () => {
+    const page = install({
+      pathname: "/permission-admin/users/123",
+      locations: { "permission-admin": "Tilgangsstyring", users: "Brukere" },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
+  });
+
+  test("an id between the parent and a generic page is skipped", () => {
+    const page = install({
+      pathname: "/permission-admin/12/users",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
+  });
+
+  test("a mode word after a generic page is ignored", () => {
+    const page = install({
+      pathname: "/permission-admin/users/edit/5",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
+  });
+
+  test("a mode word as the first part gives the default location", () => {
+    const page = install({
+      pathname: "/edit/users",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Hjemmesiden");
+  });
+
+  test("a generic page with a trailing slash gets its parent", () => {
+    const page = install({
+      pathname: "/permission-admin/users/",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
+  });
+
+  test("a page that is not generic never gets its parent", () => {
+    const page = install({
+      pathname: "/data-dashboards/admin",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Administrer dashbord");
+  });
+
+  test("a generic page after another generic page gets it as parent", () => {
+    const page = install({
+      pathname: "/help/users",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Hjelp - Brukere");
+  });
+
+  test("a generic page with the same name as its parent is shown once", () => {
+    const page = install({
+      pathname: "/help/help",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Hjelp");
+  });
+
+  test("an unnamed parent is shown as its path part", () => {
+    const page = install({
+      pathname: "/foo-bar/users",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Foo-bar - Brukere");
+  });
+
+  test("a parent named like an Object method is not looked up on Object", () => {
+    const page = install({
+      pathname: "/constructor/users",
+      locations: {
+        "permission-admin": "Tilgangsstyring",
+        users: "Brukere",
+        help: "Hjelp",
+        admin: "Administrer dashbord",
+      },
+    });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Constructor - Brukere");
+  });
+
+  test("a generic page name alone is shown without a parent", () => {
+    const page = install({ pathname: "/help", locations: { help: "Hjelp" } });
+    page.button.click();
+    expect(page.locationName.textContent).toBe("Hjelp");
   });
 
   test("opening shows the name of the last path part as the location", () => {
