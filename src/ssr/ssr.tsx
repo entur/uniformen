@@ -1,5 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
-import { chatProxyConfig, issueChatToken } from "../chat/chatProxy";
+import { chatProxyConfig, chatProxyOrigin, issueChatToken } from "../chat/chatProxy";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
 import type { PortalApplicationId } from "../components/portalApplications";
 import { optionalAuth } from "../auth/optionalAuth";
@@ -178,10 +178,10 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     // Without a chat proxy config, which Helm only sets in some environments, the
     // button would only show the error text. So it is not rendered at all. PostHog
     // is only called when the app asks for the agent and chat is configured.
+    const aiAgentRequested =
+      navProps.aiAgent || (query.app !== undefined && AI_AGENT_APPS.has(query.app));
     const aiAgent =
-      (navProps.aiAgent || (query.app !== undefined && AI_AGENT_APPS.has(query.app))) &&
-      chatProxyConfig !== undefined &&
-      (await aiAgentFlag.isOn(info));
+      aiAgentRequested && chatProxyConfig !== undefined && (await aiAgentFlag.isOn(info));
 
     // Only a user with a profile gets a chat token. This keeps machine tokens out,
     // but it also means a signed-in user has no chat while userinfo fails. Without
@@ -230,8 +230,12 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         csp: {
           "style-src": [uniformenCssHash],
           "script-src": [uniformenHeadScriptHash, uniformenScriptsHash],
-          // The chat drawer sends questions to the chat proxy from the browser.
-          ...(chatAccessToken && { "connect-src": [new URL(chatAccessToken.url).origin] }),
+          // The chat drawer sends questions to the chat proxy from the browser. This is
+          // sent to every user of an app that asks for the AI agent, so the CSP does not
+          // depend on the user. A `connect-src` replaces `default-src` for `fetch`, so
+          // a missing one for some users would break the app's own requests only for
+          // the other users.
+          ...(aiAgentRequested && chatProxyOrigin && { "connect-src": [chatProxyOrigin] }),
         },
       },
       200,

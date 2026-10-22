@@ -459,7 +459,8 @@ describe("/ssr app query param", () => {
     const plain = await (await ssr()).json();
     const withApp = await (await ssr("?app=partner")).json();
     expect(withApp.footerHtml).toBe(plain.footerHtml);
-    expect(withApp.csp).toEqual(plain.csp);
+    expect(withApp.csp["style-src"]).toEqual(plain.csp["style-src"]);
+    expect(withApp.csp["script-src"]).toEqual(plain.csp["script-src"]);
     expect(withApp.headAssets).toBe(plain.headAssets);
     expect(withApp.scripts).toBe(plain.scripts);
   });
@@ -783,8 +784,25 @@ describe("/ssr aiAgent query param", () => {
     const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
     const body = await signedIn("auth0|partner-no-flag", "?app=partner");
     expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
-    expect((body as { csp?: Record<string, string[]> }).csp?.["connect-src"]).toBeUndefined();
     isOn.mockRestore();
+  });
+
+  test("connect-src is the same for anonymous users and users without the flag when the app asks for the AI agent", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
+    const anonymous = await (await ssr("?app=partner")).json();
+    const flagOff = await signedIn("auth0|csp-no-flag", "?app=partner");
+    const withParam = await (await ssr("?app=bedrift&aiAgent=true")).json();
+    for (const body of [anonymous, flagOff, withParam]) {
+      expect(body.csp["connect-src"]).toEqual(["https://uniformen.dev.entur.no"]);
+    }
+    isOn.mockRestore();
+  });
+
+  test("an app that does not ask for the AI agent gets no connect-src", async () => {
+    for (const query of ["", "?app=bedrift", "?app=bedrift&aiAgent=false"]) {
+      const body = await (await ssr(query)).json();
+      expect(body.csp["connect-src"]).toBeUndefined();
+    }
   });
 
   test("other apps get no AI agent without aiAgent and do not check the flag", async () => {
@@ -795,11 +813,12 @@ describe("/ssr aiAgent query param", () => {
     isOn.mockRestore();
   });
 
-  test("the scripts and the CSP are the same with or without it", async () => {
+  test("the scripts and the CSP hashes are the same with or without it", async () => {
     const withAgent = await (await ssr("?aiAgent=true")).json();
     const without = await (await ssr()).json();
     expect(withAgent.scripts).toBe(without.scripts);
-    expect(withAgent.csp).toEqual(without.csp);
+    expect(withAgent.csp["style-src"]).toEqual(without.csp["style-src"]);
+    expect(withAgent.csp["script-src"]).toEqual(without.csp["script-src"]);
   });
 });
 

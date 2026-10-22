@@ -23,9 +23,12 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 - The drawer shows the page the user is on. Replies can have paragraphs, lists, headings
   and bold text. Links in a reply are shown as plain text.
 - The drawer sends questions from the browser to the service's `POST /chat-proxy`
-  endpoint. When the bar has the drawer, the `csp` field also has a `connect-src`
-  entry with the service's address. The app's Content-Security-Policy must include
-  it, or the browser blocks the questions.
+  endpoint. Where the service is connected to the AI agent backend, and the app asks
+  for the AI agent, the `csp` field has a `connect-src` entry with the service's
+  address in every response, for every user. The app's Content-Security-Policy must
+  include it, or the browser blocks the questions. A `connect-src` replaces
+  `default-src` for `fetch`, so the app must also copy the sources from its
+  `default-src` into its `connect-src`.
 ## 2026-10-16
 
 ### Changed
