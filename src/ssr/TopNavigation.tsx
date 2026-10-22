@@ -106,7 +106,6 @@ export function TopNavigation({
           {aiAgent && (
             <>
               <AiButton locale={locale} />
-              <ChatDrawer locale={locale} chatAccessToken={chatAccessToken} />
             </>
           )}
           {/* Only for anonymous users. Signed-in users get the language options in
@@ -142,6 +141,7 @@ export function TopNavigation({
           )}
         </div>
       </nav>
+      <ChatDrawer locale={locale} chatAccessToken={chatAccessToken} />
     </header>
   );
 }
