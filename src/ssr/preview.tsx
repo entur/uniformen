@@ -338,6 +338,63 @@ const PREVIEW_BASE_CSS = `
                         color: inherit;
                         cursor: pointer;
                     }
+
+                    /* Code that fetches the layout with the selected parameters. */
+                    .preview-code {
+                        width: 100%;
+                        max-width: 52rem;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
+
+                    .preview-code__head {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 0.75rem;
+                    }
+
+                    .preview-code__tabs {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 0.25rem;
+                    }
+
+                    .preview-code__tab {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.375rem;
+                        padding: 0.375rem 0.75rem;
+                        border: 1px solid #b8bad0;
+                        border-radius: 0.25rem;
+                        background: #fff;
+                        font-family: ui-monospace, monospace;
+                        font-size: 0.8125rem;
+                        cursor: pointer;
+                    }
+
+                    .preview-code__tab:has(:checked) {
+                        border-color: #181c56;
+                        background: #181c56;
+                        color: #fff;
+                    }
+
+                    .preview-code__block {
+                        margin: 0;
+                        overflow-x: auto;
+                        font-size: 0.8125rem;
+                        line-height: 1.5;
+                        padding: 0.75rem;
+                        border-radius: 0.25rem;
+                        background: #e9eaf3;
+                    }
+
+                    /* Show only the block for the checked tab. */
+                    .preview-code:has([value=layout]:checked) [data-preview-code=react],
+                    .preview-code:has([value=react]:checked) [data-preview-code=layout] {
+                        display: none;
+                    }
 `.trim();
 
 /**
@@ -414,23 +471,49 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
     field?.focus();
   }
 
+  // Copies `text` and shows the result on the button. If the clipboard is blocked, it
+  // selects `printed` instead, so the user can copy it.
+  async function copyText(button: Element, text: string, printed: Element | null) {
+    const label = button.textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = "Kopiert";
+    } catch {
+      if (printed) window.getSelection()?.selectAllChildren(printed);
+      button.textContent = "Merket";
+    }
+    window.setTimeout(() => (button.textContent = label), 1500);
+  }
+
   const copy = document.querySelector("[data-preview-copy]");
   copy?.addEventListener("click", async () => {
     // Copy the URL printed on the page, not the one in the address bar. The printed URL
     // is built from the validated query and has no extra parameters.
     const printed = document.querySelector("[data-preview-url]");
-    const label = copy.textContent;
-    try {
-      await navigator.clipboard.writeText(
-        new URL(printed?.textContent ?? "", window.location.href).href,
-      );
-      copy.textContent = "Kopiert";
-    } catch {
-      // The clipboard is blocked. Select the URL instead, so the user can copy it.
-      if (printed) window.getSelection()?.selectAllChildren(printed);
-      copy.textContent = "Merket";
-    }
-    window.setTimeout(() => (copy.textContent = label), 1500);
+    await copyText(copy, new URL(printed?.textContent ?? "", window.location.href).href, printed);
+  });
+
+  // The page reloads on every change, so store the picked code tab and check it again
+  // after the reload. Storage can be blocked. Then the first tab is shown.
+  const TAB_KEY = "uniformen-preview-code";
+  const tabs = [...document.querySelectorAll<HTMLInputElement>("[data-preview-code-tab]")];
+  try {
+    const stored = tabs.find((tab) => tab.value === localStorage.getItem(TAB_KEY));
+    if (stored) stored.checked = true;
+  } catch {}
+  for (const tab of tabs) {
+    tab.addEventListener("change", () => {
+      try {
+        localStorage.setItem(TAB_KEY, tab.value);
+      } catch {}
+    });
+  }
+
+  const copyCode = document.querySelector("[data-preview-copy-code]");
+  copyCode?.addEventListener("click", async () => {
+    const checked = tabs.find((tab) => tab.checked)?.value;
+    const printed = document.querySelector(`[data-preview-code=${checked}]`);
+    await copyText(copyCode, printed?.textContent ?? "", printed);
   });
 }
   .toString()
