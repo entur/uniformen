@@ -103,11 +103,7 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
-          {aiAgent && (
-            <>
-              <AiButton locale={locale} />
-            </>
-          )}
+          {aiAgent && <AiButton locale={locale} />}
           {/* Only for anonymous users. Signed-in users get the language options in
               the user menu. */}
           {hasLocales && !user && (
@@ -141,7 +137,7 @@ export function TopNavigation({
           )}
         </div>
       </nav>
-      <ChatDrawer locale={locale} chatAccessToken={chatAccessToken} />
+      {aiAgent && <ChatDrawer locale={locale} chatAccessToken={chatAccessToken} />}
     </header>
   );
 }
