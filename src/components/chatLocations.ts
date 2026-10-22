@@ -59,11 +59,11 @@ const nb = {
 };
 
 /**
-* Path parts that are used for a page in more than one part of the app, like `users`.
-* The drawer shows the name of the part before it as well, for example
-* "Tilgangsstyring - Brukere". Add a part here when its name is not clear on its own.
-* Every part must have a name in each language above.
-*/
+ * Path parts that are used for a page in more than one part of the app, like `users`.
+ * The drawer shows the name of the part before it as well, for example
+ * "Tilgangsstyring - Brukere". Add a part here when its name is not clear on its own.
+ * Every part must have a name in each language above.
+ */
 export const genericPages = ["users", "help"];
 
 export const locationNames: Record<Locale, Record<string, string>> = {
