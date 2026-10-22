@@ -26,6 +26,13 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   endpoint. When the bar has the drawer, the `csp` field also has a `connect-src`
   entry with the service's address. The app's Content-Security-Policy must include
   it, or the browser blocks the questions.
+## 2026-10-16
+
+### Changed
+
+- The PROD environment badge is neutral: white with a dark blue text and a grey-blue
+  border, instead of red.
+
 ## 2026-10-14
 
 ### Added

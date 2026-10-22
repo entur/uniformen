@@ -51,9 +51,8 @@ app.doc("/doc", {
 // Only start the server when this file is run directly. Tests import `app`
 // without starting a server.
 if (import.meta.main) {
-  // Bun closes a connection that has been quiet for 10 seconds by default. A chat
-  // answer can take up to 30 seconds, plus 5 seconds for the machine token.
-  const server = Bun.serve({ port: PORT, fetch: app.fetch, idleTimeout: 60 });
+  const server = Bun.serve({ port: PORT, fetch: app.fetch });
+  console.info(`Uniformen is running on ${server.url}`);
 
   /**
    * Fails readiness, keeps serving for `SHUTDOWN_DRAIN_MS`, then stops accepting

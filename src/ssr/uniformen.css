@@ -695,6 +695,7 @@
   padding: var(--uniformen-space-medium);
   justify-content: center;
   text-decoration: none;
+  color: inherit;
 }
 
 .uniformen-notifications-menu__footer .uniformen-icon__forward {
