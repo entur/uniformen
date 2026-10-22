@@ -1,5 +1,5 @@
 import { AppSwitcher } from "../components/AppSwitcher";
-import type { Locale, NotificationList } from "../types";
+import type { Locale, Notifications } from "../types";
 import { portalApplicationPath, type PortalApplicationId } from "../components/portalApplications";
 import { NotificationsMenu } from "../components/NotificationsMenu";
 import { SidebarToggle } from "../components/SidebarToggle";
@@ -73,8 +73,8 @@ export function TopNavigation({
   contrast?: boolean;
   /** The language every string in the bar is rendered in. */
   locale: Locale;
-  /** Notifications to display */
-  notifications?: NotificationList;
+  /** The notifications to show, and how many there are in total. */
+  notifications?: Notifications;
   /**
    * The languages to offer, in this order. Without it, or when it is empty, there is
    * no language switcher. For a signed-in user it is a section in the user menu. For

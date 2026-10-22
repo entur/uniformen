@@ -1,14 +1,15 @@
-import type { Locale, NotificationList } from "../types";
+import type { Locale, Notifications } from "../types";
 import { BellIcon } from "./icons/BellIcon";
 import { ForwardIcon } from "./icons/ForwardIcon";
-import { environment as runningEnvironment } from "../config";
+import { environment } from "../config";
 import { portalApplicationUrl } from "./portalApplications";
+import { getEnvironmentUrl } from "../auth/browserTokens";
 
 /**
- * Static URLs for notificatinos pointing to requests.
+ * Static URLs for notifications pointing to requests.
  * Is likely to change once notification-center is rewritten as more notification types will occur
  */
-const PERMISSION_ADMIN_BASE_URI = `${portalApplicationUrl("partner", runningEnvironment)}/permission-admin`;
+const PERMISSION_ADMIN_BASE_URI = `${portalApplicationUrl("partner", environment)}/permission-admin`;
 const ALL_REQUESTS_PATH = `${PERMISSION_ADMIN_BASE_URI}/requests`;
 const SINGLE_REQUEST_PATH = `${PERMISSION_ADMIN_BASE_URI}/requests/request`;
 const ROLE_REQUEST_APPROVED_PATH = `${PERMISSION_ADMIN_BASE_URI}/my-profile`;
@@ -54,11 +55,11 @@ const formatRawDateString = (dString: string, locale: Locale) => {
 
 interface NotificationMenuArgs {
   locale: Locale;
-  notifications?: NotificationList;
+  notifications?: Notifications;
 }
 
 export function NotificationsMenu(props: NotificationMenuArgs) {
-  const hasNotifications = !!props.notifications?.length;
+  const hasNotifications = !!(props.notifications?.totalCount && props.notifications?.items.length);
   const txt = texts[props.locale];
 
   return (
@@ -98,11 +99,16 @@ export function NotificationsMenu(props: NotificationMenuArgs) {
             <h2 class="uniformen-notifications-menu__title">{txt.title}</h2>
           </div>
           {hasNotifications ? (
-            <ul class="uniformen-notifications-menu__list">
-              {props.notifications?.slice(0, 5).map((notification) => (
+            <ul
+              class="uniformen-notifications-menu__list"
+              data-uniformen-notifications-url={getEnvironmentUrl("notifications-proxy")}
+            >
+              {props.notifications?.items.map((notification) => (
                 <li>
+                  {/* Skip PostHog autocapture for potential personal sensitive data inside the following DOM element */}
                   <a
-                    class="uniformen-notifications-menu__item"
+                    class="uniformen-notifications-menu__item ph-no-capture"
+                    data-uniformen-notification-token={notification.markAsReadToken}
                     href={
                       notification.referenceId
                         ? `${SINGLE_REQUEST_PATH}/${notification.referenceId}`
@@ -110,8 +116,7 @@ export function NotificationsMenu(props: NotificationMenuArgs) {
                     }
                   >
                     <div class="uniformen-notifications-menu__item-badge" aria-hidden="true" />
-                    {/* Skip PostHog autocapture for potential personal sensitive data in the following DOM element */}
-                    <div class="uniformen-notifications-menu__item-text ph-no-capture">
+                    <div class="uniformen-notifications-menu__item-text">
                       <span>{formatRawDateString(notification.date, props.locale)}</span>
                       <span>{notification.message}</span>
                     </div>
@@ -124,7 +129,7 @@ export function NotificationsMenu(props: NotificationMenuArgs) {
             <p class="uniformen-notifications-menu__empty">{txt.noNewNotifications}</p>
           )}
           <a class="uniformen-notifications-menu__footer" href={ALL_REQUESTS_PATH}>
-            {hasNotifications ? txt.seeAllNumbered(props.notifications!.length) : txt.seeAll}
+            {hasNotifications ? txt.seeAllNumbered(props.notifications!.totalCount) : txt.seeAll}
             <ForwardIcon />
           </a>
         </div>

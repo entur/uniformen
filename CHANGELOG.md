@@ -29,6 +29,23 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
 - `app=omsetning` renders Omsetning beside the logo. It is not an entry in the app switcher.
 
+## 2026-10-26
+
+### Added
+
+- Clicking a notification deletes it. The bar can still show it for up to 5 seconds
+  after the click.
+
+### Changed
+
+- The `csp` field now has a `connect-src` directive, `'self'` and uniformen's own
+  origin. Merge it into your page's Content-Security-Policy like the other
+  directives. Without it the browser blocks the request that deletes a notification.
+  If your policy has no `connect-src`, the browser uses your `default-src` for
+  requests. Create `connect-src` with your `default-src` sources first, then add
+  uniformen's. Otherwise the new directive replaces `default-src` for requests, and
+  the browser blocks requests that worked before.
+
 ## 2026-10-22
 
 ### Added

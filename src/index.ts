@@ -4,6 +4,7 @@ import { beginShutdown, isReady } from "./lifecycle";
 import { previewRoutes } from "./ssr/preview";
 import { uniformenSsrRoutes } from "./ssr/ssr";
 import { printMetrics, metricsRoute } from "./metrics";
+import { notificationsProxyRoute } from "./auth/notificationsProxy";
 
 export const app = new OpenAPIHono();
 
@@ -36,6 +37,7 @@ app.use("/static/*", serveStatic({ root: "./src" }));
 
 uniformenSsrRoutes(app);
 previewRoutes(app);
+notificationsProxyRoute(app);
 
 app.doc("/doc", {
   openapi: "3.0.0",

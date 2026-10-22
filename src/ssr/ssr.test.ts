@@ -371,6 +371,12 @@ describe("/ssr", () => {
     expect(body.csp["style-src"].some((s: string) => s.startsWith("'sha256-"))).toBe(true);
   });
 
+  test("csp field lets the page call uniformen, so a notification click is not blocked", async () => {
+    const res = await app.request("/ssr");
+    const body = await res.json();
+    expect(body.csp["connect-src"]).toEqual(["'self'", "https://uniformen.dev.entur.no"]);
+  });
+
   test("published hashes match the exact rendered inline bytes", async () => {
     const res = await app.request("/ssr");
     const body = await res.json();

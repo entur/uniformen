@@ -3,7 +3,16 @@ export const LOCALES = ["nb-NO", "nn-NO", "en-GB"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
-export type NotificationList = { referenceId: string | null; date: string; message: string }[];
+export type Notifications = {
+  items: {
+    referenceId: string | null;
+    date: string;
+    message: string;
+    /** Lets the browser delete this notification. The preview page leaves it out. */
+    markAsReadToken?: string;
+  }[];
+  totalCount: number;
+};
 
 /**
  * The label of the language control. It is not translated, so a user who cannot

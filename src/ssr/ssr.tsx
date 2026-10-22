@@ -3,6 +3,7 @@ import { isEnturOrganisation } from "../auth/enturOrganisation";
 import { optionalAuth } from "../auth/optionalAuth";
 import { type UserInfo, userInfoService } from "../auth/userInfo";
 import { notificationService } from "../auth/notifications";
+import { uniformenOrigin } from "../auth/browserTokens";
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
@@ -167,6 +168,10 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         csp: {
           "style-src": [uniformenCssHash],
           "script-src": [uniformenHeadScriptHash, uniformenScriptsHash],
+          // Clicking a notification sends a request back to uniformen. `'self'` is
+          // the embedding page's own origin, which most pages need anyway, and it
+          // costs nothing to repeat for a page that already allows it.
+          "connect-src": ["'self'", uniformenOrigin],
         },
       },
       200,

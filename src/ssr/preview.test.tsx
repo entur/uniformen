@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
-import { previewIsEnturUser, previewUser } from "./preview";
+import { previewIsEnturUser, previewNotifications, previewUser } from "./preview";
 import { PreviewControls, previewCode } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
@@ -513,5 +513,42 @@ describe("preview page code example", () => {
     expect(html).toContain("app: &quot;nplan&quot;,");
     expect(html).toContain("contrast: true,");
     expect(html).toContain("data-preview-copy-code");
+  });
+});
+
+describe("preview notifications", () => {
+  // Without this, a developer with DEV_ACCESS_TOKEN in .env gets their own
+  // notifications here and the test checks the wrong list.
+  const withoutDevToken = async <T,>(run: () => Promise<T>): Promise<T> => {
+    const devToken = process.env["DEV_ACCESS_TOKEN"];
+    delete process.env["DEV_ACCESS_TOKEN"];
+    try {
+      return await run();
+    } finally {
+      if (devToken !== undefined) process.env["DEV_ACCESS_TOKEN"] = devToken;
+    }
+  };
+
+  test("the made-up notifications carry no token, so a click deletes nothing", async () => {
+    const notifications = await withoutDevToken(() => previewNotifications({}));
+
+    expect(notifications?.items.length).toBeGreaterThan(0);
+    for (const notification of notifications?.items ?? []) {
+      expect(notification.markAsReadToken).toBeUndefined();
+    }
+  });
+
+  test("the preview page renders no token attribute", async () => {
+    const { html } = await withoutDevToken(() => preview("?debugUser=Navn+Navnesen"));
+
+    expect(html).toContain("uniformen-notifications-menu__item");
+    // The inline handler mentions the attribute name, so look for it as an attribute.
+    expect(html).not.toContain('data-uniformen-notification-token="');
+  });
+
+  test("the page may call uniformen, so the notification request is not blocked", async () => {
+    const { res } = await preview("?debugUser=Navn+Navnesen");
+
+    expect(res.headers.get("content-security-policy")).toContain("connect-src 'self' ");
   });
 });
