@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { notificationMock, userInfoMock } from "../test/authTestSetup";
 import { ENTUR_ORGANISATION_ID, ORGANISATION_ID_CLAIM } from "../auth/enturOrganisation";
 import {
@@ -9,7 +9,7 @@ import {
   signInternalToken,
 } from "../test/authTestKeys";
 import { app } from "../index";
-import { aiAgentFlag } from "./ssr";
+import { aiAgentFlag, chat } from "./ssr";
 
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
@@ -46,6 +46,24 @@ beforeEach(() => {
   userInfoMock.reset();
   notificationMock.reset();
 });
+
+const originalChat = { ...chat };
+const originalFlag = { client: aiAgentFlag.client, timeoutMs: aiAgentFlag.timeoutMs };
+afterEach(() => {
+  Object.assign(chat, originalChat);
+  aiAgentFlag.client = originalFlag.client;
+  aiAgentFlag.timeoutMs = originalFlag.timeoutMs;
+  aiAgentFlag.cache.clear();
+  aiAgentFlag.inFlight.clear();
+});
+
+/** Returns a fake PostHog client. `answer` decides what each flag request returns. */
+function fakePostHog(answer: () => Promise<{ enabled: boolean } | undefined>) {
+  const getFeatureFlagResult = mock(answer);
+  // The cast is needed because the real method returns a richer type.
+  aiAgentFlag.client = { getFeatureFlagResult } as unknown as typeof aiAgentFlag.client;
+  return getFeatureFlagResult;
+}
 
 describe("/ssr auth (optional)", () => {
   test("no token returns 200 (public) with empty user slot", async () => {
@@ -443,7 +461,8 @@ describe("/ssr app query param", () => {
     const plain = await (await ssr()).json();
     const withApp = await (await ssr("?app=partner")).json();
     expect(withApp.footerHtml).toBe(plain.footerHtml);
-    expect(withApp.csp).toEqual(plain.csp);
+    expect(withApp.csp["style-src"]).toEqual(plain.csp["style-src"]);
+    expect(withApp.csp["script-src"]).toEqual(plain.csp["script-src"]);
     expect(withApp.headAssets).toBe(plain.headAssets);
     expect(withApp.scripts).toBe(plain.scripts);
   });
@@ -656,6 +675,148 @@ describe("/ssr contrast query param", () => {
     expect(contrast.headAssets).toBe(light.headAssets);
     expect(contrast.csp).toEqual(light.csp);
     expect(contrast.headAssets).toContain(".uniformen-contrast");
+  });
+});
+
+describe("/ssr aiAgent query param", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+
+  test("a signed-in user with the flag on gets the button, the drawer and a chat token", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
+    const body = await signedIn("auth0|agent-flag-on", "?aiAgent=true");
+    expect(body.headerHtml).toContain("data-uniformen-ai-agent-toggle");
+    expect(body.headerHtml).toContain('id="uniformen-chat-drawer"');
+    expect(body.headerHtml).toContain("data-uniformen-chat-token=");
+    expect(isOn).toHaveBeenCalledWith(expect.objectContaining({ sub: "auth0|test" }));
+    isOn.mockRestore();
+  });
+
+  test("the chat token, messages and text field are hidden from PostHog", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
+    const html: string = (await signedIn("auth0|agent-no-capture", "?aiAgent=true")).headerHtml;
+    expect(html.match(/data-uniformen-chat-token=/g)).toHaveLength(1);
+    expect(html).toMatch(/class="ph-no-capture" data-uniformen-chat-token="[^"]+"/);
+    expect(html).toContain(
+      'class="uniformen-chat-message uniformen-chat-message--agent ph-no-capture"',
+    );
+    expect(html).toContain(
+      'class="uniformen-chat-message uniformen-chat-message--user ph-no-capture"',
+    );
+    expect(html).toContain('class="uniformen-chat-message uniformen-chat-message--system"');
+    expect(html).toContain('class="uniformen-chat-textarea ph-no-capture"');
+    expect(html).not.toMatch(/class="uniformen-chat-drawer[^"]*ph-no-capture/);
+    isOn.mockRestore();
+  });
+
+  test("a signed-in user with the flag off gets no AI agent", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
+    const body = await signedIn("auth0|agent-flag-off", "?aiAgent=true");
+    expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+    expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
+    expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
+    isOn.mockRestore();
+  });
+
+  test("aiAgent=false and no param render no AI agent and do not check the flag", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
+    for (const [sub, query] of [
+      ["auth0|agent-no-param", ""],
+      ["auth0|agent-false", "?aiAgent=false"],
+    ] as const) {
+      const body = await signedIn(sub, query);
+      expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+      expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
+      expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
+    }
+    expect(isOn).not.toHaveBeenCalled();
+    isOn.mockRestore();
+  });
+
+  test("anonymous and invalid-token requests get no AI agent and do not call PostHog", async () => {
+    const getFlag = fakePostHog(async () => ({ enabled: true }));
+    for (const res of [
+      await ssr("?aiAgent=true"),
+      await app.request("/ssr?aiAgent=true", { headers: bearer("not-a-jwt") }),
+    ]) {
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+      expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
+    }
+    expect(getFlag).not.toHaveBeenCalled();
+  });
+
+  test("without chat settings there is no button, no chat token, no connect-src and no PostHog call", async () => {
+    chat.config = undefined;
+    chat.origin = undefined;
+    const getFlag = fakePostHog(async () => ({ enabled: true }));
+    const token = await signInternalToken({ sub: "auth0|chat-off" });
+    const res = await app.request("/ssr?aiAgent=true", { headers: bearer(token) });
+    const body = await res.json();
+    expect(body.headerHtml).toContain("uniformen-top-nav__user");
+    expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+    expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
+    expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
+    expect(body.csp["connect-src"]).toBeUndefined();
+    expect(getFlag).not.toHaveBeenCalled();
+  });
+
+  test("a PostHog that never answers still gives a full bar without the AI agent", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    aiAgentFlag.timeoutMs = 10;
+    fakePostHog(() => new Promise(() => {}));
+    const token = await signInternalToken({ sub: "auth0|agent-posthog-down" });
+    const res = await app.request("/ssr?aiAgent=true", { headers: bearer(token) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.headerHtml).toContain("uniformen-top-nav__user");
+    expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+    warn.mockRestore();
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?aiAgent=yes", "?aiAgent=1", "?aiAgent="]) {
+      expect((await ssr(query)).status).toBe(400);
+    }
+  });
+
+  test("a signed-in user without aiAgent gets no chat token", async () => {
+    const body = await signedIn("auth0|chat-no-agent");
+    expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
+  });
+
+  test("connect-src is the same for anonymous users and users without the flag when the app asks for the AI agent", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
+    const anonymous = await (await ssr("?aiAgent=true")).json();
+    const flagOff = await signedIn("auth0|csp-no-flag", "?aiAgent=true");
+    const withParam = await (await ssr("?app=bedrift&aiAgent=true")).json();
+    for (const body of [anonymous, flagOff, withParam]) {
+      expect(body.csp["connect-src"]).toEqual(["https://uniformen.dev.entur.no"]);
+    }
+    isOn.mockRestore();
+  });
+
+  test("an app that does not ask for the AI agent gets no connect-src", async () => {
+    for (const query of ["", "?app=bedrift", "?app=bedrift&aiAgent=false"]) {
+      const body = await (await ssr(query)).json();
+      expect(body.csp["connect-src"]).toBeUndefined();
+    }
+  });
+
+  test("other apps get no AI agent without aiAgent and do not check the flag", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
+    const body = await signedIn("auth0|other-app", "?app=bedrift");
+    expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+    expect(isOn).not.toHaveBeenCalled();
+    isOn.mockRestore();
+  });
+
+  test("the scripts and the CSP hashes are the same with or without it", async () => {
+    const withAgent = await (await ssr("?aiAgent=true")).json();
+    const without = await (await ssr()).json();
+    expect(withAgent.scripts).toBe(without.scripts);
+    expect(withAgent.csp["style-src"]).toEqual(without.csp["style-src"]);
+    expect(withAgent.csp["script-src"]).toEqual(without.csp["script-src"]);
   });
 });
 
@@ -1062,10 +1223,51 @@ describe("/ssr caching", () => {
 });
 
 describe("aiAgentFlag", () => {
+  const user = { sub: "auth0|flag-user", email: "flag@entur.org", email_verified: true };
+
   test("is off for everyone when POSTHOG_API_KEY is not set", async () => {
     expect(await aiAgentFlag.isOn(undefined)).toBe(false);
-    expect(
-      await aiAgentFlag.isOn({ sub: "auth0|test", email: "a@entur.org", email_verified: true }),
-    ).toBe(false);
+    expect(await aiAgentFlag.isOn(user)).toBe(false);
+  });
+
+  test("returns the flag from PostHog and caches it per user", async () => {
+    const getFlag = fakePostHog(async () => ({ enabled: true }));
+    expect(await aiAgentFlag.isOn(user)).toBe(true);
+    expect(await aiAgentFlag.isOn(user)).toBe(true);
+    expect(getFlag).toHaveBeenCalledTimes(1);
+  });
+
+  test("is off when PostHog does not answer, and asks again only after the cache expires", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    aiAgentFlag.timeoutMs = 10;
+    const getFlag = fakePostHog(() => new Promise(() => {}));
+    expect(await Promise.all([aiAgentFlag.isOn(user), aiAgentFlag.isOn(user)])).toEqual([
+      false,
+      false,
+    ]);
+    expect(await aiAgentFlag.isOn(user)).toBe(false);
+    expect(getFlag).toHaveBeenCalledTimes(1);
+    const message = String(warn.mock.calls[0]?.[0]);
+    expect(message).not.toContain(user.sub);
+    expect(message).not.toContain(user.email);
+    warn.mockRestore();
+  });
+
+  test("a failure for one user does not turn the flag off for others", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    fakePostHog(async () => undefined);
+    for (const sub of ["auth0|fail-1", "auth0|fail-2", "auth0|fail-3"]) {
+      expect(await aiAgentFlag.isOn({ ...user, sub })).toBe(false);
+    }
+    fakePostHog(async () => ({ enabled: true }));
+    expect(await aiAgentFlag.isOn({ ...user, sub: "auth0|fail-4" })).toBe(true);
+    warn.mockRestore();
+  });
+
+  test("is off when PostHog fails", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    fakePostHog(() => Promise.reject(new Error("network")));
+    expect(await aiAgentFlag.isOn(user)).toBe(false);
+    warn.mockRestore();
   });
 });

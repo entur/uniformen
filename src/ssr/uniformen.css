@@ -143,6 +143,26 @@
   box-shadow: var(--uniformen-shadow-focus);
 }
 
+/* Looks like the secondary button in the Entur design system. These rules come
+   after the action rules above, so they replace the action colours. */
+.uniformen-top-nav__action--secondary {
+  padding: 0 var(--uniformen-space-small);
+  background: var(--uniformen-secondary);
+  border: 0.125rem solid var(--uniformen-secondary-border);
+  color: var(--uniformen-on-secondary);
+  font-weight: var(--uniformen-weight-body);
+}
+
+.uniformen-top-nav__action--secondary:hover {
+  background: var(--uniformen-secondary-hover);
+}
+
+.uniformen-top-nav__action--secondary:active {
+  background: var(--uniformen-secondary-active);
+  border-color: var(--uniformen-secondary-border-active);
+  color: var(--uniformen-on-secondary-active);
+}
+
 .uniformen-top-nav__divider {
   flex: none;
   width: 1px;
@@ -870,4 +890,398 @@
 .uniformen-footer a:visited {
   color: inherit;
   text-decoration: none;
+}
+
+.uniformen-chat-drawer {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  /* Place the drawer right below the bar. The sum is the nav height and the strip
+     height (zero in production). */
+  top: calc(var(--top-nav-height) + var(--uniformen-env-strip-height));
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  /* `min-width` wins over `max-width`, so the 25rem minimum is put inside `width`.
+     Then `max-width` can still keep the drawer inside a narrow viewport. */
+  width: max(25rem, 30vw);
+  max-width: 100%;
+  padding: var(--uniformen-space-large);
+  overflow-y: auto;
+  font-family: Nationale, sans-serif;
+  z-index: calc(var(--uniformen-z-popover) + 1);
+  background: var(--uniformen-drawer);
+  color: var(--uniformen-on-drawer);
+  box-shadow: var(--uniformen-shadow-panel);
+  animation: uniformen-slide-in-right 0.1s ease-out;
+}
+
+/* The drawer only gets focus from a click, so it does not need a focus ring. */
+.uniformen-chat-drawer:focus {
+  outline: none;
+}
+
+/* `display: flex` above would otherwise show the drawer when it has `hidden`. */
+.uniformen-chat-drawer[hidden] {
+  display: none;
+}
+
+/* The name has the uniformen prefix because keyframe names are global, and the
+   consuming app may have its own keyframes with a common name. */
+@keyframes uniformen-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uniformen-chat-drawer {
+    animation: none;
+  }
+}
+
+.uniformen-chat-drawer__close {
+  position: absolute;
+  top: var(--uniformen-space-medium);
+  right: var(--uniformen-space-medium);
+}
+
+/* The bar's icon buttons use the bar colours for hover and active. On the drawer,
+   the close button uses the design system's icon button colours instead. */
+.uniformen-chat-drawer__close:hover {
+  background: var(--uniformen-icon-button-hover);
+}
+
+.uniformen-chat-drawer__close:active {
+  background: var(--uniformen-icon-button-active);
+  color: var(--uniformen-on-icon-button-active);
+}
+
+.uniformen-chat-drawer__title {
+  margin: 0 0 var(--uniformen-space-medium);
+  font-size: var(--uniformen-font-xl);
+  font-weight: var(--uniformen-weight-heading);
+}
+
+.uniformen-chat-textarea__wrapper {
+  position: relative;
+}
+
+.uniformen-chat-textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  /* The send button is centred on this starting height. Change both together. */
+  height: 5rem;
+  min-height: 5rem;
+  margin: 0;
+  padding: var(--uniformen-space-small);
+  /* Leave room on the right so the text does not go under the send button. */
+  padding-right: calc(2 * var(--uniformen-space-small) + 2.5rem);
+  border: 1px solid var(--uniformen-form-border);
+  background: var(--uniformen-form-fill);
+  color: var(--uniformen-form-text);
+  font: inherit;
+  font-size: var(--uniformen-font-lg);
+  line-height: var(--uniformen-line-md);
+  resize: vertical;
+  /* The Figma design uses a 10px radius. The design system has no token for it. */
+  border-radius: 0.625rem;
+}
+
+.uniformen-chat-textarea::placeholder {
+  color: var(--uniformen-form-label);
+  opacity: 1;
+}
+
+.uniformen-chat-textarea:hover {
+  border-color: var(--uniformen-form-border-interactive);
+}
+
+.uniformen-chat-textarea:focus-visible {
+  border-color: var(--uniformen-form-border-interactive);
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
+}
+
+/* The floating button from the design system, with only an icon. */
+.uniformen-floating-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--uniformen-floating);
+  color: var(--uniformen-on-floating);
+  box-shadow: var(--uniformen-shadow-floating);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.uniformen-floating-button:hover {
+  background: var(--uniformen-floating-hover);
+}
+
+.uniformen-floating-button:active {
+  background: var(--uniformen-floating-active);
+}
+
+.uniformen-floating-button:focus-visible {
+  outline: none;
+  box-shadow: var(--uniformen-shadow-focus);
+}
+
+/* Center the button on the textarea's starting height, so it stays in place when
+   the user makes the textarea taller. */
+.uniformen-chat-textarea__send {
+  position: absolute;
+  top: 2.5rem;
+  right: var(--uniformen-space-small);
+  transform: translateY(-50%);
+}
+
+/* The chat log fills the space between the title and the text area, and scrolls
+   when the messages do not fit. */
+.uniformen-chat-window {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uniformen-space-small);
+  flex: 1;
+  min-height: 10rem;
+  margin-bottom: var(--uniformen-space-medium);
+  padding: var(--uniformen-space-small);
+  overflow-y: auto;
+  /* The Figma design uses a 10px radius. The design system has no token for it. */
+  border-radius: 0.625rem;
+  background: var(--uniformen-form-fill);
+}
+
+/* The sender modifier on the message decides the side and the bubble colour. */
+.uniformen-chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uniformen-space-xs2);
+  max-width: 60%;
+}
+
+.uniformen-chat-message--agent {
+  align-self: flex-start;
+  max-width: 90%;
+}
+
+.uniformen-chat-message--user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.uniformen-chat-message__name {
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-xs);
+  margin: 0;
+  color: var(--uniformen-on-chat);
+  font-size: var(--uniformen-font-sm);
+  font-weight: var(--uniformen-weight-heading);
+}
+
+/* The bubble colours are the same in contrast mode. Both are light, so the dark
+   chat text works on them. */
+.uniformen-chat-bubble {
+  margin: 0;
+  padding: var(--uniformen-space-small) var(--uniformen-space-medium);
+  /* The Figma design uses a 10px radius. The design system has no token for it. */
+  border-radius: 0.625rem;
+  color: var(--uniformen-on-chat);
+  font-size: var(--uniformen-font-md);
+  line-height: var(--uniformen-line-md);
+  /* Keep the line breaks in the message, and break long words such as URLs. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The paragraphs and lists in an answer. See `renderMarkdown` in `aiAgentHandlers`. */
+.uniformen-chat-bubble :is(p, ul, ol) {
+  margin: 0;
+  white-space: normal;
+}
+
+.uniformen-chat-bubble :is(p, ul, ol) + :is(p, ul, ol) {
+  margin-top: var(--uniformen-space-small);
+}
+
+.uniformen-chat-bubble :is(ul, ol) {
+  padding-left: var(--uniformen-space-medium);
+}
+
+.uniformen-chat-message--agent .uniformen-chat-bubble {
+  background: var(--uniformen-chat-agent);
+}
+
+.uniformen-chat-message--user .uniformen-chat-bubble {
+  background: var(--uniformen-chat-user);
+}
+
+/* The bubble is only as big as the dots and its padding. The padding leaves room for
+   the bounce. `align-self` stops the message from stretching the bubble to the width
+   of the name bar. `position: relative` keeps the absolutely positioned hidden text
+   inside the scrolling chat window. */
+.uniformen-chat-typing {
+  position: relative;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-xs2);
+  padding: var(--uniformen-space-xs) var(--uniformen-space-small);
+}
+
+.uniformen-chat-typing__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+  /* Without this, forced colours mode removes the background and the dots disappear. */
+  forced-color-adjust: none;
+  animation: uniformen-typing 1.2s ease-in-out infinite;
+}
+
+/* Each dot starts a little later than the one before, so the bounce moves from
+   left to right. */
+.uniformen-chat-typing__dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.uniformen-chat-typing__dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes uniformen-typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-0.1875rem);
+    opacity: 1;
+  }
+}
+
+/* The animation is purely decorative, so it is turned off for users who prefer
+   reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .uniformen-chat-typing__dot {
+    animation: none;
+  }
+}
+
+/* Hides text visually but keeps it for screen readers. */
+.uniformen-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.uniformen-new-chat-button {
+  /* Keep the button at full width, so the location text wraps instead. */
+  flex: none;
+}
+
+/* The secondary fill is transparent, so on the light drawer the button would blend
+   with the background. A white fill sets it apart. The text uses the drawer text
+   colour, like the map icon. In contrast mode the drawer is navy, and the design
+   system's contrast secondary button is used without changes. */
+.uniformen-top-nav:not(.uniformen-contrast) .uniformen-new-chat-button {
+  --uniformen-secondary: var(--uniformen-color-brand-white);
+  --uniformen-on-secondary: var(--uniformen-on-drawer);
+}
+
+.uniformen-chat-drawer__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--uniformen-space-medium);
+  padding-top: var(--uniformen-space-large);
+}
+
+.uniformen-chat-drawer__location {
+  display: flex;
+  align-items: center;
+  gap: var(--uniformen-space-xs);
+  min-width: 0;
+  /* Break long words, such as a path, so they do not push into the button. */
+  overflow-wrap: anywhere;
+}
+
+/* If the location does not fit after the label, the whole location moves to the
+   next line. A location longer than one line still wraps inside itself. */
+.uniformen-chat-drawer__location-name {
+  display: inline-block;
+}
+
+/* Move the icon up by 0.08em, like the icons in the bar. */
+.uniformen-chat-drawer__location > svg {
+  flex: none;
+  transform: translateY(-0.08em);
+}
+
+/* The example questions sit on the right, like the user's messages. */
+.uniformen-chat-message--system {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+/* The divider above the first question of a restarted chat. The line is above the
+   text and goes across the whole chat window, so a narrow window does not hide it.
+   `currentColor` keeps the line visible in both modes. */
+.uniformen-chat-restarted {
+  margin: 0;
+  padding-top: var(--uniformen-space-xs);
+  border-top: 1px solid currentColor;
+  color: var(--uniformen-on-chat);
+  font-size: var(--uniformen-font-sm);
+  text-align: center;
+}
+
+/* `display: flex` on the message would otherwise show it when it has `hidden`. */
+.uniformen-chat-message[hidden] {
+  display: none;
+}
+
+.uniformen-chat-examples {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--uniformen-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.uniformen-chat-example {
+  padding: var(--uniformen-space-xs) var(--uniformen-space-medium);
+  /* The Figma design uses a 10px radius. The design system has no token for it. */
+  border-radius: 0.625rem;
+  border: 0.125rem solid var(--uniformen-secondary-border);
+  background: var(--uniformen-form-fill);
+  color: var(--uniformen-on-chat);
+  font: inherit;
+  font-size: var(--uniformen-font-md);
+  line-height: var(--uniformen-line-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.uniformen-chat-example:hover {
+  background: var(--uniformen-secondary-hover);
+  color: var(--uniformen-on-secondary);
 }

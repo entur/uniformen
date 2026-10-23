@@ -133,6 +133,8 @@ The page waits for the layout before it renders. So when you get `null`, render 
 
 `layout.csp` is a `Record<string, string[]>`. For each directive (`style-src`, `script-src` and so on) it lists the sources the header and footer need. Add those sources to the same directives in your page's `Content-Security-Policy` header. If you skip this, the browser blocks the styles and scripts of the header and footer.
 
+`csp` can have a `connect-src`, for the AI agent's chat. A `connect-src` replaces `default-src` for `fetch`. If your page has no `connect-src`, copy the sources from your `default-src` into the new one, or your app's own requests are blocked.
+
 `fetchUniformenComponents` returns `csp` together with the four components, so the React entry point needs no second call:
 
 ```ts
