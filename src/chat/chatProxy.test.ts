@@ -44,6 +44,15 @@ function ask(body: unknown, auth: string | null = token) {
   });
 }
 
+/** Waits until `condition` is true. Fails after one second, so a broken limiter does not hang the test. */
+async function waitFor(condition: () => boolean) {
+  const deadline = Date.now() + 1000;
+  while (!condition()) {
+    if (Date.now() > deadline) throw new Error("waitFor timed out");
+    await Bun.sleep(5);
+  }
+}
+
 describe("POST /chat-proxy", () => {
   test("creates a session for the first question and returns the reply", async () => {
     let sent: unknown;
@@ -252,7 +261,7 @@ test("answers 429 when one user has too many questions open, and not other users
   };
   const open = Array.from({ length: 2 }, async () => ask({ query: "Hei" }));
   // Wait until both calls have reached sporai.
-  while (sporaiMock.calls < 2) await Bun.sleep(5);
+  await waitFor(() => sporaiMock.calls >= 2);
 
   const busy = await ask({ query: "Hei" });
   expect(busy.status).toBe(429);
@@ -262,7 +271,7 @@ test("answers 429 when one user has too many questions open, and not other users
   // Another user can still ask.
   const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;
   const otherOpen = ask({ query: "Hei" }, other);
-  while (sporaiMock.calls < 3) await Bun.sleep(5);
+  await waitFor(() => sporaiMock.calls >= 3);
 
   release();
   const statuses = (await Promise.all([...open, otherOpen])).map((res) => res.status);
@@ -292,12 +301,76 @@ describe("rate limit", () => {
     expect((await ask({ query: "Hei" })).status).toBe(200);
   });
 
-  test("does not count a question that never reaches sporai", async () => {
-    const foreign = signSessionId(proxyConfig.sessionKey, "internal|user-2", "s-1");
-    for (let i = 0; i < 10; i++) {
-      expect((await ask({ query: "Hei", sessionId: foreign })).status).toBe(404);
-    }
+  test.each([
+    [
+      "another user's session",
+      () =>
+        ask({
+          query: "Hei",
+          sessionId: signSessionId(proxyConfig.sessionKey, "internal|user-2", "s-1"),
+        }),
+      404,
+    ],
+    [
+      "a changed session id",
+      () => ask({ query: "Hei", sessionId: `${SPORAI_SESSION_ID}.AAAA` }),
+      404,
+    ],
+    ["an invalid body", () => ask({ query: "   " }), 400],
+    ["a body that is not JSON", () => ask("{not json"), 400],
+    ["a missing chat token", () => ask({ query: "Hei" }, null), 401],
+  ])("does not count %s, because it never reaches sporai", async (_name, failing, status) => {
+    for (let i = 0; i < 10; i++) expect((await failing()).status).toBe(status);
+    expect(sporaiMock.calls).toBe(0);
+    // All 10 calls are still free.
+    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
+    expect((await ask({ query: "Hei" })).status).toBe(429);
+  });
+
+  test("counts a question when sporai fails", async () => {
+    sporaiMock.respond = () => new Response("boom", { status: 500 });
+    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(503);
+    expect((await ask({ query: "Hei" })).status).toBe(429);
+  });
+
+  test("allows a call again exactly 60 seconds after the call that used the last slot", async () => {
+    const start = new Date("2026-01-01T12:00:00Z").getTime();
+    setSystemTime(start);
+    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
+
+    setSystemTime(start + 59_999);
+    const limited = await ask({ query: "Hei" });
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Retry-After")).toBe("1");
+
+    setSystemTime(start + 60_000);
     expect((await ask({ query: "Hei" })).status).toBe(200);
+  });
+
+  test("rounds Retry-After up to whole seconds", async () => {
+    const start = new Date("2026-01-01T12:00:00Z").getTime();
+    setSystemTime(start);
+    for (let i = 0; i < 10; i++) await ask({ query: "Hei" });
+
+    // 59.5 seconds are left.
+    setSystemTime(start + 500);
+    expect((await ask({ query: "Hei" })).headers.get("Retry-After")).toBe("60");
+  });
+
+  test("uses a sliding window, and Retry-After counts from the oldest call", async () => {
+    const start = new Date("2026-01-01T12:00:00Z").getTime();
+    setSystemTime(start);
+    for (let i = 0; i < 5; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
+    setSystemTime(start + 30_000);
+    for (let i = 0; i < 5; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
+
+    // The 5 calls from the start are now out of the window. The 5 later calls are not.
+    setSystemTime(start + 60_000);
+    for (let i = 0; i < 5; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
+    const limited = await ask({ query: "Hei" });
+    expect(limited.status).toBe(429);
+    // The oldest call left is from 30 seconds ago.
+    expect(limited.headers.get("Retry-After")).toBe("30");
   });
 });
 
