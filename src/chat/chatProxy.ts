@@ -287,7 +287,7 @@ export function chatProxyRoutes(
         const { payload } = await jwtVerify(token, key, {
           algorithms: ["HS256"],
           audience: CHAT_TOKEN_AUDIENCE,
-          requiredClaims: ["sub"],
+          requiredClaims: ["sub", "exp"],
         });
         c.set("chatUser", payload.sub!);
       } catch {
