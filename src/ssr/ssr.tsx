@@ -75,8 +75,11 @@ export const aiAgentFlag = {
         // The SDK returns undefined when the request fails or the flag does not exist.
         if (result === undefined) console.warn("AI agent flag check failed or timed out.");
         const on = result?.enabled ?? false;
-        // `Map` keeps keys in insertion order, so the first key is the oldest entry.
-        if (this.cache.size >= FLAG_CACHE_MAX_ENTRIES && !this.cache.has(sub)) {
+        // `Map` keeps keys in insertion order, and `set` does not move a key that
+        // already exists. So delete the key first. Then the first key is always the
+        // user whose flag was checked longest ago.
+        this.cache.delete(sub);
+        if (this.cache.size >= FLAG_CACHE_MAX_ENTRIES) {
           const oldest = this.cache.keys().next().value;
           if (oldest !== undefined) this.cache.delete(oldest);
         }
