@@ -172,7 +172,9 @@ export class SporaiClient {
       }
       const expiresIn = readField(body, "expires_in");
       const seconds =
-        typeof expiresIn === "number" && expiresIn > 0 ? expiresIn : TOKEN_DEFAULT_LIFETIME_S;
+        typeof expiresIn === "number" && Number.isFinite(expiresIn)
+          ? expiresIn
+          : TOKEN_DEFAULT_LIFETIME_S;
       this.token = {
         value: accessToken,
         expiresAt: Date.now() + Math.max(seconds * 1000 - TOKEN_EXPIRY_MARGIN_MS, 0),
