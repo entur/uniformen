@@ -4,6 +4,7 @@ import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { jwtVerify, SignJWT } from "jose";
 import { config, environment, type Environment } from "../config";
 import { SporaiClient } from "./sporaiClient";
@@ -168,7 +169,7 @@ function verifySessionId(sessionKey: Uint8Array, user: string, signed: string): 
 }
 
 /** Returns an RFC 9457 problem response with only `title` and `status`. */
-function problem(c: Context, status: 400 | 404 | 413 | 429 | 503, title: string) {
+function problem(c: Context, status: 400 | 404 | 413 | 415 | 429 | 500 | 503, title: string) {
   return c.json({ title, status }, status, { "Content-Type": "application/problem+json" });
 }
 
@@ -215,9 +216,11 @@ const chatProxyRoute = createRoute({
       "The session belongs to another user, or sporai does not know it, for example because it expired.",
     ),
     413: problemResponse("The request body is larger than 8 KiB."),
+    415: problemResponse("The `Content-Type` header is missing or is not `application/json`."),
     429: problemResponse(
       "The user has sent too many questions to sporai in the last minute (title `Too Many Requests`), or has too many questions open at the same time (title `Too Many Open Chats`). The `Retry-After` header says how many seconds to wait.",
     ),
+    500: problemResponse("An unexpected error happened in the proxy."),
     503: problemResponse("Sporai could not answer."),
   },
 });
@@ -256,6 +259,22 @@ export function chatProxyRoutes(
       allowMethods: ["POST"],
       allowHeaders: ["Authorization", "Content-Type"],
       maxAge: 600,
+    }),
+    // Hono catches an error where it is thrown, so a try/catch around `next()` would
+    // never see it. Read `c.error` after `next()` and replace the response instead.
+    // This turns malformed JSON (400), a wrong Content-Type (415) and any unexpected
+    // error (500) into problem responses.
+    createMiddleware(async (c, next) => {
+      await next();
+      const error = c.error;
+      if (!error) return;
+      if (error instanceof HTTPException && error.status === 400) {
+        c.res = problem(c, 400, "Bad Request");
+      } else if (error instanceof HTTPException && error.status === 415) {
+        c.res = problem(c, 415, "Unsupported Media Type");
+      } else {
+        c.res = problem(c, 500, "Internal Server Error");
+      }
     }),
     bodyLimit({
       maxSize: 8 * 1024,

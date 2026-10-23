@@ -11,6 +11,7 @@ import {
   loadChatProxyConfig,
   signSessionId,
 } from "./chatProxy";
+import { SporaiClient } from "./sporaiClient";
 
 const ORIGIN = "https://partner.dev.entur.org";
 
@@ -130,6 +131,28 @@ describe("POST /chat-proxy", () => {
     expect(await res.json()).toEqual({ title: "Service Unavailable", status: 503 });
   });
 
+  test("returns 500 with CORS headers and no error details for an unexpected error", async () => {
+    const chat = spyOn(SporaiClient.prototype, "chat").mockRejectedValue(
+      new Error("secret detail"),
+    );
+    // Hono logs the error. Keep the test output clean.
+    const log = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await ask({ query: "Hei" });
+      expect(res.status).toBe(500);
+      expect(res.headers.get("Content-Type")).toBe("application/problem+json");
+      expect(await res.text()).toBe(
+        JSON.stringify({ title: "Internal Server Error", status: 500 }),
+      );
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe(ORIGIN);
+    } finally {
+      chat.mockRestore();
+      log.mockRestore();
+    }
+    // The user's open call was released, so the next question works.
+    expect((await ask({ query: "Hei igjen" })).status).toBe(200);
+  });
+
   test.each([
     ["an empty query", { query: "   " }],
     ["a query that is too long", { query: "a".repeat(1001) }],
@@ -145,7 +168,25 @@ describe("POST /chat-proxy", () => {
   test("returns 400 with CORS headers for a body that is not JSON", async () => {
     const res = await ask("{not json");
     expect(res.status).toBe(400);
+    expect(res.headers.get("Content-Type")).toBe("application/problem+json");
+    expect(await res.json()).toEqual({ title: "Bad Request", status: 400 });
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe(ORIGIN);
+  });
+
+  test.each([
+    ["text/plain", { "Content-Type": "text/plain" }],
+    ["no Content-Type", {}],
+  ])("returns 415 with CORS headers for %s", async (_name, contentType) => {
+    const res = await app.request("/chat-proxy", {
+      method: "POST",
+      headers: { Origin: ORIGIN, Authorization: `Bearer ${token}`, ...contentType },
+      body: JSON.stringify({ query: "Hei" }),
+    });
+    expect(res.status).toBe(415);
+    expect(res.headers.get("Content-Type")).toBe("application/problem+json");
+    expect(await res.json()).toEqual({ title: "Unsupported Media Type", status: 415 });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(ORIGIN);
+    expect(sporaiMock.calls).toBe(0);
   });
 
   test("returns 413 for a body over 8 KiB", async () => {
