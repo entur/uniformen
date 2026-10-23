@@ -31,6 +31,9 @@ export type ChatRequest = {
 const TOKEN_TIMEOUT_MS = 5_000;
 // Auth0 gives the token a lifetime in seconds. Stop using it this long before it ends.
 const TOKEN_EXPIRY_MARGIN_MS = 60_000;
+// Lifetime to assume when Auth0 does not send a valid expires_in. Without it, every call
+// would fetch a new machine token.
+const TOKEN_DEFAULT_LIFETIME_S = 300;
 // Sporai limits the model to 1024 output tokens, so a reply this long means something
 // is wrong.
 const MAX_REPLY_CHARS = 8_000;
@@ -168,7 +171,8 @@ export class SporaiClient {
         return undefined;
       }
       const expiresIn = readField(body, "expires_in");
-      const seconds = typeof expiresIn === "number" ? expiresIn : 0;
+      const seconds =
+        typeof expiresIn === "number" && expiresIn > 0 ? expiresIn : TOKEN_DEFAULT_LIFETIME_S;
       this.token = {
         value: accessToken,
         expiresAt: Date.now() + Math.max(seconds * 1000 - TOKEN_EXPIRY_MARGIN_MS, 0),

@@ -46,6 +46,18 @@ describe("machine token", () => {
     expect(machineTokenMock.calls).toBe(2);
   });
 
+  test("is cached for 5 minutes when Auth0 sends no expires_in", async () => {
+    machineTokenMock.respond = () => Response.json({ access_token: "machine-token" });
+    await client.chat(question);
+    await client.chat(question);
+    expect(machineTokenMock.calls).toBe(1);
+
+    // The 300 s default lifetime minus the 60 s safety margin has now passed.
+    advance(300_000);
+    await client.chat(question);
+    expect(machineTokenMock.calls).toBe(2);
+  });
+
   test("is requested with the client credentials and the audience", async () => {
     let body: unknown;
     machineTokenMock.respond = async (req) => {
