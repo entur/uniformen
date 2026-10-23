@@ -68,8 +68,9 @@ directory.
 - Write user-visible render changes in `CHANGELOG.md` by hand, under a date.
   release-please generates `packages/uniformen/CHANGELOG.md` from commit subjects. Do
   not edit it, and do not change `version` in the package's `package.json` by hand.
-- When you add or change a query parameter, update three places: the handler, the
-  README parameter table and the preview page's controls.
+- When you add or change a query parameter, update four places: the handler, the
+  README parameter table, the preview page's controls and `previewCode` in
+  `src/ssr/PreviewControls.tsx`.
 - List applications in `src/components/portalApplications.ts` in the order the
   switcher shows them. The order is alphabetical by Norwegian collation, with Ø last.
 
