@@ -33,6 +33,68 @@ export function previewUrl(
   return `/?${params}`;
 }
 
+/** The functions in `@entur/uniformen` that fetch the layout. The page has a tab for each. */
+const CODE_EXAMPLES = {
+  layout: {
+    label: "fetchUniformenLayout",
+    module: "@entur/uniformen",
+    result: "const layout",
+    fetch: "fetchUniformenLayout",
+  },
+  react: {
+    label: "React",
+    module: "@entur/uniformen/react",
+    result: "const { HeadAssets, Header, Footer, Scripts, csp }",
+    fetch: "fetchUniformenComponents",
+  },
+} as const;
+
+export type CodeExample = keyof typeof CODE_EXAMPLES;
+
+const CODE_EXAMPLE_IDS: CodeExample[] = ["layout", "react"];
+
+/**
+ * Returns code that fetches the layout with the `@entur/uniformen` package, with the
+ * parameters from the validated query. Like `previewUrl`, it leaves out default values.
+ * It always leaves out the `debug` parameters, because the package gets the user from
+ * `token`.
+ *
+ * `environment` is where this preview runs. It is left out in production, because
+ * production is the package's default.
+ */
+export function previewCode(
+  query: PreviewQuery,
+  example: CodeExample,
+  environment: Environment = runningEnvironment,
+): string {
+  const { module, result, fetch } = CODE_EXAMPLES[example];
+  // The values are written with JSON.stringify, so they are valid string literals.
+  const params: string[] = [];
+  if (query.app) params.push(`app: ${JSON.stringify(query.app)}`);
+  params.push(`locale: ${JSON.stringify(query.locale)}`);
+  if (query.availableLocales) {
+    const list = query.availableLocales.map((locale) => JSON.stringify(locale)).join(", ");
+    params.push(`availableLocales: [${list}]`);
+  }
+  if (query.sidebar === "true") params.push("sidebar: true");
+  if (query.loginUrl) params.push(`loginUrl: ${JSON.stringify(query.loginUrl)}`);
+  if (query.logoutUrl) params.push(`logoutUrl: ${JSON.stringify(query.logoutUrl)}`);
+  if (query.contrast === "true") params.push("contrast: true");
+  if (query.simple === "true") params.push("simple: true");
+
+  return [
+    `import { ${fetch} } from "${module}";`,
+    "",
+    `${result} = await ${fetch}({`,
+    "  token, // the signed-in user's Auth0 access token",
+    ...(environment === "production" ? [] : [`  environment: "${environment}",`]),
+    "  params: {",
+    ...params.map((param) => `    ${param},`),
+    "  },",
+    "});",
+  ].join("\n");
+}
+
 function Field({ label, hint, children }: { label: string; hint?: string; children?: unknown }) {
   return (
     <div class="preview-controls__field">
@@ -324,6 +386,35 @@ export function PreviewControls({
         <button class="preview-controls__copy" type="button" data-preview-copy>
           Kopier lenke
         </button>
+      </div>
+
+      {/* The tabs are radio buttons outside the form, so picking one does not submit
+          it. The stylesheet shows the block for the checked tab. */}
+      <div class="preview-code">
+        <div class="preview-code__head">
+          <div class="preview-code__tabs" role="radiogroup" aria-label="Kodeeksempel">
+            {CODE_EXAMPLE_IDS.map((example) => (
+              <label class="preview-code__tab">
+                <input
+                  type="radio"
+                  name="previewCode"
+                  value={example}
+                  checked={example === "layout"}
+                  data-preview-code-tab
+                />
+                {CODE_EXAMPLES[example].label}
+              </label>
+            ))}
+          </div>
+          <button class="preview-controls__copy" type="button" data-preview-copy-code>
+            Kopier kode
+          </button>
+        </div>
+        {CODE_EXAMPLE_IDS.map((example) => (
+          <pre class="preview-code__block" data-preview-code={example}>
+            <code>{previewCode(query, example, environment)}</code>
+          </pre>
+        ))}
       </div>
     </div>
   );

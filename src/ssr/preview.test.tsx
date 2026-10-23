@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
 import { previewChatAccessToken, previewIsEnturUser, previewUser } from "./preview";
-import { PreviewControls } from "./PreviewControls";
+import { PreviewControls, previewCode } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
 
@@ -486,5 +486,60 @@ describe("preview page locale", () => {
   test("the locale reaches the chrome the page renders", async () => {
     const { html } = await preview("?locale=en-GB&debugUser=Navn+Navnesen&logoutUrl=/auth/logout");
     expect(html).toContain(">Log out<");
+  });
+});
+
+describe("preview page code example", () => {
+  test("the code has the selected parameters, without defaults or debug parameters", () => {
+    const code = previewCode(
+      {
+        app: "partner",
+        sidebar: "true",
+        simple: "false",
+        locale: "en-GB",
+        availableLocales: ["nb-NO", "en-GB"],
+        loginUrl: "/auth/login",
+        debugUser: "Navn",
+      },
+      "layout",
+      "dev",
+    );
+    expect(code).toBe(
+      [
+        'import { fetchUniformenLayout } from "@entur/uniformen";',
+        "",
+        "const layout = await fetchUniformenLayout({",
+        "  token, // the signed-in user's Auth0 access token",
+        '  environment: "dev",',
+        "  params: {",
+        '    app: "partner",',
+        '    locale: "en-GB",',
+        '    availableLocales: ["nb-NO", "en-GB"],',
+        "    sidebar: true,",
+        '    loginUrl: "/auth/login",',
+        "  },",
+        "});",
+      ].join("\n"),
+    );
+  });
+
+  test("the React example imports the adapter", () => {
+    const code = previewCode({ locale: "nb-NO" }, "react", "staging");
+    expect(code).toContain('import { fetchUniformenComponents } from "@entur/uniformen/react";');
+    expect(code).toContain("const { HeadAssets, Header, Footer, Scripts, csp } = await");
+    expect(code).toContain('environment: "staging"');
+  });
+
+  test("production is left out, because it is the package's default", () => {
+    expect(previewCode({ locale: "nb-NO" }, "layout", "production")).not.toContain("environment");
+  });
+
+  test("the page shows both examples for the query, with a copy button", async () => {
+    const { html } = await preview("?app=nplan&contrast=true");
+    expect(html).toContain('data-preview-code="layout"');
+    expect(html).toContain('data-preview-code="react"');
+    expect(html).toContain("app: &quot;nplan&quot;,");
+    expect(html).toContain("contrast: true,");
+    expect(html).toContain("data-preview-copy-code");
   });
 });

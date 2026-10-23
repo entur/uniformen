@@ -8,7 +8,7 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
-## 2026-10-13
+## 2026-10-23
 
 ### Added
 
@@ -29,6 +29,15 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   include it, or the browser blocks the questions. A `connect-src` replaces
   `default-src` for `fetch`, so the app must also copy the sources from its
   `default-src` into its `connect-src`.
+  
+## 2026-10-22
+
+### Added
+
+- The preview page shows code that fetches the layout with `@entur/uniformen`, with
+  the parameters selected on the page. One tab uses `fetchUniformenLayout` and one
+  uses the React adapter. A button copies the code.
+
 ## 2026-10-16
 
 ### Changed

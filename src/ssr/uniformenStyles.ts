@@ -109,6 +109,7 @@ export function buildRootVars(env: Environment): string {
   --uniformen-font-xl2: ${rem(fontSizes.rem.extraLarge2)};
   --uniformen-line-xs: ${rem(lineHeights.rem.extraSmall)};
   --uniformen-line-md: ${rem(lineHeights.rem.medium)};
+  --uniformen-line-xl: ${rem(lineHeights.rem.extraLarge)};
   --uniformen-weight-body: ${fontWeights.body};
   --uniformen-weight-heading: ${fontWeights.heading};
   --uniformen-radius-md: ${rem(borderRadiuses.rem.medium)};
