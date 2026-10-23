@@ -13,7 +13,7 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 ### Added
 
 - An AI agent button in the bar, for a signed-in user who has the `ai-agent` feature
-  flag on in PostHog. It is shown with `aiAgent=true`, and only with `app=partner`.
+  flag on in PostHog. It is shown with `aiAgent=true`.
   It is only shown where the service is connected to the AI agent backend, which is
   dev for now. If PostHog is slow or fails, the bar is rendered without the button.
   The preview page shows the button without checking the flag.

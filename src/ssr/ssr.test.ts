@@ -785,29 +785,10 @@ describe("/ssr aiAgent query param", () => {
     expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
   });
 
-  test("app=partner gives a user with the flag on the AI agent without aiAgent", async () => {
-    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
-    const token = await signInternalToken({ sub: "auth0|partner-chat" });
-    const res = await app.request("/ssr?app=partner", { headers: bearer(token) });
-    const body = await res.json();
-    expect(body.headerHtml).toContain("data-uniformen-ai-agent-toggle");
-    expect(body.headerHtml).toContain("data-uniformen-chat-token=");
-    // Tests run with ENVIRONMENT=dev.
-    expect(body.csp["connect-src"]).toEqual(["https://uniformen.dev.entur.no"]);
-    isOn.mockRestore();
-  });
-
-  test("app=partner gives a user with the flag off no AI agent", async () => {
-    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
-    const body = await signedIn("auth0|partner-no-flag", "?app=partner");
-    expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
-    isOn.mockRestore();
-  });
-
   test("connect-src is the same for anonymous users and users without the flag when the app asks for the AI agent", async () => {
     const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
-    const anonymous = await (await ssr("?app=partner")).json();
-    const flagOff = await signedIn("auth0|csp-no-flag", "?app=partner");
+    const anonymous = await (await ssr("?aiAgent=true")).json();
+    const flagOff = await signedIn("auth0|csp-no-flag", "?aiAgent=true");
     const withParam = await (await ssr("?app=bedrift&aiAgent=true")).json();
     for (const body of [anonymous, flagOff, withParam]) {
       expect(body.csp["connect-src"]).toEqual(["https://uniformen.dev.entur.no"]);

@@ -1,7 +1,6 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { chatProxyConfig, chatProxyOrigin, issueChatToken } from "../chat/chatProxy";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
-import type { PortalApplicationId } from "../components/portalApplications";
 import { optionalAuth } from "../auth/optionalAuth";
 import { type UserInfo, userInfoService } from "../auth/userInfo";
 import { notificationService } from "../auth/notifications";
@@ -89,10 +88,6 @@ export const aiAgentFlag = {
     return request;
   },
 };
-
-// These apps get the AI agent button without sending `aiAgent=true`. Add an app here
-// to give it the button too.
-const AI_AGENT_APPS: ReadonlySet<PortalApplicationId> = new Set(["partner"]);
 
 const uniformenHeaderSchema = z.object({
   // Define any headers we want to validate here
@@ -184,8 +179,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     // Without a chat proxy config, which Helm only sets in some environments, the
     // button would only show the error text. So it is not rendered at all. PostHog
     // is only called when the app asks for the agent and chat is configured.
-    const aiAgentRequested =
-      navProps.aiAgent || (query.app !== undefined && AI_AGENT_APPS.has(query.app));
+    const aiAgentRequested = navProps.aiAgent;
     const aiAgent = aiAgentRequested && chat.config !== undefined && (await aiAgentFlag.isOn(info));
 
     // Only a user with a profile gets a chat token. This keeps machine tokens out,
