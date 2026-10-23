@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { SignJWT } from "jose";
-import { signInternalToken } from "../test/authTestKeys";
+import { INTERNAL_AUDIENCE, signInternalToken } from "../test/authTestKeys";
 import { machineTokenMock, SPORAI_SESSION_ID, sporaiMock } from "../test/authTestSetup";
 import {
   allowedOrigin,
@@ -32,9 +32,10 @@ beforeEach(async () => {
 
 afterEach(() => setSystemTime());
 
-function ask(body: unknown, auth: string | null = token) {
+function ask(body: unknown, auth: string | null = token, signal?: AbortSignal) {
   return app.request("/chat-proxy", {
     method: "POST",
+    signal,
     headers: {
       Origin: ORIGIN,
       "Content-Type": "application/json",
@@ -280,6 +281,73 @@ test("answers 429 when one user has too many questions open, and not other users
   expect((await ask({ query: "Hei" })).status).toBe(200);
 });
 
+describe("a failed call gives the open call back", () => {
+  // The limit is 2 open calls, so 3 failures in a row only pass if each one gives its place back.
+  async function expectPlaceIsGivenBack(
+    call: (i: number) => Response | Promise<Response>,
+    status: number,
+  ) {
+    for (let i = 0; i < 3; i++) expect((await call(i)).status).toBe(status);
+    sporaiMock.reset();
+    expect((await ask({ query: "Hei" })).status).toBe(200);
+  }
+
+  test("when sporai answers with an error", async () => {
+    sporaiMock.respond = () => new Response("boom", { status: 500 });
+    await expectPlaceIsGivenBack(() => ask({ query: "Hei" }), 503);
+  });
+
+  test("when sporai takes too long", async () => {
+    const slow = new SporaiClient(
+      {
+        baseUrl: process.env["SPORAI_URL"]!,
+        tokenUri: process.env["AUTH0_INTERNAL_TOKEN_URI"]!,
+        clientId: process.env["MNG_AUTH0_INT_CLIENT_ID"]!,
+        clientSecret: process.env["MNG_AUTH0_INT_CLIENT_SECRET"]!,
+        audience: INTERNAL_AUDIENCE,
+      },
+      { timeoutMs: 50 },
+    );
+    app = new OpenAPIHono();
+    chatProxyRoutes(app, { ...proxyConfig, client: slow }, "dev");
+    sporaiMock.respond = async () => {
+      await Bun.sleep(300);
+      return new Response("svar");
+    };
+    await expectPlaceIsGivenBack(() => ask({ query: "Hei" }), 503);
+  });
+
+  test("when the user cancels the request", async () => {
+    sporaiMock.respond = async () => {
+      await Bun.sleep(300);
+      return new Response("svar");
+    };
+    await expectPlaceIsGivenBack(async (i) => {
+      const controller = new AbortController();
+      const response = ask({ query: "Hei" }, token, controller.signal);
+      await waitFor(() => sporaiMock.calls > i);
+      controller.abort();
+      return response;
+    }, 503);
+  });
+});
+
+test("returns 503 when sporai cannot create a session, and does not ask the question", async () => {
+  const create = spyOn(SporaiClient.prototype, "createSession").mockResolvedValue({
+    kind: "error",
+  });
+  try {
+    const res = await ask({ query: "Hei" });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ title: "Service Unavailable", status: 503 });
+    expect(sporaiMock.calls).toBe(0);
+  } finally {
+    create.mockRestore();
+  }
+  // The open call was given back.
+  expect((await ask({ query: "Hei" })).status).toBe(200);
+});
+
 describe("rate limit", () => {
   test("answers 429 after 10 calls to sporai in a minute, and allows calls again later", async () => {
     setSystemTime(new Date("2026-01-01T12:00:00Z"));
@@ -401,6 +469,9 @@ describe("CORS", () => {
     ["https://uniformen.dev.entur.no", "dev", true],
     ["https://evilentur.org", "dev", false],
     ["https://entur.org.evil.com", "dev", false],
+    ["https://entur.no.evil.com", "dev", false],
+    ["null", "dev", false],
+    ["null", "production", false],
     ["http://partner.entur.org", "dev", false],
     ["http://localhost:3000", "dev", true],
     ["http://localhost:5173", "dev", true],
