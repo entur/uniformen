@@ -29,6 +29,12 @@ const posthog = posthogApiKey
 const FLAG_CACHE_MS = 60_000;
 const FLAG_CACHE_MAX_ENTRIES = 5000;
 
+/**
+ * The chat settings that `/ssr` uses. Only tests replace them, to simulate that
+ * chat is off.
+ */
+export const chat = { config: chatProxyConfig, origin: chatProxyOrigin };
+
 export const aiAgentFlag = {
   /** Only changed by tests. */
   client: posthog as Pick<PostHog, "getFeatureFlagResult"> | undefined,
@@ -180,15 +186,14 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     // is only called when the app asks for the agent and chat is configured.
     const aiAgentRequested =
       navProps.aiAgent || (query.app !== undefined && AI_AGENT_APPS.has(query.app));
-    const aiAgent =
-      aiAgentRequested && chatProxyConfig !== undefined && (await aiAgentFlag.isOn(info));
+    const aiAgent = aiAgentRequested && chat.config !== undefined && (await aiAgentFlag.isOn(info));
 
     // Only a user with a profile gets a chat token. This keeps machine tokens out,
     // but it also means a signed-in user has no chat while userinfo fails. Without
     // a token, the drawer shows the error text for every question.
     const chatAccessToken =
       info && tenant && payload?.sub && aiAgent
-        ? await issueChatToken(chatProxyConfig, `${tenant}|${payload.sub}`)
+        ? await issueChatToken(chat.config, `${tenant}|${payload.sub}`)
         : undefined;
 
     ssrRequestMetric.inc({
@@ -235,7 +240,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
           // depend on the user. A `connect-src` replaces `default-src` for `fetch`, so
           // a missing one for some users would break the app's own requests only for
           // the other users.
-          ...(aiAgentRequested && chatProxyOrigin && { "connect-src": [chatProxyOrigin] }),
+          ...(aiAgentRequested && chat.origin && { "connect-src": [chat.origin] }),
         },
       },
       200,

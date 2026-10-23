@@ -9,7 +9,7 @@ import {
   signInternalToken,
 } from "../test/authTestKeys";
 import { app } from "../index";
-import { aiAgentFlag } from "./ssr";
+import { aiAgentFlag, chat } from "./ssr";
 
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
@@ -47,8 +47,10 @@ beforeEach(() => {
   notificationMock.reset();
 });
 
+const originalChat = { ...chat };
 const originalFlag = { client: aiAgentFlag.client, timeoutMs: aiAgentFlag.timeoutMs };
 afterEach(() => {
+  Object.assign(chat, originalChat);
   aiAgentFlag.client = originalFlag.client;
   aiAgentFlag.timeoutMs = originalFlag.timeoutMs;
   aiAgentFlag.cache.clear();
@@ -741,6 +743,21 @@ describe("/ssr aiAgent query param", () => {
       expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
       expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
     }
+    expect(getFlag).not.toHaveBeenCalled();
+  });
+
+  test("without chat settings there is no button, no chat token, no connect-src and no PostHog call", async () => {
+    chat.config = undefined;
+    chat.origin = undefined;
+    const getFlag = fakePostHog(async () => ({ enabled: true }));
+    const token = await signInternalToken({ sub: "auth0|chat-off" });
+    const res = await app.request("/ssr?aiAgent=true", { headers: bearer(token) });
+    const body = await res.json();
+    expect(body.headerHtml).toContain("uniformen-top-nav__user");
+    expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
+    expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
+    expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
+    expect(body.csp["connect-src"]).toBeUndefined();
     expect(getFlag).not.toHaveBeenCalled();
   });
 
