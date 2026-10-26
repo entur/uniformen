@@ -7,7 +7,7 @@ jobs:
     uses: entur/gha-docker/.github/workflows/lint.yml@dcdc76ce2d251de20f35a92c566d8fe99036e03e # v1.13.0
 
   helm-lint:
-    uses: entur/gha-helm/.github/workflows/lint.yml@eebe21e7625a695085aefd79f64893a34adc2302 # v2.0.0
+    uses: entur/gha-helm/.github/workflows/lint.yml@080c3d42794f3be06b42e3a81ff23a3a0e3b0235 # v2.1.0
     with:
       environment: dev
       chart: helm/uniformen
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
         with:
           # Dependabot does not update this version. Bump it by hand.
           version: 2026.9.18
@@ -44,7 +44,7 @@ jobs:
         working-directory: packages/uniformen
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
         with:
           # Dependabot does not update this version. Bump it by hand.
           version: 2026.9.18
@@ -58,7 +58,7 @@ jobs:
         run: bun run fmt:check
       - name: Test
         run: bun run test
-      - uses: entur/gha-npmjs/.github/actions/prepare-packages@d1701803b89f6393047cdff568ba264b25cefd2d # v1.0.0
+      - uses: entur/gha-npmjs/.github/actions/prepare-packages@a6dec5a97a11246d4f33879078ff53b394d55355 # v1.1.0
         with:
           release_type: manifest
           package_manager: bun
