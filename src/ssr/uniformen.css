@@ -1192,13 +1192,12 @@
 }
 
 .uniformen-new-chat-button {
-  /* Keep the button at full width, so the location text wraps instead. */
   flex: none;
 }
 
 /* The secondary fill is transparent, so on the light drawer the button would blend
    with the background. A white fill sets it apart. The text uses the drawer text
-   colour, like the map icon. In contrast mode the drawer is navy, and the design
+   colour. In contrast mode the drawer is navy, and the design
    system's contrast secondary button is used without changes. */
 .uniformen-top-nav:not(.uniformen-contrast) .uniformen-new-chat-button {
   --uniformen-secondary: var(--uniformen-color-brand-white);
@@ -1207,31 +1206,10 @@
 
 .uniformen-chat-drawer__footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: var(--uniformen-space-medium);
   padding-top: var(--uniformen-space-large);
-}
-
-.uniformen-chat-drawer__location {
-  display: flex;
-  align-items: center;
-  gap: var(--uniformen-space-xs);
-  min-width: 0;
-  /* Break long words, such as a path, so they do not push into the button. */
-  overflow-wrap: anywhere;
-}
-
-/* If the location does not fit after the label, the whole location moves to the
-   next line. A location longer than one line still wraps inside itself. */
-.uniformen-chat-drawer__location-name {
-  display: inline-block;
-}
-
-/* Move the icon up by 0.08em, like the icons in the bar. */
-.uniformen-chat-drawer__location > svg {
-  flex: none;
-  transform: translateY(-0.08em);
 }
 
 /* The example questions sit on the right, like the user's messages. */

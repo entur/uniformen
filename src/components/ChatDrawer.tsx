@@ -1,11 +1,9 @@
 import type { ChatAccessToken } from "../chat/chatProxy";
 import type { Locale } from "../types";
-import { locationsByApp } from "./chatLocations";
 import { examplesByApp } from "./chatExamples";
 import { ChatMessage } from "./ChatMessage";
 import { ChatTextArea } from "./ChatTextArea";
 import { CloseIcon } from "./icons/CloseIcon";
-import { MapIcon } from "./icons/MapIcon";
 import { NewChatButton } from "./NewChatButton";
 import type { PortalApplicationId } from "./portalApplications";
 
@@ -13,8 +11,6 @@ const texts = {
   "nb-NO": {
     close: "Lukk skuff",
     agentWelcomeText: "Hei! Hva lurer du på?",
-    userLocation: "Du er her: ",
-    unspecifiedLocation: "Hjemmesiden",
     error: "Beklager, jeg kunne ikke svare nå. Prøv igjen litt senere.",
     errorRefresh: "Samtalen har vært åpen for lenge. Last inn nettsiden på nytt og prøv igjen.",
     errorRateLimit: "Du sender spørsmål for raskt. Vent litt og prøv igjen.",
@@ -26,8 +22,6 @@ const texts = {
   "nn-NO": {
     close: "Lukk skuff",
     agentWelcomeText: "Hei! Kva lurer du på?",
-    userLocation: "Du er her: ",
-    unspecifiedLocation: "Heimesida",
     error: "Beklagar, eg kunne ikkje svare no. Prøv igjen litt seinare.",
     errorRefresh: "Samtalen har vore open for lenge. Last inn nettsida på nytt og prøv igjen.",
     errorRateLimit: "Du sender spørsmål for raskt. Vent litt og prøv igjen.",
@@ -39,8 +33,6 @@ const texts = {
   "en-GB": {
     close: "Close drawer",
     agentWelcomeText: "Hi! What would you like to know?",
-    userLocation: "You are here: ",
-    unspecifiedLocation: "Homepage",
     error: "Sorry, I could not answer right now. Please try again later.",
     errorRefresh:
       "The conversation has been open for too long. Please refresh the website and try again.",
@@ -78,7 +70,6 @@ export function ChatDrawer({
   activeAppId?: PortalApplicationId;
 }) {
   const txt = texts[locale];
-  const locations = activeAppId && locationsByApp[activeAppId];
   const examples = (activeAppId && examplesByApp[activeAppId]?.[locale]) ?? txt.examples;
   return (
     <div
@@ -89,8 +80,6 @@ export function ChatDrawer({
       data-uniformen-chat-error-text-refresh={txt.errorRefresh}
       data-uniformen-chat-error-text-rate-limit={txt.errorRateLimit}
       data-uniformen-chat-error-text-too-many-chats={txt.errorTooManyChats}
-      data-uniformen-chat-locations={JSON.stringify(locations?.names[locale] ?? {})}
-      data-uniformen-chat-generic-pages={JSON.stringify(locations?.genericPages ?? [])}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"
@@ -135,16 +124,6 @@ export function ChatDrawer({
       </template>
       <ChatTextArea locale={locale} />
       <div class="uniformen-chat-drawer__footer">
-        <div class="uniformen-chat-drawer__location">
-          <MapIcon />
-          {/* One element, so the label and the location wrap together as one text. */}
-          <span>
-            {txt.userLocation}{" "}
-            {/* The browser replaces this text with the current path when the path is
-                not empty. See `aiAgentHandlers`. */}
-            <span class="uniformen-chat-drawer__location-name">{txt.unspecifiedLocation}</span>
-          </span>
-        </div>
         <NewChatButton locale={locale} />
       </div>
     </div>

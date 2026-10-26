@@ -16,10 +16,6 @@ export default function aiAgentHandlers() {
   if (!drawer) return;
 
   const textarea = () => drawer.querySelector<HTMLTextAreaElement>(".uniformen-chat-textarea");
-  const locationName = drawer.querySelector(".uniformen-chat-drawer__location-name");
-  // The location text that the server rendered. It is shown again when the path has
-  // no part to show, for example after a navigation to the root path.
-  const defaultLocation = locationName?.textContent ?? "";
 
   /** Moves the drawer so it is below the bar and above the footer. */
   function placeDrawer() {
@@ -34,16 +30,6 @@ export default function aiAgentHandlers() {
   // scrolling stays smooth.
   window.addEventListener("scroll", placeDrawer, { passive: true });
   window.addEventListener("resize", placeDrawer);
-
-  // A single-page app changes the path without loading a new page, so the location
-  // is updated on every navigation, also while the drawer is open. The Navigation API
-  // also sees `history.pushState`. Browsers without it only update on back and forward.
-  const navigation = (window as { navigation?: EventTarget }).navigation;
-  if (navigation) {
-    navigation.addEventListener("currententrychange", displayLocation);
-  } else {
-    window.addEventListener("popstate", displayLocation);
-  }
 
   button.addEventListener("click", () => setDrawerOpen(Boolean(drawer.hidden)));
 
@@ -90,7 +76,6 @@ export default function aiAgentHandlers() {
     drawer.hidden = !open;
     button.setAttribute("aria-expanded", String(open));
     if (!open) return;
-    displayLocation();
     // The page may have scrolled while the drawer was closed.
     placeDrawer();
     textarea()?.focus();
@@ -311,79 +296,17 @@ export default function aiAgentHandlers() {
   }
 
   /**
-   * Returns the page's path, or the drawer's name for the homepage on the root path,
-   * for example "Hjemmesiden". Returns "location-not-found" when the path cannot be
+   * Returns the page's path, or "homepage" on the root path. Returns "location-not-found" when the path cannot be
    * read. Sporai only accepts path characters, so the values cannot contain spaces.
    */
   function readPath() {
     try {
       const path = window.location.pathname;
       if (typeof path !== "string" || !path) return "location-not-found";
-      return path === "/" ? defaultLocation || "homepage" : path;
+      return path === "/" ? "homepage" : path;
     } catch {
       return "location-not-found";
     }
-  }
-
-  /** Shows the user's current place in the app at the bottom of the drawer. */
-  function displayLocation() {
-    if (locationName) locationName.textContent = findLocation() || defaultLocation;
-  }
-
-  /**
-   * Returns a readable name for the page the user is on, based on the URL path.
-   * The name is in the drawer's language and starts with a capital letter.
-   *
-   * It works in four steps:
-   * 1. Cut the path at a mode word (`edit`, `add`, `create`, `readonly`).
-   * 2. Skip numeric ids at the end.
-   * 3. Look up the last path part in the drawer's location names. Use the part itself
-   *    when there is no name for it.
-   * 4. For a generic page like `users`, put the name of the part before it first.
-   *
-   * Examples, when `users` is a generic page:
-   * - `/turnover/123/edit` returns "Turnover"
-   * - `/settings/users` returns "Settings - Users"
-   *
-   * Returns "" when the path has no usable part, for example on the root path.
-   * `displayLocation` then shows the default location, which is the homepage.
-   */
-  function findLocation() {
-    const parts = window.location.pathname.split("/").filter(Boolean);
-    // Step 1: `readonly`, `add`, `edit` and `create` are not pages. They show a page
-    // in another mode. Keep only the parts before the first one of them.
-    const modes = new Set(["readonly", "add", "edit", "create"]);
-    const stop = parts.findIndex((part) => modes.has(part));
-    const pageParts = stop === -1 ? parts : parts.slice(0, stop);
-    // Step 2: A number is usually the id of one item, like the 123 in `/turnover/123`.
-    // Find the last part that is not a number.
-    const isId = (part: string) => /^\d+$/.test(part);
-    const lastIndex = pageParts.findLastIndex((part) => !isId(part));
-    if (lastIndex === -1) return "";
-    const names: Record<string, string> = JSON.parse(
-      drawer?.getAttribute("data-uniformen-chat-locations") ?? "{}",
-    );
-    // Step 3: Turns a path part into its display name. hasOwn makes sure a path like
-    // `/constructor` does not find a method of Object.
-    const display = (part: string) => {
-      const name = (Object.hasOwn(names, part) && names[part]) || part;
-      return name.charAt(0).toUpperCase() + name.slice(1);
-    };
-    const last = pageParts[lastIndex];
-    if (last === undefined) return "";
-    // Step 4: Pages like `users` and `help` could exist in several parts of the app, so the
-    // name alone does not tell the user where they are. Add the part before it, if
-    // there is one.
-    const genericPages: string[] = JSON.parse(
-      drawer?.getAttribute("data-uniformen-chat-generic-pages") ?? "[]",
-    );
-    const parent = pageParts.slice(0, lastIndex).findLast((part) => !isId(part));
-    const parentName = parent && display(parent);
-    const lastName = display(last);
-    // Skip the parent when both names are the same, like `/help/help`.
-    return genericPages.includes(last) && parentName && parentName !== lastName
-      ? `${parentName} - ${lastName}`
-      : lastName;
   }
 
   /** Shows the example questions when `visible` is true, and hides them when it is false. */

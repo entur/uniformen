@@ -197,7 +197,7 @@ class FakeDocument {
   }
 }
 
-/** Keeps its listeners, so a test can fire `popstate` or `currententrychange`. */
+/** Keeps its listeners, so a test can fire events. */
 class FakeEventTarget {
   private readonly listeners = new Map<string, Listener[]>();
 
@@ -218,10 +218,7 @@ class FakeEventTarget {
 class FakeWindow extends FakeEventTarget {
   readonly innerHeight = 800;
 
-  constructor(
-    readonly location: { pathname: string },
-    readonly navigation?: FakeEventTarget,
-  ) {
+  constructor(readonly location: { pathname: string }) {
     super();
   }
 }
@@ -248,22 +245,13 @@ function install({
   button: withButton = true,
   drawer: withDrawer = true,
   chat = true,
-  locations = { "fare-structures": "Prisstrukturer" },
-  genericPages = ["users", "help"],
-  navigation = false,
   respond = () => Response.json({ reply: "Svar", sessionId: "s-1" }),
 }: {
   pathname?: string;
-  /** Whether the browser has the Navigation API. */
-  navigation?: boolean;
   button?: boolean;
   drawer?: boolean;
   /** Whether the drawer has a chat URL and token. */
   chat?: boolean;
-  /** The names that the server renders for path parts. */
-  locations?: Record<string, string>;
-  /** The path parts that get the name of their parent part in front. */
-  genericPages?: string[];
   /** The reply from `/chat-proxy`. */
   respond?: () => Response | Promise<Response>;
 } = {}) {
@@ -283,8 +271,6 @@ function install({
   const send = new FakeElement({ "data-uniformen-chat-send": "" });
   const close = new FakeElement({ "data-uniformen-chat-drawer-close": "" });
   const newChat = new FakeElement({ "data-uniformen-new-chat": "" });
-  const locationName = new FakeElement({ class: "uniformen-chat-drawer__location-name" });
-  locationName.textContent = "Hjemmesiden";
   const restartedDivider = new FakeElement({ class: "uniformen-chat-restarted" });
   restartedDivider.textContent = "Ny økt";
 
@@ -298,8 +284,6 @@ function install({
       "data-uniformen-chat-error-text-refresh": "Last inn på nytt",
       "data-uniformen-chat-error-text-rate-limit": "For raskt",
       "data-uniformen-chat-error-text-too-many-chats": "For mange samtaler",
-      "data-uniformen-chat-locations": JSON.stringify(locations),
-      "data-uniformen-chat-generic-pages": JSON.stringify(genericPages),
       ...chatAttributes,
     },
     [
@@ -324,7 +308,6 @@ function install({
       textarea,
       send,
       newChat,
-      locationName,
     ],
   );
   drawer.hidden = true;
@@ -333,7 +316,7 @@ function install({
   for (const element of [button, textarea]) {
     element.onFocus = (focused) => (doc.activeElement = focused);
   }
-  const win = new FakeWindow({ pathname }, navigation ? new FakeEventTarget() : undefined);
+  const win = new FakeWindow({ pathname });
   globals["Element"] = FakeElement;
   globals["HTMLElement"] = FakeElement;
   globals["document"] = doc;
@@ -364,7 +347,6 @@ function install({
     send,
     close,
     newChat,
-    locationName,
     messages,
     type,
     typing: () => chatWindow.querySelectorAll("[data-uniformen-chat-typing]").length,
@@ -411,38 +393,8 @@ describe("aiAgentHandlers", () => {
     }
   });
 
-  test("listens for scroll, resize and popstate when the drawer is in the page", () => {
-    expect(install().win.listened).toEqual(["scroll", "resize", "popstate"]);
-  });
-
-  test("with the Navigation API, listens for navigations instead of popstate", () => {
-    const page = install({ navigation: true });
-    expect(page.win.listened).toEqual(["scroll", "resize"]);
-    expect(page.win.navigation?.listened).toEqual(["currententrychange"]);
-  });
-
-  test("a navigation updates the location, also while the drawer is closed", () => {
-    const page = install({ pathname: "/price-and-product/zones", navigation: true });
-    page.win.location.pathname = "/price-and-product/fare-structures";
-    page.win.navigation?.fire("currententrychange");
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("back and forward update the location when there is no Navigation API", () => {
-    const page = install({ pathname: "/price-and-product/zones" });
-    page.button.click();
-    page.win.location.pathname = "/price-and-product/fare-structures";
-    page.win.fire("popstate");
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("a navigation to the root path shows the server-rendered location again", () => {
-    const page = install({ pathname: "/price-and-product/zones", navigation: true });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Zones");
-    page.win.location.pathname = "/";
-    page.win.navigation?.fire("currententrychange");
-    expect(page.locationName.textContent).toBe("Hjemmesiden");
+  test("listens for scroll and resize when the drawer is in the page", () => {
+    expect(install().win.listened).toEqual(["scroll", "resize"]);
   });
 
   test("the button opens and closes the drawer, and keeps aria-expanded in sync", () => {
@@ -508,225 +460,6 @@ describe("aiAgentHandlers", () => {
     expect(page.button.focused).toBe(0);
   });
 
-  test("a generic page name gets its parent part in front", () => {
-    const page = install({
-      pathname: "/permission-admin/users/123",
-      locations: { "permission-admin": "Tilgangsstyring", users: "Brukere" },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
-  });
-
-  test("an id between the parent and a generic page is skipped", () => {
-    const page = install({
-      pathname: "/permission-admin/12/users",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
-  });
-
-  test("a mode word after a generic page is ignored", () => {
-    const page = install({
-      pathname: "/permission-admin/users/edit/5",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
-  });
-
-  test("a mode word as the first part gives the default location", () => {
-    const page = install({
-      pathname: "/edit/users",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Hjemmesiden");
-  });
-
-  test("a generic page with a trailing slash gets its parent", () => {
-    const page = install({
-      pathname: "/permission-admin/users/",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Tilgangsstyring - Brukere");
-  });
-
-  test("a page that is not generic never gets its parent", () => {
-    const page = install({
-      pathname: "/data-dashboards/admin",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Administrer dashbord");
-  });
-
-  test("a generic page after another generic page gets it as parent", () => {
-    const page = install({
-      pathname: "/help/users",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Hjelp - Brukere");
-  });
-
-  test("a generic page with the same name as its parent is shown once", () => {
-    const page = install({
-      pathname: "/help/help",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Hjelp");
-  });
-
-  test("an unnamed parent is shown as its path part", () => {
-    const page = install({
-      pathname: "/foo-bar/users",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Foo-bar - Brukere");
-  });
-
-  test("a parent named like an Object method is not looked up on Object", () => {
-    const page = install({
-      pathname: "/constructor/users",
-      locations: {
-        "permission-admin": "Tilgangsstyring",
-        users: "Brukere",
-        help: "Hjelp",
-        admin: "Administrer dashbord",
-      },
-    });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Constructor - Brukere");
-  });
-
-  test("a generic page name alone is shown without a parent", () => {
-    const page = install({ pathname: "/help", locations: { help: "Hjelp" } });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Hjelp");
-  });
-
-  test("opening shows the name of the last path part as the location", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("a path part without a name is shown as it is", () => {
-    const page = install({ pathname: "/price-and-product/zones" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Zones");
-  });
-
-  test("a readonly path part is skipped", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/readonly/" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("the path parts after readonly are skipped too", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/readonly/123" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("an add path part and the parts after it are skipped", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/add/step-2" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("an edit path part and the parts after it are skipped", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/edit/123" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("a create path part and the parts after it are skipped", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/create" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("a number at the end of the path is skipped", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/123" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("a number before an edit path part is skipped", () => {
-    const page = install({ pathname: "/price-and-product/fare-structures/123/edit" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Prisstrukturer");
-  });
-
-  test("a number in the middle of the path does not change the location", () => {
-    const page = install({ pathname: "/orders/123/zones" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Zones");
-  });
-
-  test("on a readonly path with nothing before it the server-rendered location stays", () => {
-    const page = install({ pathname: "/readonly/123" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Hjemmesiden");
-  });
-
-  test("a path part that matches a method of Object is shown as it is", () => {
-    const page = install({ pathname: "/constructor" });
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Constructor");
-  });
-
-  test("on the root path the server-rendered location stays", () => {
-    const page = install();
-    page.button.click();
-    expect(page.locationName.textContent).toBe("Hjemmesiden");
-  });
-
   test("sending adds the question, hides the examples, shows typing and empties the field", () => {
     const page = install();
     page.button.click();
@@ -773,12 +506,12 @@ describe("aiAgentHandlers", () => {
     ]);
   });
 
-  test("sends the drawer's name for the homepage on the root path", async () => {
+  test("sends homepage on the root path", async () => {
     const page = install({ pathname: "/" });
     page.type("Hei");
     page.send.click();
     await replied();
-    expect(page.bodies()).toEqual([{ query: "Hei", location: "Hjemmesiden" }]);
+    expect(page.bodies()).toEqual([{ query: "Hei", location: "homepage" }]);
   });
 
   test("sends location-not-found when the path cannot be read", async () => {
