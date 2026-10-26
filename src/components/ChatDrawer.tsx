@@ -63,6 +63,9 @@ const texts = {
   },
 } as const;
 
+//The text at the top of the chat-drawer
+const drawerName = "Sporai";
+
 /**
  * Renders the AI agent's chat drawer. It is hidden until the user clicks the AI agent
  * button, and then it slides in from the right side of the window.
@@ -70,10 +73,12 @@ const texts = {
 export function ChatDrawer({
   locale,
   chatAccessToken,
+  appName, //used to specify chat-responder
 }: {
   locale: Locale;
   /** Without it, every question gets the error text. */
   chatAccessToken?: ChatAccessToken;
+  appName?: string
 }) {
   const txt = texts[locale];
   return (
@@ -110,10 +115,10 @@ export function ChatDrawer({
         <CloseIcon />
       </button>
       <h2 class="uniformen-chat-drawer__title" id="uniformen-chat-drawer-title">
-        Sporai
+        {drawerName}
       </h2>
       <div class="uniformen-chat-window" role="log">
-        <ChatMessage sender="agent" text={txt.agentWelcomeText} locale={locale} />
+        <ChatMessage sender="agent" text={txt.agentWelcomeText} locale={locale} appName={appName} />
         <ChatMessage sender="system" questions={txt.examples} locale={locale} />
       </div>
       {/* The browser copies these messages into the chat. See `aiAgentHandlers`. */}
@@ -121,10 +126,10 @@ export function ChatDrawer({
         <ChatMessage sender="user" text="" locale={locale} />
       </template>
       <template data-uniformen-chat-agent-template>
-        <ChatMessage sender="agent" text="" locale={locale} />
+        <ChatMessage sender="agent" text="" locale={locale} appName={appName} />
       </template>
       <template data-uniformen-chat-typing-template>
-        <ChatMessage sender="agent" typing locale={locale} />
+        <ChatMessage sender="agent" typing locale={locale} appName={appName} />
       </template>
       <template data-uniformen-chat-restarted-template>
         <p class="uniformen-chat-restarted">{txt.restarted}</p>

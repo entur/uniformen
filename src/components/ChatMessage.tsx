@@ -17,16 +17,19 @@ const texts = {
  * A system message shows `questions` as buttons the user can click to ask them.
  */
 export function ChatMessage(
-  props: { locale: Locale } & (
+  props: { locale: Locale; appName?: string } & (
     | { sender: "agent" | "user"; text: string; typing?: never }
     | { sender: "agent"; typing: true; text?: never }
     | { sender: "system"; questions: readonly string[] }
   ),
 ) {
   const { sender, locale } = props;
-  // "Partner Chat" is the name of the service, so it is not translated.
   const senders = {
-    agent: { name: "Partner Chat", icon: <CustomerServiceIcon /> },
+    // The name of the service, so it is not translated.
+    agent: {
+      name: props.appName ? `${props.appName} Chat` : "Chat",
+      icon: <CustomerServiceIcon />,
+    },
     user: { name: texts[locale].you, icon: null },
     system: { name: texts[locale].faq, icon: <CommentIcon /> },
   } satisfies Record<ChatSender, { name: string; icon: unknown }>;

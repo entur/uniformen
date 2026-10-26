@@ -691,6 +691,16 @@ describe("/ssr aiAgent query param", () => {
     isOn.mockRestore();
   });
 
+  test("the agent name in the drawer follows the app param", async () => {
+    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
+    const withApp = await signedIn("auth0|agent-name-app", "?aiAgent=true&app=nplan");
+    expect(withApp.headerHtml).toContain("Nplan Chat</p>");
+    const withoutApp = await signedIn("auth0|agent-name-no-app", "?aiAgent=true");
+    expect(withoutApp.headerHtml).toContain(">Chat</p>");
+    expect(withoutApp.headerHtml).not.toContain("Partner Chat");
+    isOn.mockRestore();
+  });
+
   test("the chat token, messages and text field are hidden from PostHog", async () => {
     const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(true);
     const html: string = (await signedIn("auth0|agent-no-capture", "?aiAgent=true")).headerHtml;
