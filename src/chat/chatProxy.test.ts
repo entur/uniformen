@@ -509,3 +509,83 @@ describe("loadChatProxyConfig", () => {
     expect((await off.request("/chat-proxy", { method: "POST" })).status).toBe(404);
   });
 });
+
+describe("rate limit cleanup", () => {
+  let runCleanup: () => void;
+  let cleanupPeriodMs: number | undefined;
+
+  beforeEach(() => {
+    // Catch the timer instead of waiting 60 seconds. The timer must be created while the
+    // spy is on, so these tests build their own app.
+    const intervalSpy = spyOn(globalThis, "setInterval").mockImplementation(((
+      callback: () => void,
+      ms: number,
+    ) => {
+      runCleanup = callback;
+      cleanupPeriodMs = ms;
+      return { unref() {} };
+    }) as never);
+    try {
+      app = new OpenAPIHono();
+      chatProxyRoutes(app, proxyConfig, "dev");
+    } finally {
+      intervalSpy.mockRestore();
+    }
+  });
+
+  /** Runs the cleanup once and returns the users that it removed from the map. */
+  function removedUsers() {
+    const deleteSpy = spyOn(Map.prototype, "delete");
+    try {
+      runCleanup();
+      return deleteSpy.mock.calls
+        .map(([key]) => String(key))
+        .filter((key) => key.startsWith("internal|"));
+    } finally {
+      deleteSpy.mockRestore();
+    }
+  }
+
+  test("runs every 60 seconds", () => {
+    expect(cleanupPeriodMs).toBe(60_000);
+  });
+
+  test("removes a user 60 seconds after the last call, and not before", async () => {
+    const start = new Date("2026-01-01T12:00:00Z").getTime();
+    setSystemTime(start);
+    await ask({ query: "Hei" });
+
+    setSystemTime(start + 59_999);
+    expect(removedUsers()).toEqual([]);
+
+    setSystemTime(start + 60_000);
+    expect(removedUsers()).toEqual(["internal|user-1"]);
+  });
+
+  test("keeps a user whose newest call is less than 60 seconds old", async () => {
+    const start = new Date("2026-01-01T12:00:00Z").getTime();
+    setSystemTime(start);
+    await ask({ query: "Hei" });
+    setSystemTime(start + 50_000);
+    await ask({ query: "Hei" });
+
+    // The first call is 60 seconds old, but the second is only 10 seconds old.
+    setSystemTime(start + 60_000);
+    expect(removedUsers()).toEqual([]);
+
+    setSystemTime(start + 110_000);
+    expect(removedUsers()).toEqual(["internal|user-1"]);
+  });
+
+  test("removes only the users who have been quiet", async () => {
+    const start = new Date("2026-01-01T12:00:00Z").getTime();
+    const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;
+    setSystemTime(start);
+    await ask({ query: "Hei" });
+    setSystemTime(start + 30_000);
+    await ask({ query: "Hei" }, other);
+
+    setSystemTime(start + 60_000);
+    expect(removedUsers()).toEqual(["internal|user-1"]);
+  });
+});

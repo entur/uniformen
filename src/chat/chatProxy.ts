@@ -246,9 +246,19 @@ export function chatProxyRoutes(
   // The number of open sporai calls for each user. The key is the `sub` of the chat token.
   const activeCallsPerUser = new Map<string, number>();
 
-  // The times of each user's latest calls to sporai, from the last 60 seconds.
-  // A user's entry is only cleaned up when that user sends a new question.
+  // The times of each user's calls to sporai. A time older than 60 seconds does not
+  // count. The old times are removed when the user sends a new question, and the user
+  // is removed by the timer below when the user has been quiet for 60 seconds.
   const recentCallsPerUser = new Map<string, number[]>();
+
+  // Remove users who have not called sporai for 60 seconds, so the map does not grow
+  // for the life of the pod.
+  setInterval(() => {
+    const now = Date.now();
+    for (const [user, times] of recentCallsPerUser) {
+      if (now - times[times.length - 1]! >= RATE_WINDOW_MS) recentCallsPerUser.delete(user);
+    }
+  }, RATE_WINDOW_MS).unref();
 
   server.use(
     "/chat-proxy",
@@ -334,10 +344,13 @@ export function chatProxyRoutes(
       const now = Date.now();
       const recent = (recentCallsPerUser.get(user) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
       if (recent.length >= MAX_SPORAI_CALLS_PER_MINUTE_PER_USER) {
+        // Save the list without the old times. This call is rejected, so it is not counted.
         recentCallsPerUser.set(user, recent);
         c.header("Retry-After", String(Math.ceil((recent[0]! + RATE_WINDOW_MS - now) / 1000)));
         return problem(c, 429, "Too Many Requests");
       }
+
+      //save the list only with the recent calls and the new call.
       recentCallsPerUser.set(user, [...recent, now]);
 
       if (sessionId === undefined) {
