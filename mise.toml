@@ -1,4 +1,4 @@
-# Dependabot does not update this file. When you bump bun here, also bump the
-# oven/bun images in the Dockerfile, and the other way round.
+# Only the Bun major is pinned here, so mise uses the newest 1.x.
+# Dependabot pins the exact Bun version in the oven/bun images in the Dockerfile.
 [tools]
-bun = "1.4.4"
+bun = "1"

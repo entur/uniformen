@@ -46,6 +46,8 @@ jobs:
         with:
           # Dependabot does not update this version. Bump it by hand.
           version: 2026.9.18
+          # mise.toml only pins the Bun major. Refresh the cache daily so CI gets new versions.
+          cache_max_age_days: 1
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Test
