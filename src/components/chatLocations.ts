@@ -1,10 +1,26 @@
 import type { Locale } from "../types";
+import type { PortalApplicationId } from "./portalApplications";
+
+/** The location names of one application. */
+type AppLocations = {
+  /** The names shown in the chat drawer for the parts of the URL path, per language. */
+  names: Record<Locale, Record<string, string>>;
+
+  /**
+   * Path parts that are used for a page in more than one part of the app, like `users`.
+   * The drawer shows the name of the part before it as well, for example
+   * "Tilgangsstyring - Brukere". Add a part here when its name is not clear on its own.
+   * Every part must have a name in each language.
+   */
+  genericPages: string[];
+};
 
 /**
- * The names shown in the chat drawer for the parts of the URL path, per language.
- * Add a name here when a new page is added to the app.
+ * Add a name here when a new page is added to the app. An application that is not
+ * listed shows the parts of the URL path as they are.
  */
-const nb = {
+const partnerNb = {
+  //outside of partnerNames, since its used by both nn and nb
   "price-and-product": "Pris og produkt",
   "fare-structures": "Prisstrukturer",
   products: "Produkter",
@@ -58,18 +74,10 @@ const nb = {
   distances: "Avstander",
 };
 
-/**
- * Path parts that are used for a page in more than one part of the app, like `users`.
- * The drawer shows the name of the part before it as well, for example
- * "Tilgangsstyring - Brukere". Add a part here when its name is not clear on its own.
- * Every part must have a name in each language above.
- */
-export const genericPages = ["users", "help"];
-
-export const locationNames: Record<Locale, Record<string, string>> = {
-  "nb-NO": nb,
+const partnerNames: Record<Locale, Record<string, string>> = {
+  "nb-NO": partnerNb,
   // nynorsk pages are currently unavailable (October 2026), so bokmål is displayed instead
-  "nn-NO": nb,
+  "nn-NO": partnerNb,
   "en-GB": {
     "price-and-product": "Price and product",
     "fare-structures": "Fare structures",
@@ -123,4 +131,25 @@ export const locationNames: Record<Locale, Record<string, string>> = {
     farezones: "Fare Zones",
     distances: "Distances",
   },
+};
+
+// How the record of names should look like before filling with locations and their location-names.
+// const cleosNames: Record<Locale, Record<string, string>> = {
+//   "nb-NO": {},
+//   "nn-NO": {},
+//   "en-GB": {},
+// };
+
+const partnerGenericPages = ["users", "help"];
+
+export const locationsByApp: Partial<Record<PortalApplicationId, AppLocations>> = {
+  // TODO: Write location names for the apps below, then remove the comment marks.
+  // bedrift: { names: { "nb-NO": {}, "nn-NO": {}, "en-GB": {} }, genericPages: [] },
+  // cleos: { names: cleosNames, genericPages: [] },
+  // nplan: { names: { "nb-NO": {}, "nn-NO": {}, "en-GB": {} }, genericPages: [] },
+  // "ops-center": { names: { "nb-NO": {}, "nn-NO": {}, "en-GB": {} }, genericPages: [] },
+  partner: { names: partnerNames, genericPages: partnerGenericPages },
+  // skoleskyss: { names: { "nb-NO": {}, "nn-NO": {}, "en-GB": {} }, genericPages: [] },
+  // sorvis: { names: { "nb-NO": {}, "nn-NO": {}, "en-GB": {} }, genericPages: [] },
+  // varslingssenter: { names: { "nb-NO": {}, "nn-NO": {}, "en-GB": {} }, genericPages: [] },
 };

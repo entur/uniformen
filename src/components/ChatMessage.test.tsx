@@ -50,3 +50,21 @@ describe("ChatDrawer example questions", () => {
     expect(html).toContain("Where am I?");
   });
 });
+
+describe("ChatDrawer location names", () => {
+  test("an app with location names sends them to the browser", async () => {
+    const html = await renderComponentToString(<ChatDrawer locale="en-GB" activeAppId="partner" />);
+    expect(html).toContain("Terminal report");
+    expect(html).toContain("data-uniformen-chat-generic-pages=");
+    expect(html).toContain("users");
+  });
+
+  test("an app without location names sends none", async () => {
+    const unknownApp = "unknown-app" as PortalApplicationId;
+    const html = await renderComponentToString(
+      <ChatDrawer locale="en-GB" activeAppId={unknownApp} />,
+    );
+    expect(html).not.toContain("Terminal report");
+    expect(html).toContain('data-uniformen-chat-generic-pages="[]"');
+  });
+});

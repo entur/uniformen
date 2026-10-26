@@ -1,6 +1,6 @@
 import type { ChatAccessToken } from "../chat/chatProxy";
 import type { Locale } from "../types";
-import { genericPages, locationNames } from "./chatLocations";
+import { locationsByApp } from "./chatLocations";
 import { examplesByApp } from "./chatExamples";
 import { ChatMessage } from "./ChatMessage";
 import { ChatTextArea } from "./ChatTextArea";
@@ -78,6 +78,7 @@ export function ChatDrawer({
   activeAppId?: PortalApplicationId;
 }) {
   const txt = texts[locale];
+  const locations = activeAppId && locationsByApp[activeAppId];
   const examples = (activeAppId && examplesByApp[activeAppId]?.[locale]) ?? txt.examples;
   return (
     <div
@@ -88,8 +89,8 @@ export function ChatDrawer({
       data-uniformen-chat-error-text-refresh={txt.errorRefresh}
       data-uniformen-chat-error-text-rate-limit={txt.errorRateLimit}
       data-uniformen-chat-error-text-too-many-chats={txt.errorTooManyChats}
-      data-uniformen-chat-locations={JSON.stringify(locationNames[locale])}
-      data-uniformen-chat-generic-pages={JSON.stringify(genericPages)}
+      data-uniformen-chat-locations={JSON.stringify(locations?.names[locale] ?? {})}
+      data-uniformen-chat-generic-pages={JSON.stringify(locations?.genericPages ?? [])}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"
