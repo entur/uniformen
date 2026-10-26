@@ -16,7 +16,7 @@ on:
 jobs:
   release-please:
     if: ${{ github.event_name == 'push' }}
-    uses: entur/gha-meta/.github/workflows/release.yml@c14eef7f4d90ed1be2c1df4dfb0927322bcbb3ba # v1
+    uses: entur/gha-meta/.github/workflows/release.yml@c3ca051ef943942321084a21ec919bc8097dfd92 # v1
     with:
       release_type: manifest
     permissions:
@@ -42,7 +42,7 @@ jobs:
         with:
           # Empty on a push, so the push commit is checked out.
           ref: ${{ inputs.tag }}
-      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
         with:
           # Dependabot does not update this version. Bump it by hand.
           version: 2026.9.18
@@ -51,7 +51,7 @@ jobs:
       - name: Test
         run: bun run test
       - id: prepare-packages
-        uses: entur/gha-npmjs/.github/actions/prepare-packages@d1701803b89f6393047cdff568ba264b25cefd2d # v1.0.0
+        uses: entur/gha-npmjs/.github/actions/prepare-packages@a6dec5a97a11246d4f33879078ff53b394d55355 # v1.1.0
         with:
           release_type: manifest
           package_manager: bun
@@ -64,7 +64,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: entur/gha-npmjs/.github/workflows/publish.yml@d1701803b89f6393047cdff568ba264b25cefd2d # v1.0.0
+    uses: entur/gha-npmjs/.github/workflows/publish.yml@a6dec5a97a11246d4f33879078ff53b394d55355 # v1.1.0
     with:
       artifact_name: ${{ needs.build-package.outputs.artifact_name }}
       provenance: true
