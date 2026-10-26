@@ -78,7 +78,7 @@ export function ChatDrawer({
   locale: Locale;
   /** Without it, every question gets the error text. */
   chatAccessToken?: ChatAccessToken;
-  appName?: string
+  appName?: string;
 }) {
   const txt = texts[locale];
   return (

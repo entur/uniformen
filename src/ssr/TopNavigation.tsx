@@ -138,7 +138,9 @@ export function TopNavigation({
         </div>
       </nav>
       {/* appName is given to ChatDrawer so that ChatMessage can use for naming the chat-responder */}
-      {aiAgent && <ChatDrawer locale={locale} chatAccessToken={chatAccessToken} appName={appName} />}
+      {aiAgent && (
+        <ChatDrawer locale={locale} chatAccessToken={chatAccessToken} appName={appName} />
+      )}
     </header>
   );
 }
