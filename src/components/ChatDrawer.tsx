@@ -1,11 +1,13 @@
 import type { ChatAccessToken } from "../chat/chatProxy";
 import type { Locale } from "../types";
 import { genericPages, locationNames } from "./chatLocations";
+import { examplesByApp } from "./chatExamples";
 import { ChatMessage } from "./ChatMessage";
 import { ChatTextArea } from "./ChatTextArea";
 import { CloseIcon } from "./icons/CloseIcon";
 import { MapIcon } from "./icons/MapIcon";
 import { NewChatButton } from "./NewChatButton";
+import type { PortalApplicationId } from "./portalApplications";
 
 const texts = {
   "nb-NO": {
@@ -19,11 +21,7 @@ const texts = {
     errorTooManyChats: "Du har for mange samtaler åpne samtidig. Vent litt og prøv igjen.",
     restarted:
       "Samtalen ble tidsavbrutt og startet på nytt. Assistenten husker ikke meldingene over.",
-    examples: [
-      "Hvor ser jeg mine avtaler?",
-      "Hvor kan jeg se terminalrapporter?",
-      "Hvem kontakter man ved problemer?",
-    ],
+    examples: ["Hvor er jeg?", "Hva kan du hjelpe meg med?", "Hvem kontakter man ved problemer?"],
   },
   "nn-NO": {
     close: "Lukk skuff",
@@ -36,11 +34,7 @@ const texts = {
     errorTooManyChats: "Du har for mange samtalar opne samtidig. Vent litt og prøv igjen.",
     restarted:
       "Samtalen vart tidsavbroten og starta på nytt. Assistenten hugsar ikkje meldingane over.",
-    examples: [
-      "Kvar ser eg avtalene mine?",
-      "Kvar kan eg sjå terminalrapportar?",
-      "Kven kontaktar ein ved problem?",
-    ],
+    examples: ["Kvar er eg?", "Kva kan du hjelpe meg med?", "Kven kontaktar ein ved problem?"],
   },
   "en-GB": {
     close: "Close drawer",
@@ -56,8 +50,8 @@ const texts = {
     restarted:
       "The conversation timed out and was restarted. The assistant does not remember the messages above.",
     examples: [
-      "Where can I see my agreements?",
-      "Where can I see terminal reports?",
+      "Where am I?",
+      "What can you help me with?",
       "Who do I contact if there are problems?",
     ],
   },
@@ -74,13 +68,17 @@ export function ChatDrawer({
   locale,
   chatAccessToken,
   appName, //used to specify chat-responder
+  activeAppId,
 }: {
   locale: Locale;
   /** Without it, every question gets the error text. */
   chatAccessToken?: ChatAccessToken;
   appName?: string;
+  /** Picks the example questions. Without it, or without questions for it, the general ones are used. */
+  activeAppId?: PortalApplicationId;
 }) {
   const txt = texts[locale];
+  const examples = (activeAppId && examplesByApp[activeAppId]?.[locale]) ?? txt.examples;
   return (
     <div
       hidden
@@ -119,7 +117,7 @@ export function ChatDrawer({
       </h2>
       <div class="uniformen-chat-window" role="log">
         <ChatMessage sender="agent" text={txt.agentWelcomeText} locale={locale} appName={appName} />
-        <ChatMessage sender="system" questions={txt.examples} locale={locale} />
+        <ChatMessage sender="system" questions={examples} locale={locale} />
       </div>
       {/* The browser copies these messages into the chat. See `aiAgentHandlers`. */}
       <template data-uniformen-chat-user-template>
