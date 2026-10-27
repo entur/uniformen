@@ -59,6 +59,16 @@ const APPLICATIONS = [
     },
   },
   {
+    id: "omsetning",
+    appName: "Omsetning",
+    unlisted: true,
+    hosts: {
+      dev: "omsetning.dev.entur.no",
+      staging: "omsetning.staging.entur.no",
+      production: "omsetning.entur.no",
+    },
+  },
+  {
     id: "ops-center",
     appName: "Ops Center",
     hosts: {
@@ -208,22 +218,20 @@ const APPLICATION_URLS = Object.fromEntries(
 const isPortalApplicationId = (id: string): id is PortalApplicationId =>
   Object.hasOwn(APPLICATION_URLS, id);
 
+/** Returns the environment whose hosts the given environment links to. */
+export const linkedEnvironment = (environment: Environment): SwitchableEnvironment =>
+  LINKED_ENVIRONMENT[environment];
+
 /**
  * Returns the application's URL in each environment it is deployed to. Returns
- * undefined when the id is missing or unknown, or when the application has no host
- * in the given environment. The user can only switch away from an environment the
- * application runs in.
+ * undefined when the id is missing or unknown.
  *
  * The returned object is shared by all renders, so it is readonly. Changing it
  * would change the links in every later render.
  */
-export function portalApplicationUrls(
-  id: string | undefined,
-  environment: Environment,
-): ApplicationUrls | undefined {
+export function portalApplicationUrls(id: string | undefined): ApplicationUrls | undefined {
   if (id === undefined || !isPortalApplicationId(id)) return undefined;
-  const urls: ApplicationUrls = APPLICATION_URLS[id];
-  return urls[LINKED_ENVIRONMENT[environment]] === undefined ? undefined : urls;
+  return APPLICATION_URLS[id];
 }
 
 /** The ids of the applications that have a host in every environment. */
