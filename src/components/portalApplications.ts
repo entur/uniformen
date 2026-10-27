@@ -59,6 +59,15 @@ const APPLICATIONS = [
     },
   },
   {
+    id: "omsetning",
+    appName: "Omsetning",
+    hosts: {
+      dev: "omsetning.dev.entur.no",
+      staging: "omsetning.staging.entur.no",
+      production: "omsetning.entur.no",
+    },
+  },
+  {
     id: "ops-center",
     appName: "Ops Center",
     hosts: {

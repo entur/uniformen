@@ -16,6 +16,7 @@ const EXPECTED_URLS: Record<"dev" | "staging" | "production", string[]> = {
   dev: [
     "https://cleos-client.dev.entur.io",
     "https://nplan.dev.entur.org",
+    "https://omsetning.dev.entur.no",
     "https://ops-center.dev.entur.io",
     "https://entur-partner.dev.entur.org",
     "https://sorvis.dev.entur.io",
@@ -24,6 +25,7 @@ const EXPECTED_URLS: Record<"dev" | "staging" | "production", string[]> = {
   staging: [
     "https://cleos-client.staging.entur.io",
     "https://nplan.staging.entur.org",
+    "https://omsetning.staging.entur.no",
     "https://ops-center.staging.entur.io",
     "https://entur-partner.staging.entur.org",
     "https://sorvis.staging.entur.io",
@@ -32,6 +34,7 @@ const EXPECTED_URLS: Record<"dev" | "staging" | "production", string[]> = {
   production: [
     "https://cleos.entur.org",
     "https://nplan.entur.org",
+    "https://omsetning.entur.no",
     "https://ops-center.entur.io",
     "https://entur-partner.entur.org",
     "https://sorvis.entur.io",

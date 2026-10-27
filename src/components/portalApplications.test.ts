@@ -63,6 +63,7 @@ describe("application ids", () => {
       "bedrift",
       "cleos",
       "nplan",
+      "omsetning",
       "ops-center",
       "partner",
       "skoleskyss",

@@ -391,13 +391,15 @@ describe("/ssr", () => {
 
 describe("/ssr app query param", () => {
   const APP_NAMES: [slug: string, rendered: string][] = [
-    ["partner", "Partner"],
-    ["sorvis", "Sørvis"],
-    ["varslingssenter", "Varslingssenter"],
+    ["bedrift", "Bedrift"],
     ["cleos", "CLEOS"],
     ["nplan", "Nplan"],
+    ["omsetning", "Omsetning"],
     ["ops-center", "Ops Center"],
+    ["partner", "Partner"],
     ["skoleskyss", "Skoleskyss"],
+    ["sorvis", "Sørvis"],
+    ["varslingssenter", "Varslingssenter"],
   ];
 
   const ssr = (query = "") => app.request(`/ssr${query}`);
