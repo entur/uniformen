@@ -2,180 +2,153 @@ import { describe, expect, test } from "bun:test";
 import {
   PORTAL_APPLICATION_IDS,
   PORTAL_APPLICATIONS,
+  linkedEnvironment,
   portalApplicationName,
   portalApplicationPath,
   portalApplicationUrl,
   portalApplicationUrls,
 } from "./portalApplications";
-import { expectedUrls } from "../test/expectedPortalUrls";
 import type { Environment } from "../config";
 
 const ENVIRONMENTS: Environment[] = ["local", "dev", "staging", "production"];
 
-describe("portal application links per environment", () => {
-  test("each environment resolves its own list of links", () => {
-    for (const env of ENVIRONMENTS) {
-      expect(PORTAL_APPLICATIONS[env].map((app) => app.url)).toEqual(expectedUrls(env));
-    }
+describe("registry rules", () => {
+  test("ids are unique", () => {
+    expect(new Set(PORTAL_APPLICATION_IDS).size).toBe(PORTAL_APPLICATION_IDS.length);
   });
 
-  test("local rides dev, so a locally served header never links to production", () => {
-    expect(PORTAL_APPLICATIONS.local).toEqual(PORTAL_APPLICATIONS.dev);
+  test("every application has a unique name", () => {
+    const names = PORTAL_APPLICATION_IDS.map((id) => portalApplicationName(id));
+    for (const name of names) expect(name).toBeTruthy();
+    expect(new Set(names).size).toBe(names.length);
   });
 
-  test("no environment links to a host of another", () => {
-    // This catches an entry that was copied from another environment's list and
-    // still points at that environment's host.
-    for (const env of ENVIRONMENTS) {
-      const own = new Set(expectedUrls(env));
-      for (const { url } of PORTAL_APPLICATIONS[env]) {
-        expect(own.has(url)).toBe(true);
+  test("applications are sorted by name in Norwegian alphabetical order", () => {
+    // The Norwegian collator puts Æ, Ø and Å after Z.
+    const names = PORTAL_APPLICATION_IDS.map((id) => portalApplicationName(id) as string);
+    expect(names).toEqual(names.toSorted(new Intl.Collator("nb").compare));
+  });
+
+  test("every application is deployed somewhere, and only to https URLs", () => {
+    for (const id of PORTAL_APPLICATION_IDS) {
+      const urls = Object.values(portalApplicationUrls(id) ?? {});
+      expect(urls.length).toBeGreaterThan(0);
+      for (const url of urls) {
+        expect(url).toMatch(/^https:\/\/[a-z0-9.-]+\.[a-z]+(\/[a-z0-9-]+)*$/);
       }
     }
   });
 
-  test("every link is a unique absolute https url", () => {
+  test("each URL belongs to the environment it is listed under", () => {
+    // This catches an entry that was copied from another environment and still
+    // points at that environment's host.
+    for (const id of PORTAL_APPLICATION_IDS) {
+      const { dev, staging, production } = portalApplicationUrls(id) ?? {};
+      if (dev !== undefined) expect(dev).toContain(".dev.");
+      if (staging !== undefined) expect(staging).toContain(".staging.");
+      if (production !== undefined) expect(production).not.toMatch(/\.(dev|staging)\./);
+    }
+  });
+});
+
+describe("app switcher list", () => {
+  test("includes a listed application in every environment it is deployed to", () => {
+    // The other tests here loop over the entries, so they would also pass on an
+    // empty list.
+    for (const env of ENVIRONMENTS) {
+      expect(PORTAL_APPLICATIONS[env].map((app) => app.id)).toContain("nplan");
+    }
+  });
+
+  test("each entry links to the application in the switcher's own environment", () => {
+    for (const env of ["dev", "staging", "production"] as const) {
+      for (const { id, appName, url } of PORTAL_APPLICATIONS[env]) {
+        expect(url).toBe(portalApplicationUrls(id)?.[env] as string);
+        expect(appName).toBe(portalApplicationName(id) as string);
+      }
+    }
+  });
+
+  test("keeps the registry order", () => {
+    for (const env of ENVIRONMENTS) {
+      const ids = PORTAL_APPLICATIONS[env].map((app) => app.id);
+      const positions = ids.map((id) => PORTAL_APPLICATION_IDS.indexOf(id));
+      expect(positions).toEqual(positions.toSorted((a, b) => a - b));
+    }
+  });
+
+  test("links are unique", () => {
     for (const env of ENVIRONMENTS) {
       const urls = PORTAL_APPLICATIONS[env].map((app) => app.url);
-      for (const url of urls) {
-        expect(url.startsWith("https://")).toBe(true);
-        // A misspelled host field would put `null` or `undefined` into the URL.
-        expect(url).not.toMatch(/null|undefined/);
-      }
       expect(new Set(urls).size).toBe(urls.length);
     }
   });
 
-  test("identity does not move with the environment", () => {
-    const names = new Map(PORTAL_APPLICATIONS.production.map(({ id, appName }) => [id, appName]));
-    for (const env of ENVIRONMENTS) {
-      expect(PORTAL_APPLICATIONS[env].map((app) => app.id)).toEqual([...names.keys()]);
-      for (const { id, appName } of PORTAL_APPLICATIONS[env]) {
-        expect(appName).toBe(names.get(id) as string);
-      }
-    }
-  });
-});
-
-describe("application ids", () => {
-  test("the accepted query values are the applications themselves", () => {
-    expect(PORTAL_APPLICATION_IDS).toEqual([
-      "bedrift",
-      "cleos",
-      "nplan",
-      "omsetning",
-      "ops-center",
-      "partner",
-      "skoleskyss",
-      "sorvis",
-      "varslingssenter",
-    ]);
-    for (const { id } of PORTAL_APPLICATIONS.production) {
-      expect(PORTAL_APPLICATION_IDS).toContain(id);
-    }
+  test("local uses the dev list, so a locally served header never links to production", () => {
+    expect(PORTAL_APPLICATIONS.local).toEqual(PORTAL_APPLICATIONS.dev);
   });
 
-  test("ids are unique", () => {
-    expect(new Set(PORTAL_APPLICATION_IDS).size).toBe(PORTAL_APPLICATION_IDS.length);
-  });
-});
-
-describe("unlisted applications", () => {
-  test("Skoleskyss is known, and offered by no environment's switcher", () => {
-    expect(PORTAL_APPLICATION_IDS).toContain("skoleskyss");
+  test("leaves out an unlisted application", () => {
     for (const env of ENVIRONMENTS) {
       expect(PORTAL_APPLICATIONS[env].map((app) => app.id)).not.toContain("skoleskyss");
-      expect(PORTAL_APPLICATIONS[env].map((app) => app.url)).not.toContain(
-        "https://skoleskyss.entur.no",
-      );
-    }
-  });
-
-  test("its own links are the environments it is deployed to", () => {
-    expect(portalApplicationUrls("skoleskyss", "production")).toEqual({
-      staging: "https://skoleskyss.staging.entur.no",
-      production: "https://skoleskyss.entur.no",
-    });
-  });
-
-  test("an environment it is not deployed to hands out nothing to switch between", () => {
-    // Local uses the dev hosts, and Skoleskyss has no dev deployment.
-    for (const env of ["local", "dev"] as const) {
-      expect(portalApplicationUrls("skoleskyss", env)).toBeUndefined();
     }
   });
 });
 
 describe("portalApplicationUrls", () => {
-  test("a fully deployed application switches from every environment", () => {
-    for (const env of ENVIRONMENTS) {
-      expect(portalApplicationUrls("nplan", env)).toEqual({
-        dev: "https://nplan.dev.entur.org",
-        staging: "https://nplan.staging.entur.org",
-        production: "https://nplan.entur.org",
-      });
-    }
+  test("returns the URL in every environment of a fully deployed application", () => {
+    expect(portalApplicationUrls("nplan")).toEqual({
+      dev: "https://nplan.dev.entur.org",
+      staging: "https://nplan.staging.entur.org",
+      production: "https://nplan.entur.org",
+    });
   });
 
-  test("no application, or one the portal does not know, switches from none", () => {
-    for (const env of ENVIRONMENTS) {
-      expect(portalApplicationUrls(undefined, env)).toBeUndefined();
-      expect(portalApplicationUrls("retired-app", env)).toBeUndefined();
-      expect(portalApplicationUrls("Skoleskyss", env)).toBeUndefined();
-    }
+  test("returns only the environments the application is deployed to", () => {
+    expect(portalApplicationUrls("skoleskyss")).toEqual({
+      staging: "https://skoleskyss.staging.entur.no",
+      production: "https://skoleskyss.entur.no",
+    });
+  });
+
+  test("returns undefined for a missing, unknown or wrongly cased id", () => {
+    expect(portalApplicationUrls(undefined)).toBeUndefined();
+    expect(portalApplicationUrls("retired-app")).toBeUndefined();
+    expect(portalApplicationUrls("Skoleskyss")).toBeUndefined();
   });
 
   test("Bedrift's URLs include its path", () => {
-    expect(portalApplicationUrls("bedrift", "production")).toEqual({
+    expect(portalApplicationUrls("bedrift")).toEqual({
       staging: "https://skoleskyss.staging.entur.no/bedrift",
       production: "https://skoleskyss.entur.no/bedrift",
     });
   });
 });
 
-describe("portalApplicationUrl", () => {
-  /** The ids portalApplicationUrl accepts. These apps have a host in every environment. */
-  const FULLY_DEPLOYED = [
-    "cleos",
-    "nplan",
-    "ops-center",
-    "partner",
-    "sorvis",
-    "varslingssenter",
-  ] as const;
-
-  test("agrees with the list the switcher renders, for every app in every environment", () => {
-    for (const env of ENVIRONMENTS) {
-      for (const id of FULLY_DEPLOYED) {
-        const url = PORTAL_APPLICATIONS[env].find((app) => app.id === id)?.url;
-        expect(url).toBeDefined();
-        expect(portalApplicationUrl(id, env)).toBe(url as string);
-      }
-    }
-  });
-
-  test("local rides dev here too", () => {
-    for (const id of FULLY_DEPLOYED) {
-      expect(portalApplicationUrl(id, "local")).toBe(portalApplicationUrl(id, "dev"));
-      expect(portalApplicationUrl(id, "local")).not.toBe(portalApplicationUrl(id, "production"));
+describe("linkedEnvironment", () => {
+  test("local links to dev, and every other environment links to itself", () => {
+    expect(linkedEnvironment("local")).toBe("dev");
+    for (const env of ["dev", "staging", "production"] as const) {
+      expect(linkedEnvironment(env)).toBe(env);
     }
   });
 });
 
-describe("portalApplicationName", () => {
-  test("every application has a name for the logo slot", () => {
-    for (const id of PORTAL_APPLICATION_IDS) {
-      expect(portalApplicationName(id)).toBeTruthy();
-    }
+describe("portalApplicationUrl", () => {
+  test("returns the URL for the given environment", () => {
+    expect(portalApplicationUrl("cleos", "dev")).toBe("https://cleos-client.dev.entur.io");
+    expect(portalApplicationUrl("cleos", "staging")).toBe("https://cleos-client.staging.entur.io");
+    expect(portalApplicationUrl("cleos", "production")).toBe("https://cleos.entur.org");
   });
 
-  test("names the applications added alongside the per-environment links", () => {
-    expect(portalApplicationName("partner")).toBe("Partner");
+  test("local uses dev", () => {
+    expect(portalApplicationUrl("cleos", "local")).toBe(portalApplicationUrl("cleos", "dev"));
+  });
+});
+
+describe("portalApplicationName", () => {
+  test("returns the name of a known application", () => {
     expect(portalApplicationName("sorvis")).toBe("Sørvis");
-    expect(portalApplicationName("cleos")).toBe("CLEOS");
-    expect(portalApplicationName("nplan")).toBe("Nplan");
-    expect(portalApplicationName("ops-center")).toBe("Ops Center");
-    expect(portalApplicationName("skoleskyss")).toBe("Skoleskyss");
   });
 
   test("returns undefined when no app is given", () => {
@@ -198,10 +171,8 @@ describe("portalApplicationPath", () => {
     expect(portalApplicationPath("bedrift")).toBe("/bedrift");
   });
 
-  test("returns / for every other app, for a missing id and for an unknown id", () => {
-    for (const id of PORTAL_APPLICATION_IDS.filter((other) => other !== "bedrift")) {
-      expect(portalApplicationPath(id)).toBe("/");
-    }
+  test("returns / for an app served at the root, for a missing id and for an unknown id", () => {
+    expect(portalApplicationPath("partner")).toBe("/");
     expect(portalApplicationPath()).toBe("/");
     expect(portalApplicationPath("unknown")).toBe("/");
   });

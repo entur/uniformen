@@ -1,6 +1,7 @@
 import { environment as runningEnvironment, type Environment } from "../config";
 import { ChevronDownIcon } from "../components/icons/ChevronDownIcon";
 import {
+  linkedEnvironment,
   portalApplicationUrls,
   SWITCHABLE_ENVIRONMENTS,
   type PortalApplicationId,
@@ -47,7 +48,7 @@ export function EnvironmentBadge({
   activeAppId?: PortalApplicationId;
   locale: Locale;
 }) {
-  const urls = portalApplicationUrls(activeAppId, environment);
+  const urls = portalApplicationUrls(activeAppId);
   const txt = texts[locale];
 
   /* The rows are always in the same order, starting with dev, whichever
@@ -59,13 +60,16 @@ export function EnvironmentBadge({
     if (url !== undefined) rows.push({ env, url });
   }
 
+  // The user can only switch away from an environment the application runs in.
+  const switchable = rows.some((row) => row.env === linkedEnvironment(environment));
+
   const pointer = environment !== "production" && (
     <span class="uniformen-env-badge__pointer" aria-hidden="true"></span>
   );
 
   const label = <span class="uniformen-env-badge__label">{ENV_LABELS[environment]}</span>;
 
-  if (!urls) {
+  if (!switchable) {
     return (
       <div class="uniformen-env-badge" data-uniformen-environment={environment}>
         {pointer}
