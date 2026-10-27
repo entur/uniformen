@@ -14,6 +14,8 @@ import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import { clientVersionLabel, ssrRequestMetric } from "../metrics";
 import { PostHog } from "posthog-node";
 
+const featureFlagTimeoutMs = 200;
+
 // Without POSTHOG_API_KEY, the AI agent feature flag is off for everyone.
 const posthogApiKey = process.env["POSTHOG_API_KEY"];
 if (!posthogApiKey) console.warn("AI agent flag is off. POSTHOG_API_KEY is not set.");
@@ -21,7 +23,7 @@ const posthog = posthogApiKey
   ? new PostHog(posthogApiKey, {
       host: "https://eu.i.posthog.com",
       featureFlagsRequestMaxRetries: 0,
-      featureFlagsRequestTimeoutMs: 200,
+      featureFlagsRequestTimeoutMs: featureFlagTimeoutMs,
     })
   : undefined;
 
@@ -38,7 +40,7 @@ export const aiAgentFlag = {
   /** Only changed by tests. */
   client: posthog as Pick<PostHog, "getFeatureFlagResult"> | undefined,
   /** The longest time a response waits for PostHog. Only changed by tests. */
-  timeoutMs: 200,
+  timeoutMs: featureFlagTimeoutMs,
   /** The flag per user `sub`. A failed request is stored as off. */
   cache: new Map<string, { on: boolean; expiresAt: number }>(),
   /** Flag requests that are running now, per user `sub`. */
