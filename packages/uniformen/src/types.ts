@@ -16,6 +16,7 @@ export type FetchUniformenParams = {
     | "bedrift"
     | "cleos"
     | "nplan"
+    | "omsetning"
     | "ops-center"
     | "partner"
     | "skoleskyss"
