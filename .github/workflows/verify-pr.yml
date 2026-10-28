@@ -36,4 +36,4 @@ jobs:
     name: Verify PR title
     needs: [changed-paths]
     if: ${{ needs.changed-paths.outputs.package == 'true' }}
-    uses: entur/gha-meta/.github/workflows/verify-pr.yml@c14eef7f4d90ed1be2c1df4dfb0927322bcbb3ba # v1
+    uses: entur/gha-meta/.github/workflows/verify-pr.yml@c3ca051ef943942321084a21ec919bc8097dfd92 # v1

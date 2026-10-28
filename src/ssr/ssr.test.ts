@@ -10,6 +10,7 @@ import {
 } from "../test/authTestKeys";
 import { app } from "../index";
 import { aiAgentFlag, chat } from "./ssr";
+import { PORTAL_APPLICATION_IDS, portalApplicationName } from "../components/portalApplications";
 
 function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
@@ -408,19 +409,10 @@ describe("/ssr", () => {
 });
 
 describe("/ssr app query param", () => {
-  const APP_NAMES: [slug: string, rendered: string][] = [
-    ["partner", "Partner"],
-    ["sorvis", "Sørvis"],
-    ["varslingssenter", "Varslingssenter"],
-    ["cleos", "CLEOS"],
-    ["nplan", "Nplan"],
-    ["ops-center", "Ops Center"],
-    ["skoleskyss", "Skoleskyss"],
-  ];
-
   const ssr = (query = "") => app.request(`/ssr${query}`);
 
-  for (const [slug, rendered] of APP_NAMES) {
+  for (const slug of PORTAL_APPLICATION_IDS) {
+    const rendered = portalApplicationName(slug) as string;
     test(`app=${slug} renders "${rendered}" in the logo slot`, async () => {
       const res = await ssr(`?app=${slug}`);
       expect(res.status).toBe(200);

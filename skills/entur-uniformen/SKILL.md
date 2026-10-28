@@ -9,7 +9,7 @@ description: Uniformen is the shared header and footer of Entur's B2B and partne
 
 Uniformen is Entur's shared header and footer. One service renders them, and every portal application embeds the same HTML. When the header or footer changes, your app gets the change without a new release of your app.
 
-**Who it is for.** Uniformen is for Entur's B2B portals. These are the applications that Entur's partners and Entur's own employees sign in to, for example `partner`, `cleos`, `nplan`, `ops-center`, `skoleskyss` and `sorvis`. Users often move between several of these applications, and they all get the same header, the same app switcher and the same account menu. Public sites for travellers use a different header and footer, and this service does not render those.
+**Who it is for.** Uniformen is for Entur's B2B portals. These are the applications that Entur's partners and Entur's own employees sign in to, for example `partner`, `cleos`, `nplan`, `omsetning`, `ops-center`, `skoleskyss` and `sorvis`. Users often move between several of these applications, and they all get the same header, the same app switcher and the same account menu. Public sites for travellers use a different header and footer, and this service does not render those.
 
 The service has an endpoint, `/ssr`, that returns the layout as JSON. `@entur/uniformen` is the client for that endpoint.
 

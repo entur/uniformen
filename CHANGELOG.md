@@ -8,7 +8,7 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
-## 2026-10-23
+## 2026-10-28
 
 ### Added
 
@@ -29,6 +29,12 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   include it, or the browser blocks the questions. A `connect-src` replaces
   `default-src` for `fetch`, so the app must also copy the sources from its
   `default-src` into its `connect-src`.
+  
+## 2026-10-27
+
+### Added
+
+- `app=omsetning` renders Omsetning beside the logo. It is not an entry in the app switcher.
 
 ## 2026-10-22
 
