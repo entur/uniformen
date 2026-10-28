@@ -12,8 +12,8 @@ const texts = {
 
 /**
  * Returns one chat message, with a name bar above the bubble. The sender decides the
- * name, the icon, the colour and which side the message is on. With `typing`, the
- * bubble shows three animated dots that tell the user the agent is writing a reply.
+ * name, the icon, and style. With `typing`, the bubble shows three animated dots that
+ * tell the user the agent is writing a reply.
  * A system message shows `questions` as buttons the user can click to ask them.
  */
 export function ChatMessage(

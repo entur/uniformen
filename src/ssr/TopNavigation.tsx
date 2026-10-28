@@ -137,9 +137,6 @@ export function TopNavigation({
           )}
         </div>
       </nav>
-      {/* appName is given to ChatDrawer so that ChatMessage can use for naming the chat-responder
-       * activeAppId is used to look for specified example questions
-       */}
       {aiAgent && (
         <ChatDrawer
           locale={locale}

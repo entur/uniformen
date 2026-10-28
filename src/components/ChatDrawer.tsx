@@ -49,7 +49,6 @@ const texts = {
   },
 } as const;
 
-//The text at the top of the chat-drawer
 const drawerName = "Sporai";
 
 /**
@@ -59,7 +58,7 @@ const drawerName = "Sporai";
 export function ChatDrawer({
   locale,
   chatAccessToken,
-  appName, //used to specify chat-responder
+  appName,
   activeAppId,
 }: {
   locale: Locale;
