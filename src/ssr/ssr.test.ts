@@ -651,6 +651,25 @@ describe("/ssr contrast query param", () => {
   });
 });
 
+describe("/ssr dark mode", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+
+  test("the stylesheet has dark colours for the bar and the footer", async () => {
+    const body = await (await ssr()).json();
+    expect(body.headAssets).toContain(
+      '[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {',
+    );
+    expect(body.headAssets).toContain("color-scheme: dark;");
+  });
+
+  test("no query param turns it on, so the markup is the same", async () => {
+    const dark = await (await ssr("?colorMode=dark")).json();
+    const light = await (await ssr()).json();
+    expect(dark).toEqual(light);
+    expect(light.headerHtml).not.toContain("data-color-mode");
+  });
+});
+
 describe("/ssr top bar chrome", () => {
   test("renders the environment badge for the running environment", async () => {
     const body = await enturSignedIn("auth0|chrome-env");

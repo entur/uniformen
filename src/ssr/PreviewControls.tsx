@@ -20,6 +20,7 @@ export function previewUrl(
   if (query.sidebar === "true") params.set("sidebar", "true");
   if (query.simple === "true") params.set("simple", "true");
   if (query.contrast === "true") params.set("contrast", "true");
+  if (query.colorMode === "dark") params.set("colorMode", "dark");
   if (query.loginUrl) params.set("loginUrl", query.loginUrl);
   if (query.logoutUrl) params.set("logoutUrl", query.logoutUrl);
   params.set("locale", query.locale);
@@ -332,6 +333,23 @@ export function PreviewControls({
                 checked={query.contrast === "true"}
               />
               appen har en mørk side bak headeren
+            </label>
+          </Field>
+
+          <Field
+            label="colorMode"
+            hint={
+              'Mørk modus fra designsystemet. Appen slår den på med data-color-mode="dark" på <html>.'
+            }
+          >
+            <label class="preview-controls__check">
+              <input
+                type="checkbox"
+                name="colorMode"
+                value="dark"
+                checked={query.colorMode === "dark"}
+              />
+              appen er i mørk modus
             </label>
           </Field>
 

@@ -247,6 +247,28 @@ describe("preview page contrast", () => {
   });
 });
 
+describe("preview page dark mode", () => {
+  test("colorMode=dark sets the attribute on the page, the way an app does", async () => {
+    const { html } = await preview("?colorMode=dark");
+    expect(html).toContain('<html lang="nb-NO" data-color-mode="dark">');
+    expect(html).toContain('name="colorMode" value="dark" checked=""');
+  });
+
+  test("without it the page has no colour mode", async () => {
+    const { html } = await preview();
+    expect(html).toContain('<html lang="nb-NO">');
+  });
+
+  test("the copyable link carries it", async () => {
+    const { html } = await preview("?colorMode=dark");
+    expect(html).toContain("colorMode=dark");
+  });
+
+  test("anything other than light or dark is rejected", async () => {
+    expect((await preview("?colorMode=auto")).res.status).toBe(400);
+  });
+});
+
 describe("preview page controls", () => {
   test("the parameters are on the page, as a form that sets them", async () => {
     const { html } = await preview();
@@ -334,6 +356,7 @@ describe("preview page controls", () => {
     expect(where("logoutUrl")).toBe("right");
     expect(where("simple")).toBe("whole");
     expect(where("contrast")).toBe("whole");
+    expect(where("colorMode")).toBe("whole");
     expect(where("locale")).toBe("whole");
   });
 

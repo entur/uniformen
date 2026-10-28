@@ -1,6 +1,7 @@
 import {
   borderRadiuses,
   colors,
+  componentColors,
   fontSizes,
   fontWeights,
   lineHeights,
@@ -125,8 +126,42 @@ const CONTRAST_VARS = `.uniformen-contrast {
 }
 `;
 
+const topbarDark = componentColors.dark.components.menu.topbar.contrast;
+
+/**
+ * Colours for dark mode. The app turns dark mode on with `data-color-mode="dark"` on
+ * `<html>` or another ancestor, the same attribute the design system's components use.
+ * The bar uses the design system's dark top bar colours, and the panels use its dark
+ * overlay colours.
+ *
+ * In the design system, the standard and the contrast colours have the same dark
+ * colours. So this rule also applies to a contrast header and footer. The selector has
+ * two parts, so it is more specific than `.uniformen-contrast` and wins over it.
+ */
+const DARK_VARS = `[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {
+  color-scheme: dark;
+  --uniformen-surface: ${topbarDark.background};
+  --uniformen-surface-hover: ${topbarDark.fillHover};
+  --uniformen-surface-active: ${semantic.fill.selected.hover.dark};
+  --uniformen-on-surface: ${topbarDark.text};
+  --uniformen-divider: ${topbarDark.divide};
+  --uniformen-panel: ${semantic.fill.background.overlay.solid};
+  --uniformen-panel-body: ${semantic.fill.background.subdued.dark};
+  --uniformen-panel-hover: ${semantic.fill.background.overlay.solidalt};
+  --uniformen-panel-selected: ${semantic.fill.selected.default.darktint};
+  --uniformen-panel-border: ${semantic.fill.selected.hover.darktint};
+  --uniformen-panel-border-strong: ${semantic.stroke.darkalt};
+  --uniformen-on-panel: ${semantic.text.lightalt};
+  --uniformen-on-panel-subdued: ${semantic.text.darkalt};
+  --uniformen-shadow-bar: none;
+  --uniformen-shadow-panel: ${shadows.boxShadow};
+  --uniformen-shadow-focus: ${shadows.focusContrast};
+}
+`;
+
 // Built once at startup, for the environment this instance runs in.
-const UNIFORMEN_CSS = buildRootVars(environment).trim() + uniformenCss.trim() + CONTRAST_VARS;
+const UNIFORMEN_CSS =
+  buildRootVars(environment).trim() + uniformenCss.trim() + CONTRAST_VARS + DARK_VARS;
 
 export const uniformenCssHash = await sha256Source(UNIFORMEN_CSS);
 

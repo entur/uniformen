@@ -8,6 +8,21 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-10-28
+
+### Added
+
+- Dark mode. When the page has `data-color-mode="dark"` on `<html>` or another element
+  around the header and footer, the bar, the footer and their panels use the design
+  system's dark colours. This also applies with `contrast=true`, because the design
+  system gives the standard and the contrast colours the same dark colours.
+- The preview page has a `colorMode` control that turns on dark mode.
+
+### Fixed
+
+- The lines between rows in the notifications panel use the panel's border colour.
+  In contrast mode they were light grey on the dark blue panel.
+
 ## 2026-10-27
 
 ### Added
