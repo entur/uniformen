@@ -104,6 +104,6 @@ export function topNavigationProps({
     availableLocales,
     loginUrl,
     logoutUrl,
-    aiAgent: aiAgent === "true",
+    aiAgent: !simpleMode && aiAgent === "true",
   };
 }
