@@ -109,6 +109,11 @@ export type FetchUniformenParams = {
    * Use it on login, error and terms pages. Set it per page, not for the whole app.
    */
   simple?: boolean;
+
+  /**
+   * Asks for the AI agent button in the top bar. The default is `false`.
+   */
+  aiAgent?: boolean;
 };
 
 export type UniformenLayout = {
