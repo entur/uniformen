@@ -58,7 +58,8 @@ parameters and parameters set to their default value.
 | `debugEnturUser`     | `true`, `false`                                                                                              | `true` renders the bar as for an Entur user, which shows the environment badge. Default `false`. Any other value returns `400`. Preview page only.                                                                                                                                                                                                                                                                                    |
 | `sidebar`            | `true`, `false`                                                                                              | `true` renders the button that collapses the app's side navigation. The preview page also shows a demo sidebar for the button to act on. Default `false`. Any other value returns `400`.                                                                                                                                                                                                                                              |
 | `simple`             | `true`, `false`                                                                                              | `true` hides the app switcher, notifications, the sidebar button and "Mine tilganger". When `true`, `sidebar` is ignored. The footer does not change. Default `false`. Any other value returns `400`.                                                                                                                                                                                                                                 |
-| `contrast`           | `true`, `false`                                                                                              | `true` renders the bar, footer and its panels in the design system's contrast colours. Use it when the page behind the header is dark. Default `false`. Any other value returns `400`.                                                                                                                                                                                                                                                |
+| `contrast`           | `true`, `false`                                                                                              | `true` renders the bar, footer and its panels in the design system's contrast colours. Use it when the page behind the header is dark. In dark mode it has no effect, see [Dark mode](#dark-mode). Default `false`. Any other value returns `400`.                                                                                                                                                                                    |
+| `colorMode`          | `light`, `dark`                                                                                              | `dark` sets `data-color-mode="dark"` on the preview page's `<html>`, which turns on [dark mode](#dark-mode). In an app, the app sets this attribute, so `/ssr` has no such parameter. Default `light`. Any other value returns `400`. Preview page only.                                                                                                                                                                              |
 | `loginUrl`           | a path on the app's own origin, e.g. `/auth/login`, at most 512 characters                                   | The link target for "Logg inn" on the bar for users who are not signed in. If it is not set, there is no login link. An absolute URL, `//host` or `javascript:` returns `400`.                                                                                                                                                                                                                                                        |
 | `logoutUrl`          | a path on the app's own origin, e.g. `/auth/logout`, at most 512 characters                                  | The link target for "Logg ut" in the signed-in user's menu. If it is not set, there is no logout link. An absolute URL, `//host` or `javascript:` returns `400`.                                                                                                                                                                                                                                                                      |
 | `locale`             | `nb-NO` (default), `nn-NO`, `en-GB`                                                                          | The language of the header. The preview page also sets `<html lang>` to this value. Any other value returns `400`.                                                                                                                                                                                                                                                                                                                    |
@@ -76,6 +77,25 @@ signed-in user and their organisation must come from the token, not from the URL
 preview page also ignores them in production. Otherwise anyone could share a
 production link that shows a signed-in user without a session, or shows controls the
 viewer does not have access to.
+
+## Dark mode
+
+The header, the footer and their panels follow the design system's dark mode. Your
+app turns it on with the same attribute that the design system's components use:
+
+```html
+<html data-color-mode="dark"></html>
+```
+
+The attribute can also be on another element around the header and footer. Uniformen
+does not set the attribute and has no query parameter for it. The stylesheet contains
+both the light and the dark colours, so the `/ssr` response is the same in both
+modes. If your app lets the user pick "system", read `prefers-color-scheme` in your
+app and set the attribute to `light` or `dark`.
+
+In the design system, the standard colours and the contrast colours have the same
+dark colours. So in dark mode, `contrast=true` looks the same as `contrast=false`. You
+can keep sending `contrast=true` for the light mode of a dark page.
 
 ## The environment badge
 

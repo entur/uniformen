@@ -51,20 +51,19 @@ const PREVIEW_BASE_CSS = `
                     }
                     main { flex: 1 0 auto; display: flex; }
 
-                    /* With contrast=true the app's page behind the header is dark, so
-                       the preview page is dark too. The contrast colours are hard to
-                       judge on a white page. The controls keep their white card. */
-                    body.preview--contrast { background: #08091c; }
+                    /* With contrast=true or in dark mode the app's page behind the
+                       header is dark, so the preview page is dark too. The header
+                       colours are hard to judge on a white page. The controls keep
+                       their white card. */
+                    body.preview--contrast,
+                    [data-color-mode="dark"] body { background: #08091c; }
 
-                    /* Dark colours for the example sidebar in contrast mode, so it can
-                       be read on the dark page. */
-                    .preview--contrast .preview-sidebar { border-right-color: #393d79; }
-                    .preview--contrast .preview-sidebar__title,
-                    .preview--contrast .preview-sidebar__close,
-                    .preview--contrast .preview-sidebar__link { color: #ffffff; }
-                    .preview--contrast .preview-sidebar__heading { color: #aeb7e2; }
-                    .preview--contrast .preview-sidebar__close:hover,
-                    .preview--contrast .preview-sidebar__link:hover { background: #393d79; }
+                    /* Dark colours for the example sidebar, so it can be read on the
+                       dark page. */
+                    :is(.preview--contrast, [data-color-mode="dark"]) .preview-sidebar { border-right-color: #393d79; }
+                    :is(.preview--contrast, [data-color-mode="dark"]) :is(.preview-sidebar__title, .preview-sidebar__close, .preview-sidebar__link) { color: #ffffff; }
+                    :is(.preview--contrast, [data-color-mode="dark"]) .preview-sidebar__heading { color: #aeb7e2; }
+                    :is(.preview--contrast, [data-color-mode="dark"]) :is(.preview-sidebar__close:hover, .preview-sidebar__link:hover) { background: #393d79; }
 
                     /* Example side navigation, for testing the collapse button by hand.
                        The width animates. The inner column has a fixed width, so the
@@ -544,6 +543,9 @@ const previewQuerySchema = uniformenQuerySchema.extend({
   // The preview page has no token, so it is a parameter here.
   debugEnturUser: z.enum(["true", "false"]).optional(),
   debugNotifications: z.enum(["none", "some", "all"]).optional(),
+  // The value for `data-color-mode` on the page's `<html>`. In an app, the app sets
+  // this attribute, so it is not a parameter of `/ssr`.
+  colorMode: z.enum(["light", "dark"]).optional(),
 });
 
 export type PreviewQuery = z.infer<typeof previewQuerySchema>;
@@ -623,7 +625,7 @@ export function previewRoutes(server: OpenAPIHono): void {
 
     // The locale codes are valid BCP 47 language tags.
     return ctx.html(`
-        <html lang="${navProps.locale}">
+        <html lang="${navProps.locale}"${query.colorMode === "dark" ? ' data-color-mode="dark"' : ""}>
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />

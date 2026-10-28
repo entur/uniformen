@@ -184,6 +184,16 @@ window.addEventListener("uniformen:locale", (event) => {
 
 The reload is needed because the server-rendered header and your app's loaded modules both pick their language when the document loads. On the next render, send the saved choice as `params.locale` and set `<html lang>` to the same value.
 
+## Dark mode
+
+The header and footer follow the design system's dark mode. Set the same attribute that the design system's components use, on `<html>`:
+
+```html
+<html data-color-mode="dark"></html>
+```
+
+There is no parameter for dark mode, so do not add one to `params`. If the app offers a "system" choice, resolve it with `prefers-color-scheme` in the app and set the attribute to `light` or `dark`. In dark mode, `contrast: true` looks the same as the default, because the design system gives the standard and the contrast colours the same dark colours.
+
 ## Checking the result by hand
 
 The root path of the service shows the header and footer on a page, with a control for every parameter and the URL for the current settings: https://uniformen.entur.no. Use it to see what a set of parameters looks like before you add it to an app.
