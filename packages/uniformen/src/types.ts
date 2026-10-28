@@ -109,6 +109,13 @@ export type FetchUniformenParams = {
    * Use it on login, error and terms pages. Set it per page, not for the whole app.
    */
   simple?: boolean;
+
+  /**
+   * Asks for the AI agent button in the top bar. The default is `false`. The button
+   * is only shown to signed-in users who have the `ai-agent` feature flag, so
+   * setting this does not show it to everyone. It is hidden when `simple` is set.
+   */
+  aiAgent?: boolean;
 };
 
 export type UniformenLayout = {

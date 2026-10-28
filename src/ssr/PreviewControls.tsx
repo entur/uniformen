@@ -81,6 +81,7 @@ export function previewCode(
   if (query.logoutUrl) params.push(`logoutUrl: ${JSON.stringify(query.logoutUrl)}`);
   if (query.contrast === "true") params.push("contrast: true");
   if (query.simple === "true") params.push("simple: true");
+  if (query.aiAgent === "true") params.push("aiAgent: true");
 
   return [
     `import { ${fetch} } from "${module}";`,
