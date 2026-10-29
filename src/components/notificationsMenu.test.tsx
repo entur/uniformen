@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { renderComponentToString } from "../ssr/renderComponentToString";
-import type { Locale, NotificationList } from "../types";
+import type { Locale, Notifications } from "../types";
 
 // The test server always runs as dev (see test/authTestSetup), and the menu reads the
 // environment from the config, so every link points at Partner in dev.
@@ -11,15 +11,23 @@ const PERMISSION_ADMIN = "https://entur-partner.dev.entur.org/permission-admin";
 const hrefs = (html: string): string[] =>
   [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] as string);
 
-const notification = (overrides: Partial<NotificationList[number]> = {}) => ({
+const notification = (overrides: Partial<Notifications["items"][number]> = {}) => ({
   referenceId: "42",
   date: "2026-10-01T09:00:00Z",
   message: "Navn Navnesen ber om tilgang",
+  markAsReadToken: "token",
   ...overrides,
 });
 
-const render = (notifications?: NotificationList, locale: Locale = "nb-NO") =>
-  renderComponentToString(<NotificationsMenu locale={locale} notifications={notifications} />);
+// `totalCount` defaults to the number of items. Pass it when the test needs a total
+// that is larger than the list, which is what the service sends for a long list.
+const render = (items?: Notifications["items"], locale: Locale = "nb-NO", totalCount?: number) =>
+  renderComponentToString(
+    <NotificationsMenu
+      locale={locale}
+      notifications={items ? { items, totalCount: totalCount ?? items.length } : undefined}
+    />,
+  );
 
 describe("notifications menu", () => {
   test("the bell is a collapsed toggle wired to its panel, like the bar's others", async () => {
@@ -60,9 +68,9 @@ describe("notifications menu", () => {
     const html = await render([notification({ message: "Navn Navnesen ber om tilgang" })]);
     const text = html.indexOf("Navn Navnesen");
     const marker = html.lastIndexOf("ph-no-capture", text);
-    // The name must be inside the element that carries the class, not before it.
+    // The name must be inside the link that carries the class, not before it.
     expect(marker).toBeGreaterThan(-1);
-    expect(html.slice(marker, text)).not.toContain("</div>");
+    expect(html.slice(marker, text)).not.toContain("</a>");
   });
 
   test("an item with a referenceId links to that request, one without goes to the profile", async () => {
@@ -82,15 +90,21 @@ describe("notifications menu", () => {
     expect(hrefs(html)).toEqual([`${PERMISSION_ADMIN}/requests`]);
   });
 
-  test("the panel shows five items at most, and the footer counts them all", async () => {
-    const many = Array.from({ length: 8 }, (_, index) =>
+  test("the footer counts every notification, not only the ones in the panel", async () => {
+    const five = Array.from({ length: 5 }, (_, index) =>
       notification({ referenceId: String(index), message: `Varsel ${index}` }),
     );
-    const html = await render(many);
-    expect(html.match(/uniformen-notifications-menu__item"/g)).toHaveLength(5);
+    const html = await render(five, "nb-NO", 8);
+    expect(html.match(/uniformen-notifications-menu__item ph-no-capture"/g)).toHaveLength(5);
+    // Only the items the user can see carry a token, so a hidden one cannot be deleted.
+    expect(html.match(/data-uniformen-notification-token=/g)).toHaveLength(5);
     expect(html).toContain(">Se alle 8 hendelser<");
-    expect(html).toContain("Varsel 4");
-    expect(html).not.toContain("Varsel 5");
+  });
+
+  test("an item without a token has no token attribute for the click handler to find", async () => {
+    const html = await render([notification({ markAsReadToken: undefined })]);
+    expect(html).toContain("uniformen-notifications-menu__item");
+    expect(html).not.toContain("data-uniformen-notification-token");
   });
 
   test("an empty list says so, and the footer drops the count", async () => {

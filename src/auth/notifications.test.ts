@@ -25,10 +25,31 @@ beforeEach(() => notificationMock.reset());
 afterEach(() => setSystemTime());
 
 describe("NotificationServiceImpl", () => {
-  test("a user with no notifications gets an empty array, not undefined", async () => {
+  test("a user with no notifications gets an empty list, not undefined", async () => {
     notificationMock.respond = () => Response.json([]);
     const token = await signInternalToken();
-    expect(await service().getNotifications("internal", token, "empty|user")).toEqual([]);
+    expect(await service().getNotifications("internal", token, "empty|user")).toEqual({
+      items: [],
+      totalCount: 0,
+    });
+  });
+
+  test("at most five notifications come back, but totalCount counts them all", async () => {
+    const many = Array.from({ length: 8 }, (_, index) => ({ ...notification, id: 1000 + index }));
+    notificationMock.respond = () => Response.json(many);
+    const token = await signInternalToken();
+    const result = await service().getNotifications("internal", token, "many|user");
+    expect(result?.items).toHaveLength(5);
+    expect(result?.totalCount).toBe(8);
+  });
+
+  test("a notification without a message text is left out of both the list and the count", async () => {
+    notificationMock.respond = () =>
+      Response.json([notification, { ...notification, id: 1011, messages: [] }]);
+    const token = await signInternalToken();
+    const result = await service().getNotifications("internal", token, "no|message");
+    expect(result?.items).toHaveLength(1);
+    expect(result?.totalCount).toBe(1);
   });
 
   test("sends the caller's token to the API", async () => {
@@ -87,7 +108,8 @@ describe("NotificationServiceImpl", () => {
     expect(notificationMock.calls).toBe(1);
     setSystemTime(new Date(Date.now() + 11)); // move the clock past the negative TTL
     notificationMock.respond = () => Response.json([notification]);
-    expect(await notifications.getNotifications("internal", token, "ttl|user")).toHaveLength(1);
+    const result = await notifications.getNotifications("internal", token, "ttl|user");
+    expect(result?.items).toHaveLength(1);
     expect(notificationMock.calls).toBe(2);
     setSystemTime(new Date(Date.now() + 22)); // still inside the positive TTL
     await notifications.getNotifications("internal", token, "ttl|user");
