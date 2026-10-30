@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { MachineTokenProvider } from "../auth/machineToken";
 import { INTERNAL_AUDIENCE } from "../test/authTestKeys";
 import { machineTokenMock, SPORAI_SESSION_ID, sporaiMock } from "../test/authTestSetup";
 import { SporaiClient } from "./sporaiClient";
 
-const config = {
-  baseUrl: process.env["SPORAI_URL"]!,
+const tokenOptions = {
   tokenUri: process.env["AUTH0_INTERNAL_TOKEN_URI"]!,
   clientId: process.env["MNG_AUTH0_INT_CLIENT_ID"]!,
   clientSecret: process.env["MNG_AUTH0_INT_CLIENT_SECRET"]!,
@@ -13,67 +13,20 @@ const config = {
 
 const question = { sessionId: "session-1", query: "Hva er en rolle?", rateLimitKey: "user-key" };
 
-// Moves the clock forward, so tests do not have to wait for a token to expire.
-const advance = (ms: number) => setSystemTime(new Date(Date.now() + ms));
+// A new token provider for every client, so the cached machine token does not carry over.
+const newClient = (baseUrl = process.env["SPORAI_URL"]!) =>
+  new SporaiClient({ baseUrl, tokens: new MachineTokenProvider(tokenOptions) }, { timeoutMs: 200 });
 
 let client: SporaiClient;
 
 beforeEach(() => {
   machineTokenMock.reset();
   sporaiMock.reset();
-  // A new client for every test, so the cached machine token does not carry over.
-  client = new SporaiClient(config, { timeoutMs: 200 });
+  client = newClient();
 });
 
-afterEach(() => setSystemTime());
-
 describe("machine token", () => {
-  test("is fetched once for parallel calls", async () => {
-    await Promise.all([client.chat(question), client.chat(question)]);
-    expect(machineTokenMock.calls).toBe(1);
-    expect(sporaiMock.calls).toBe(2);
-  });
-
-  test("is reused until shortly before it expires", async () => {
-    await client.chat(question);
-    advance(3_000_000);
-    await client.chat(question);
-    expect(machineTokenMock.calls).toBe(1);
-
-    // The 3,600 s lifetime minus the 60 s safety margin has now passed.
-    advance(600_000);
-    await client.chat(question);
-    expect(machineTokenMock.calls).toBe(2);
-  });
-
-  test("is cached for 5 minutes when Auth0 sends no expires_in", async () => {
-    machineTokenMock.respond = () => Response.json({ access_token: "machine-token" });
-    await client.chat(question);
-    await client.chat(question);
-    expect(machineTokenMock.calls).toBe(1);
-
-    // The 300 s default lifetime minus the 60 s safety margin has now passed.
-    advance(300_000);
-    await client.chat(question);
-    expect(machineTokenMock.calls).toBe(2);
-  });
-
-  test("is requested with the client credentials and the audience", async () => {
-    let body: unknown;
-    machineTokenMock.respond = async (req) => {
-      body = await req.json();
-      return Response.json({ access_token: "machine-token", expires_in: 3600 });
-    };
-    await client.chat(question);
-    expect(body).toEqual({
-      grant_type: "client_credentials",
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-      audience: config.audience,
-    });
-  });
-
-  test("a failed fetch gives an error and is not cached", async () => {
+  test("a failed fetch gives an error and sporai is not called", async () => {
     machineTokenMock.respond = () => new Response("nope", { status: 500 });
     expect(await client.chat(question)).toEqual({ kind: "error" });
     expect(sporaiMock.calls).toBe(0);
@@ -82,19 +35,17 @@ describe("machine token", () => {
     expect(await client.chat(question)).toEqual({ kind: "ok", reply: "svar" });
   });
 
-  test("a response without access_token gives an error", async () => {
-    machineTokenMock.respond = () => Response.json({ expires_in: 3600 });
-    expect(await client.chat(question)).toEqual({ kind: "error" });
-  });
+  test.each([401, 403])(
+    "is kept after sporai answers %i, so a problem with sporai does not cost Auth0 calls",
+    async (status) => {
+      sporaiMock.respond = () => new Response("no", { status });
+      expect(await client.chat(question)).toEqual({ kind: "error" });
 
-  test("is dropped after sporai answers 401, so the next call fetches a new one", async () => {
-    sporaiMock.respond = () => new Response("no", { status: 401 });
-    expect(await client.chat(question)).toEqual({ kind: "error" });
-
-    sporaiMock.reset();
-    expect(await client.chat(question)).toEqual({ kind: "ok", reply: "svar" });
-    expect(machineTokenMock.calls).toBe(2);
-  });
+      sporaiMock.reset();
+      expect(await client.chat(question)).toEqual({ kind: "ok", reply: "svar" });
+      expect(machineTokenMock.calls).toBe(1);
+    },
+  );
 });
 
 describe("createSession", () => {
@@ -104,10 +55,7 @@ describe("createSession", () => {
 
   test("a failed request gives an error", async () => {
     // This path does not exist on the fake server, so sporai answers 404.
-    const broken = new SporaiClient(
-      { ...config, baseUrl: `${config.baseUrl}/broken` },
-      { timeoutMs: 200 },
-    );
+    const broken = newClient(`${process.env["SPORAI_URL"]}/broken`);
     expect(await broken.createSession()).toEqual({ kind: "error" });
   });
 });
@@ -225,11 +173,11 @@ describe("logging", () => {
     sporaiMock.respond = () => new Response("no", { status: 401 });
     await client.chat(question);
     machineTokenMock.respond = () => new Response("no", { status: 500 });
-    await new SporaiClient(config, { timeoutMs: 200 }).chat(question);
+    await newClient().chat(question);
 
     expect(logged.length).toBeGreaterThan(0);
     const output = logged.join("\n");
-    expect(output).not.toContain(config.clientSecret);
+    expect(output).not.toContain(tokenOptions.clientSecret);
     expect(output).not.toContain("machine-token");
   });
 });

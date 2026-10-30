@@ -6,7 +6,8 @@ import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { jwtVerify, SignJWT } from "jose";
-import { config, environment, type Environment } from "../config";
+import { machineToken } from "../auth/machineToken";
+import { environment, type Environment } from "../config";
 import { SporaiClient } from "./sporaiClient";
 
 declare module "hono" {
@@ -47,27 +48,14 @@ export type ChatAccessToken = { url: string; token: string };
 export function loadChatProxyConfig(
   env: Record<string, string | undefined> = process.env,
 ): ChatProxyConfig | undefined {
-  const names = [
-    "SPORAI_URL",
-    "AUTH0_INTERNAL_TOKEN_URI",
-    "MNG_AUTH0_INT_CLIENT_ID",
-    "MNG_AUTH0_INT_CLIENT_SECRET",
-  ] as const;
+  const names = ["SPORAI_URL", "MNG_AUTH0_INT_CLIENT_SECRET"] as const;
   const missing = names.filter((name) => !env[name]);
-  if (missing.length > 0) {
+  if (missing.length > 0 || !machineToken) {
     console.warn(`Chat is off. Missing env vars: ${missing.join(", ")}`);
     return undefined;
   }
   const clientSecret = env["MNG_AUTH0_INT_CLIENT_SECRET"]!;
-  const internal = config.tenants.find((tenant) => tenant.name === "internal")!;
-  const client = new SporaiClient({
-    baseUrl: env["SPORAI_URL"]!,
-    tokenUri: env["AUTH0_INTERNAL_TOKEN_URI"]!,
-    clientId: env["MNG_AUTH0_INT_CLIENT_ID"]!,
-    clientSecret,
-    // We ask for the first internal audience.
-    audience: [internal.audience].flat()[0]!,
-  });
+  const client = new SporaiClient({ baseUrl: env["SPORAI_URL"]!, tokens: machineToken });
   // The chat token key is made from the client secret, so no new secret is needed.
   // When the client secret changes, all chat tokens stop working.
   const key = createHmac("sha256", clientSecret).update("uniformen-chat-token").digest();

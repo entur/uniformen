@@ -1,12 +1,10 @@
+import type { MachineTokenProvider } from "../auth/machineToken";
+
 export type SporaiConfig = {
   /** The base URL of sporai, without a trailing slash. */
   baseUrl: string;
-  /** The internal Auth0 token endpoint. */
-  tokenUri: string;
-  clientId: string;
-  clientSecret: string;
-  /** The audience to ask Auth0 for. */
-  audience: string;
+  /** Gives the machine token for sporai. It never throws. */
+  tokens: Pick<MachineTokenProvider, "getToken">;
 };
 
 export type SporaiClientOptions = {
@@ -41,29 +39,16 @@ export type ChatRequest = {
   location?: string;
 };
 
-const TOKEN_TIMEOUT_MS = 5_000;
-// Auth0 gives the token a lifetime in seconds. Stop using it this long before it ends.
-const TOKEN_EXPIRY_MARGIN_MS = 60_000;
-// Lifetime to assume when Auth0 does not send a valid expires_in. Without it, every call
-// would fetch a new machine token.
-const TOKEN_DEFAULT_LIFETIME_S = 300;
 // Sporai limits the model to 1024 output tokens, so a reply this long means something
 // is wrong.
 const MAX_REPLY_CHARS = 8_000;
 
-type MachineToken = { value: string; expiresAt: number };
-
 /**
- * Calls sporai with a machine token from Auth0, and never throws. A failure comes
- * back as a result.
- *
- * The machine token is cached in memory. Parallel calls that need a new token
- * share one request, in the same way as `UserInfoServiceImpl`.
+ * Calls sporai with the machine token, and never throws. A failure comes back as a
+ * result.
  */
 export class SporaiClient {
   private readonly timeoutMs: number;
-  private token: MachineToken | undefined;
-  private inFlight: Promise<string | undefined> | undefined;
 
   constructor(
     private readonly config: SporaiConfig,
@@ -118,7 +103,7 @@ export class SporaiClient {
     init: { method: string; body?: string; headers?: Record<string, string> },
     signal?: AbortSignal,
   ): Promise<Response | SporaiError> {
-    const token = await this.getToken();
+    const token = await this.config.tokens.getToken();
     if (!token) return { kind: "error" };
 
     const timeout = AbortSignal.timeout(this.timeoutMs);
@@ -133,9 +118,8 @@ export class SporaiClient {
         },
         signal: signal ? AbortSignal.any([timeout, signal]) : timeout,
       });
-      // Sporai does not accept our token. Throw it away, so the next request gets a new one.
+      // Do not clear the token here. Uniformen also uses it for notifications.
       if (res.status === 401 || res.status === 403) {
-        this.token = undefined;
         console.error(
           `sporai rejected the machine token: HTTP ${res.status}. Check the Auth0 client.`,
         );
@@ -151,56 +135,6 @@ export class SporaiClient {
   private logFailure(status: number): SporaiError {
     console.warn(`sporai request failed: HTTP ${status}`);
     return { kind: "error" };
-  }
-
-  /** Returns a machine token, or `undefined` if Auth0 could not give one. */
-  private getToken(): Promise<string | undefined> {
-    if (this.token && this.token.expiresAt > Date.now()) {
-      return Promise.resolve(this.token.value);
-    }
-    this.inFlight ??= this.fetchToken().finally(() => {
-      this.inFlight = undefined;
-    });
-    return this.inFlight;
-  }
-
-  private async fetchToken(): Promise<string | undefined> {
-    try {
-      const res = await fetch(this.config.tokenUri, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          grant_type: "client_credentials",
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
-          audience: this.config.audience,
-        }),
-        signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
-      });
-      if (!res.ok) {
-        console.error(`machine token fetch failed: HTTP ${res.status}`);
-        return undefined;
-      }
-      const body: unknown = await res.json();
-      const accessToken = readField(body, "access_token");
-      if (typeof accessToken !== "string") {
-        console.error("machine token fetch failed: no access_token in the response");
-        return undefined;
-      }
-      const expiresIn = readField(body, "expires_in");
-      const seconds =
-        typeof expiresIn === "number" && Number.isFinite(expiresIn)
-          ? expiresIn
-          : TOKEN_DEFAULT_LIFETIME_S;
-      this.token = {
-        value: accessToken,
-        expiresAt: Date.now() + Math.max(seconds * 1000 - TOKEN_EXPIRY_MARGIN_MS, 0),
-      };
-      return this.token.value;
-    } catch (error) {
-      console.error("machine token fetch failed:", errorName(error));
-      return undefined;
-    }
   }
 }
 

@@ -27,7 +27,7 @@ let token: string;
 beforeEach(async () => {
   machineTokenMock.reset();
   sporaiMock.reset();
-  // A new app for every test, so the machine token cache does not carry over.
+  // A new app for every test.
   proxyConfig = loadChatProxyConfig()!;
   app = new OpenAPIHono();
   chatProxyRoutes(app, proxyConfig, "dev");
