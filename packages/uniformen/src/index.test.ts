@@ -235,9 +235,11 @@ describe("fetchUniformenLayout", () => {
 
     it("sends booleans as the strings the service's schema accepts", async () => {
       mockFetch(emptyLayout);
-      await fetchUniformenLayout({ params: { simple: true, sidebar: false } });
+      await fetchUniformenLayout({
+        params: { simple: true, sidebar: false, hideNotifications: true },
+      });
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        "https://uniformen.entur.no/ssr?simple=true&sidebar=false",
+        "https://uniformen.entur.no/ssr?simple=true&sidebar=false&hideNotifications=true",
         expect.anything(),
       );
     });
