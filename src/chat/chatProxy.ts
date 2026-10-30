@@ -229,7 +229,14 @@ const chatProxyRoute = createRoute({
     ),
     413: problemResponse("The request body is larger than 8 KiB."),
     415: problemResponse("The `Content-Type` header is missing or is not `application/json`."),
-    429: problemResponse("Sporai says the user has sent too many questions."),
+    429: {
+      ...problemResponse("Sporai says the user has sent too many questions."),
+      headers: z.object({
+        "Retry-After": z.string().optional().openapi({
+          description: "The number of seconds to wait before the next question, when sporai says.",
+        }),
+      }),
+    },
     500: problemResponse("An unexpected error happened in the proxy."),
     503: problemResponse("Sporai could not answer."),
   },
@@ -261,6 +268,8 @@ export function chatProxyRoutes(
       origin: (origin) => allowedOrigin(origin, env),
       allowMethods: ["POST"],
       allowHeaders: ["Authorization", "Content-Type"],
+      // The browser only lets the page read these response headers.
+      exposeHeaders: ["Retry-After"],
       maxAge: 600,
     }),
     // Hono catches an error where it is thrown, so a try/catch around `next()` would
@@ -336,7 +345,10 @@ export function chatProxyRoutes(
         signal,
       );
       if (result.kind === "sessionGone") return problem(c, 404, "Not Found");
-      if (result.kind === "rateLimited") return problem(c, 429, "Too Many Requests");
+      if (result.kind === "rateLimited") {
+        if (result.retryAfterSeconds) c.header("Retry-After", String(result.retryAfterSeconds));
+        return problem(c, 429, "Too Many Requests");
+      }
       if (result.kind === "error") return problem(c, 503, "Service Unavailable");
       return c.json(
         { reply: result.reply, sessionId: signSessionId(sessionKey, user, sessionId) },

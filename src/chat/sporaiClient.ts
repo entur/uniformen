@@ -18,7 +18,11 @@ export type SporaiClientOptions = {
 export type SporaiError = { kind: "error" };
 
 /** Sporai answered 429, because the user sent too many questions. */
-export type SporaiRateLimited = { kind: "rateLimited" };
+export type SporaiRateLimited = {
+  kind: "rateLimited";
+  /** The seconds to wait, from the `Retry-After` header. Missing when the header is missing or not usable. */
+  retryAfterSeconds?: number;
+};
 
 export type SessionResult = { kind: "ok"; sessionId: string } | SporaiRateLimited | SporaiError;
 /** `sessionGone` means sporai does not know the session, for example because it expired. */
@@ -89,7 +93,7 @@ export class SporaiClient {
     );
     if (!(res instanceof Response)) return res;
     if (res.status === 404) return { kind: "sessionGone" };
-    if (res.status === 429) return { kind: "rateLimited" };
+    if (res.status === 429) return { kind: "rateLimited", retryAfterSeconds: readRetryAfter(res) };
     if (!res.ok) return this.logFailure(res.status);
     let reply: string;
     try {
@@ -203,6 +207,17 @@ export class SporaiClient {
 /** Returns only the name of an error, so a log line cannot contain a secret. */
 function errorName(error: unknown): string {
   return error instanceof Error ? error.name : "unknown error";
+}
+
+/**
+ * Returns the `Retry-After` header of `res` as a number of seconds. Returns `undefined`
+ * when the header is missing or is not a positive whole number.
+ */
+function readRetryAfter(res: Response): number | undefined {
+  const value = res.headers.get("Retry-After");
+  if (value === null || !/^\d+$/.test(value)) return undefined;
+  const seconds = Number(value);
+  return Number.isSafeInteger(seconds) && seconds > 0 ? seconds : undefined;
 }
 
 /** Reads a property from a parsed JSON value. Returns `undefined` if there is none. */

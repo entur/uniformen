@@ -289,6 +289,27 @@ test("answers 429 when sporai answers 429 to a new session or to a question", as
   expect(await created.json()).toEqual({ title: "Too Many Requests", status: 429 });
 });
 
+test("a 429 from sporai gives Retry-After on, and lets the browser read it", async () => {
+  sporaiMock.respond = (req) =>
+    new URL(req.url).pathname === "/api/chat/sessions"
+      ? Response.json({ sessionId: SPORAI_SESSION_ID })
+      : new Response("slow down", { status: 429, headers: { "Retry-After": "42" } });
+  const res = await ask({ query: "Hei" });
+  expect(res.status).toBe(429);
+  expect(res.headers.get("Retry-After")).toBe("42");
+  expect(res.headers.get("Access-Control-Expose-Headers")).toBe("Retry-After");
+});
+
+test("a 429 from sporai without Retry-After has no Retry-After", async () => {
+  sporaiMock.respond = (req) =>
+    new URL(req.url).pathname === "/api/chat/sessions"
+      ? Response.json({ sessionId: SPORAI_SESSION_ID })
+      : new Response("slow down", { status: 429 });
+  const res = await ask({ query: "Hei" });
+  expect(res.status).toBe(429);
+  expect(res.headers.get("Retry-After")).toBeNull();
+});
+
 describe("CORS", () => {
   test("allows a preflight from an Entur origin", async () => {
     const res = await app.request("/chat-proxy", {

@@ -146,6 +146,24 @@ describe("chat", () => {
     expect(await client.chat(question)).toEqual({ kind: "rateLimited" });
   });
 
+  test("sporai 429 gives the seconds to wait from Retry-After", async () => {
+    sporaiMock.respond = () =>
+      new Response("slow down", { status: 429, headers: { "Retry-After": "42" } });
+    expect(await client.chat(question)).toEqual({ kind: "rateLimited", retryAfterSeconds: 42 });
+  });
+
+  test.each(["0", "-5", "soon", "1.5", ""])(
+    "sporai 429 with Retry-After %j gives no seconds",
+    async (retryAfter) => {
+      sporaiMock.respond = () =>
+        new Response("slow down", { status: 429, headers: { "Retry-After": retryAfter } });
+      expect(await client.chat(question)).toStrictEqual({
+        kind: "rateLimited",
+        retryAfterSeconds: undefined,
+      });
+    },
+  );
+
   test.each([400, 403, 500])("sporai %i gives an error", async (status) => {
     sporaiMock.respond = () => new Response("no", { status });
     expect(await client.chat(question)).toEqual({ kind: "error" });

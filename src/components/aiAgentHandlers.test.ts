@@ -283,6 +283,7 @@ function install({
       "data-uniformen-chat-error-text": "Feil",
       "data-uniformen-chat-error-text-refresh": "Last inn på nytt",
       "data-uniformen-chat-error-text-rate-limit": "For raskt",
+      "data-uniformen-chat-error-text-rate-limit-wait": "For raskt, vent {seconds} sek.",
       ...chatAttributes,
     },
     [
@@ -576,6 +577,29 @@ describe("aiAgentHandlers", () => {
     await replied();
     expect(page.messages()).toEqual(["Hei!", "Hei", "For raskt"]);
   });
+
+  test("shows the seconds to wait when the rate limit reply has them", async () => {
+    const page = install({
+      respond: () => new Response(null, { status: 429, headers: { "Retry-After": "42" } }),
+    });
+    page.type("Hei");
+    page.send.click();
+    await replied();
+    expect(page.messages()).toEqual(["Hei!", "Hei", "For raskt, vent 42 sek."]);
+  });
+
+  test.each(["0", "-5", "soon", "1.5", ""])(
+    "shows the rate limit text without seconds when Retry-After is %j",
+    async (retryAfter) => {
+      const page = install({
+        respond: () => new Response(null, { status: 429, headers: { "Retry-After": retryAfter } }),
+      });
+      page.type("Hei");
+      page.send.click();
+      await replied();
+      expect(page.messages()).toEqual(["Hei!", "Hei", "For raskt"]);
+    },
+  );
 
   test("an expired session shows a divider and asks the question again", async () => {
     const replies = [200, 404, 200];

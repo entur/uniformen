@@ -91,6 +91,9 @@ export default function aiAgentHandlers() {
   const errorText = drawer.getAttribute("data-uniformen-chat-error-text") ?? "";
   const errorTextRefresh = drawer.getAttribute("data-uniformen-chat-error-text-refresh") ?? "";
   const errorTextRateLimit = drawer.getAttribute("data-uniformen-chat-error-text-rate-limit") ?? "";
+  // Has `{seconds}` where the number of seconds to wait goes.
+  const errorTextRateLimitWait =
+    drawer.getAttribute("data-uniformen-chat-error-text-rate-limit-wait") ?? "";
 
   /**
    * Adds the question in the text field to the chat, empties the field and adds the
@@ -251,7 +254,7 @@ export default function aiAgentHandlers() {
         return null;
       }
       if (res.status === 401) return errorTextRefresh;
-      if (res.status === 429) return errorTextRateLimit;
+      if (res.status === 429) return rateLimitText(res.headers.get("Retry-After"));
       if (!res.ok) return errorText;
       const body: { reply: string; sessionId: string } = await res.json();
       if (count === questionCount) sessionId = body.sessionId;
@@ -259,6 +262,16 @@ export default function aiAgentHandlers() {
     } catch {
       return errorText;
     }
+  }
+
+  /**
+   * Returns the rate limit text with the seconds in it. Returns the text without
+   * seconds when `retryAfter` is not a positive whole number.
+   */
+  function rateLimitText(retryAfter: string | null) {
+    const seconds = retryAfter !== null && /^\d+$/.test(retryAfter) ? Number(retryAfter) : 0;
+    if (seconds <= 0 || !errorTextRateLimitWait) return errorTextRateLimit;
+    return errorTextRateLimitWait.replace("{seconds}", String(seconds));
   }
 
   /** Sends the text of the example question that the user clicked. */
