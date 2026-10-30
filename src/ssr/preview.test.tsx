@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
-import { previewChatAccessToken, previewIsEnturUser, previewNotifications, previewUser } from "./preview";
+import {
+  previewChatAccessToken,
+  previewIsEnturUser,
+  previewNotifications,
+  previewUser,
+} from "./preview";
 import { PreviewControls, previewCode } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
@@ -295,6 +300,9 @@ describe("preview page aiAgent", () => {
     const groups = html.split(/class="preview-controls__group preview-controls__group--/);
     const group = groups.find((part) => part.includes('name="aiAgent"'));
     expect(group?.match(/^[a-z]+/)?.[0]).toBe("right");
+  });
+});
+
 describe("preview page dark mode", () => {
   test("colorMode=dark sets the attribute on the page, the way an app does", async () => {
     const { html } = await preview("?colorMode=dark");

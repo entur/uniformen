@@ -835,6 +835,9 @@ describe("/ssr aiAgent query param", () => {
     expect(withAgent.scripts).toBe(without.scripts);
     expect(withAgent.csp["style-src"]).toEqual(without.csp["style-src"]);
     expect(withAgent.csp["script-src"]).toEqual(without.csp["script-src"]);
+  });
+});
+
 describe("/ssr dark mode", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
 

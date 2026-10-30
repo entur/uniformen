@@ -69,20 +69,6 @@ export const notificationMock = {
 };
 
 /**
- * A mock of the Auth0 endpoint that hands out machine tokens. `expiresIn` is in
- * seconds, the same as Auth0's `expires_in`.
- */
-export const machineTokenMock = {
-  calls: 0,
-  respond: (_req: Request): Response | Promise<Response> =>
-    Response.json({ access_token: "machine-token", expires_in: 3600 }),
-  reset(): void {
-    this.calls = 0;
-    this.respond = (_req) => Response.json({ access_token: "machine-token", expires_in: 3600 });
-  },
-};
-
-/**
  * A mock of deleting one notification. `ids` holds the ids of every delete the test
  * server was asked for, in order.
  */
@@ -129,9 +115,6 @@ const server = Bun.serve({
     if (pathname === "/sporai/api/chat" && req.method === "POST") {
       sporaiMock.calls++;
       return sporaiMock.respond(req);
-    if (pathname === "/oauth/token") {
-      machineTokenMock.calls++;
-      return machineTokenMock.respond(req);
     }
     const deletePath = /^\/notification-center\/v1\/messages\/(.+)$/.exec(pathname);
     if (deletePath && req.method === "DELETE") {
@@ -162,8 +145,3 @@ process.env["AUTH0_PARTNER_JWKS_URI"] =
   `http://localhost:${server.port}/partner/.well-known/jwks.json`;
 process.env["AUTH0_PARTNER_USERINFO_URI"] = `http://localhost:${server.port}/partner/userinfo`;
 process.env["NOTIFICATION_API_BASE_URI"] = `http://localhost:${server.port}/notification-center`;
-// The machine user. These are set here, not read from `.env`, so the tests do not
-// need real credentials and never reach the real Auth0.
-process.env["AUTH0_INTERNAL_TOKEN_URI"] = `http://localhost:${server.port}/oauth/token`;
-process.env["MNG_AUTH0_INT_CLIENT_ID"] = "test-client-id";
-process.env["MNG_AUTH0_INT_CLIENT_SECRET"] = "test-client-secret";
