@@ -9,11 +9,16 @@ import {
   chatProxyRoutes,
   issueChatToken,
   loadChatProxyConfig,
+  deriveRateLimitKey,
   signSessionId,
 } from "./chatProxy";
 import { SporaiClient } from "./sporaiClient";
 
 const ORIGIN = "https://partner.dev.entur.org";
+// `USER` is the user in the default `token`, and `SUB` is its id. `OTHER_USER` is someone else.
+const SUB = "user-1";
+const USER = `internal|${SUB}`;
+const OTHER_USER = "internal|user-2";
 
 let proxyConfig: ChatProxyConfig;
 let app: OpenAPIHono;
@@ -26,7 +31,7 @@ beforeEach(async () => {
   proxyConfig = loadChatProxyConfig()!;
   app = new OpenAPIHono();
   chatProxyRoutes(app, proxyConfig, "dev");
-  token = (await issueChatToken(proxyConfig, "internal|user-1"))!.token;
+  token = (await issueChatToken(proxyConfig, USER))!.token;
 });
 
 afterEach(() => setSystemTime());
@@ -56,9 +61,7 @@ describe("POST /chat-proxy", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = await res.json();
     expect(body.reply).toBe("svar");
-    expect(body.sessionId).toBe(
-      signSessionId(proxyConfig.sessionKey, "internal|user-1", SPORAI_SESSION_ID),
-    );
+    expect(body.sessionId).toBe(signSessionId(proxyConfig.sessionKey, USER, SPORAI_SESSION_ID));
     expect(sent).toEqual({
       sessionId: SPORAI_SESSION_ID,
       query: "Hva er en rolle?",
@@ -73,10 +76,30 @@ describe("POST /chat-proxy", () => {
       return new Response("svar");
     };
     const sessionId = crypto.randomUUID();
-    const signed = signSessionId(proxyConfig.sessionKey, "internal|user-1", sessionId);
+    const signed = signSessionId(proxyConfig.sessionKey, USER, sessionId);
     const res = await ask({ query: "Og så?", sessionId: signed });
     expect(await res.json()).toEqual({ reply: "svar", sessionId: signed });
     expect(sent).toEqual({ sessionId, query: "Og så?" });
+  });
+
+  test("sends the rate limit key of the user, without the user id in it", async () => {
+    const seen: { rateLimitKey?: string | null } = {};
+    sporaiMock.respond = (req) => {
+      seen.rateLimitKey = req.headers.get("rate-limit-key");
+      return new Response("svar");
+    };
+    await ask({ query: "Hei" });
+    expect(seen.rateLimitKey).toBe(deriveRateLimitKey(proxyConfig.rateLimitSecret, USER));
+    expect(seen.rateLimitKey).toMatch(/^[0-9a-f]{64}$/);
+    // The regex alone would not catch a user id that only has hex characters.
+    expect(seen.rateLimitKey).not.toContain(SUB);
+  });
+
+  test("makes the same rate limit key on every pod, and a different one for each user", () => {
+    const otherPod = loadChatProxyConfig()!;
+    const key = deriveRateLimitKey(proxyConfig.rateLimitSecret, USER);
+    expect(deriveRateLimitKey(otherPod.rateLimitSecret, USER)).toBe(key);
+    expect(deriveRateLimitKey(proxyConfig.rateLimitSecret, OTHER_USER)).not.toBe(key);
   });
 
   test("leaves out a location that sporai would reject", async () => {
@@ -92,7 +115,7 @@ describe("POST /chat-proxy", () => {
 
   test("returns 404 when sporai does not know the session", async () => {
     sporaiMock.respond = () => new Response(null, { status: 404 });
-    const sessionId = signSessionId(proxyConfig.sessionKey, "internal|user-1", crypto.randomUUID());
+    const sessionId = signSessionId(proxyConfig.sessionKey, USER, crypto.randomUUID());
     const res = await ask({ query: "Hei", sessionId });
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toBe("application/problem+json");
@@ -101,7 +124,7 @@ describe("POST /chat-proxy", () => {
   });
 
   test("returns 404 for another user's session and does not call sporai", async () => {
-    const sessionOfA = signSessionId(proxyConfig.sessionKey, "internal|user-a", SPORAI_SESSION_ID);
+    const sessionOfA = signSessionId(proxyConfig.sessionKey, OTHER_USER, SPORAI_SESSION_ID);
     const res = await ask({ query: "Hva spurte A om?", sessionId: sessionOfA });
     expect(res.status).toBe(404);
     expect(sporaiMock.calls).toBe(0);
@@ -110,13 +133,10 @@ describe("POST /chat-proxy", () => {
   test.each([
     ["a bare sporai session id", SPORAI_SESSION_ID],
     ["a changed signature", `${SPORAI_SESSION_ID}.AAAA`],
-    [
-      "a session id from another key",
-      signSessionId(new Uint8Array(32), "internal|user-1", SPORAI_SESSION_ID),
-    ],
+    ["a session id from another key", signSessionId(new Uint8Array(32), USER, SPORAI_SESSION_ID)],
     [
       "a changed session id with the old signature",
-      `${crypto.randomUUID()}.${signSessionId(loadChatProxyConfig()!.sessionKey, "internal|user-1", SPORAI_SESSION_ID).split(".")[1]}`,
+      `${crypto.randomUUID()}.${signSessionId(loadChatProxyConfig()!.sessionKey, USER, SPORAI_SESSION_ID).split(".")[1]}`,
     ],
   ])("returns 404 for %s and does not call sporai", async (_name, sessionId) => {
     const res = await ask({ query: "Hei", sessionId });
@@ -230,16 +250,13 @@ describe("chat token", () => {
 
   test("from another key is rejected", async () => {
     const other = { ...proxyConfig, key: new Uint8Array(32) };
-    const res = await ask(
-      { query: "Hei" },
-      (await issueChatToken(other, "internal|user-1"))!.token,
-    );
+    const res = await ask({ query: "Hei" }, (await issueChatToken(other, USER))!.token);
     expect(res.status).toBe(401);
   });
 
   test("comes with the URL for the environment", async () => {
-    expect((await issueChatToken(proxyConfig, "internal|user-1"))?.url).toMatch(/\/chat-proxy$/);
-    expect(await issueChatToken(undefined, "internal|user-1")).toBeUndefined();
+    expect((await issueChatToken(proxyConfig, USER))?.url).toMatch(/\/chat-proxy$/);
+    expect(await issueChatToken(undefined, USER)).toBeUndefined();
   });
 });
 

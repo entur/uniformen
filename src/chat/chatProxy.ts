@@ -29,7 +29,12 @@ const CHAT_TOKEN_LIFETIME = "8h";
 // The same pattern as sporai's. Sporai rejects any other `location` with a 400.
 const LOCATION_PATTERN = /^[a-zA-Z0-9/_-]{0,100}$/;
 
-export type ChatProxyConfig = { client: SporaiClient; key: Uint8Array; sessionKey: Uint8Array };
+export type ChatProxyConfig = {
+  client: SporaiClient;
+  key: Uint8Array;
+  sessionKey: Uint8Array;
+  rateLimitSecret: Uint8Array;
+};
 
 /** The chat proxy URL that the browser sends questions to, and the token it sends with them. */
 export type ChatAccessToken = { url: string; token: string };
@@ -69,7 +74,21 @@ export function loadChatProxyConfig(
   // A separate key for session ids, so a signed session id can never pass as a chat
   // token.
   const sessionKey = createHmac("sha256", clientSecret).update("uniformen-chat-session").digest();
-  return { client, key, sessionKey };
+  // Every pod has the same client secret, so every pod makes the same rate limit key
+  // for the same user.
+  const rateLimitSecret = createHmac("sha256", clientSecret)
+    .update("uniformen-sporai-rate-limit")
+    .digest();
+  return { client, key, sessionKey, rateLimitSecret };
+}
+
+/**
+ * Returns the `Rate-Limit-Key` header value that sporai gets for `user`. Sporai counts
+ * the questions of each value, so it must be the same for one user and different for
+ * each user. It does not show who the user is.
+ */
+export function deriveRateLimitKey(rateLimitSecret: Uint8Array, user: string): string {
+  return createHmac("sha256", rateLimitSecret).update(user).digest("hex");
 }
 
 /** The chat settings for this process, or `undefined` when chat is off. */
@@ -226,7 +245,7 @@ export function chatProxyRoutes(
   env: Environment,
 ): void {
   if (!proxyConfig) return;
-  const { client, key, sessionKey } = proxyConfig;
+  const { client, key, sessionKey, rateLimitSecret } = proxyConfig;
 
   server.openAPIRegistry.registerComponent("securitySchemes", "ChatToken", {
     type: "http",
@@ -309,6 +328,7 @@ export function chatProxyRoutes(
         {
           sessionId,
           query,
+          rateLimitKey: deriveRateLimitKey(rateLimitSecret, user),
           // Leave out a location that sporai would reject, so the question still gets a reply.
           location:
             location !== undefined && LOCATION_PATTERN.test(location) ? location : undefined,

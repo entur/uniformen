@@ -31,6 +31,8 @@ export type ChatResult =
 export type ChatRequest = {
   sessionId: string;
   query: string;
+  /** Sent as the `Rate-Limit-Key` header, not in the body. Sporai limits each value. */
+  rateLimitKey: string;
   /** The page the user is on. Sporai only accepts path characters. */
   location?: string;
 };
@@ -79,9 +81,10 @@ export class SporaiClient {
   }
 
   async chat(question: ChatRequest, signal?: AbortSignal): Promise<ChatResult> {
+    const { rateLimitKey, ...body } = question;
     const res = await this.request(
       "/api/chat",
-      { method: "POST", body: JSON.stringify(question) },
+      { method: "POST", body: JSON.stringify(body), headers: { "Rate-Limit-Key": rateLimitKey } },
       signal,
     );
     if (!(res instanceof Response)) return res;
@@ -108,7 +111,7 @@ export class SporaiClient {
    */
   private async request(
     path: string,
-    init: { method: string; body?: string },
+    init: { method: string; body?: string; headers?: Record<string, string> },
     signal?: AbortSignal,
   ): Promise<Response | SporaiError> {
     const token = await this.getToken();
@@ -122,6 +125,7 @@ export class SporaiClient {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json, text/plain",
+          ...init.headers,
         },
         signal: signal ? AbortSignal.any([timeout, signal]) : timeout,
       });

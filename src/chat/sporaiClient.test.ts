@@ -11,7 +11,7 @@ const config = {
   audience: INTERNAL_AUDIENCE,
 };
 
-const question = { sessionId: "session-1", query: "Hva er en rolle?" };
+const question = { sessionId: "session-1", query: "Hva er en rolle?", rateLimitKey: "user-key" };
 
 // Moves the clock forward, so tests do not have to wait for a token to expire.
 const advance = (ms: number) => setSystemTime(new Date(Date.now() + ms));
@@ -117,16 +117,23 @@ describe("chat", () => {
     expect(await client.chat(question)).toEqual({ kind: "ok", reply: "svar" });
   });
 
-  test("sends the machine token and the question as JSON", async () => {
-    const seen: { authorization?: string | null; body?: unknown } = {};
+  test("sends the machine token, the rate limit key header and the question as JSON", async () => {
+    const seen: { authorization?: string | null; rateLimitKey?: string | null; body?: unknown } =
+      {};
     sporaiMock.respond = async (req) => {
       seen.authorization = req.headers.get("authorization");
+      seen.rateLimitKey = req.headers.get("rate-limit-key");
       seen.body = await req.json();
       return new Response("svar");
     };
     await client.chat({ ...question, location: "/turnover/point-of-sales" });
     expect(seen.authorization).toBe("Bearer machine-token");
-    expect(seen.body).toEqual({ ...question, location: "/turnover/point-of-sales" });
+    expect(seen.rateLimitKey).toBe("user-key");
+    expect(seen.body).toEqual({
+      sessionId: "session-1",
+      query: "Hva er en rolle?",
+      location: "/turnover/point-of-sales",
+    });
   });
 
   test("sporai 404 means the session is gone", async () => {
