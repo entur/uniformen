@@ -94,9 +94,6 @@ export function deriveRateLimitKey(rateLimitSecret: Uint8Array, user: string): s
 /** The chat settings for this process, or `undefined` when chat is off. */
 export const chatProxyConfig = loadChatProxyConfig();
 
-/** The origin of the chat proxy, or `undefined` when chat is off. */
-export const chatProxyOrigin = chatProxyConfig && new URL(CHAT_PROXY_URLS[environment]).origin;
-
 /**
  * Returns a chat token for a signed-in user and the URL the browser sends questions
  * to, or `undefined` when chat is off. `user` must identify a verified user, for

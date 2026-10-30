@@ -764,9 +764,8 @@ describe("/ssr aiAgent query param", () => {
     expect(getFlag).not.toHaveBeenCalled();
   });
 
-  test("without chat settings there is no button, no chat token, no connect-src and no PostHog call", async () => {
+  test("without chat settings there is no button, no chat token and no PostHog call", async () => {
     chat.config = undefined;
-    chat.origin = undefined;
     const getFlag = fakePostHog(async () => ({ enabled: true }));
     const token = await signInternalToken({ sub: "auth0|chat-off" });
     const res = await app.request("/ssr?aiAgent=true", { headers: bearer(token) });
@@ -775,7 +774,6 @@ describe("/ssr aiAgent query param", () => {
     expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
     expect(body.headerHtml).not.toContain("uniformen-chat-drawer");
     expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
-    expect(body.csp["connect-src"]).toBeUndefined();
     expect(getFlag).not.toHaveBeenCalled();
   });
 
@@ -801,24 +799,6 @@ describe("/ssr aiAgent query param", () => {
   test("a signed-in user without aiAgent gets no chat token", async () => {
     const body = await signedIn("auth0|chat-no-agent");
     expect(body.headerHtml).not.toContain("data-uniformen-chat-token=");
-  });
-
-  test("connect-src is the same for anonymous users and users without the flag when the app asks for the AI agent", async () => {
-    const isOn = spyOn(aiAgentFlag, "isOn").mockResolvedValue(false);
-    const anonymous = await (await ssr("?aiAgent=true")).json();
-    const flagOff = await signedIn("auth0|csp-no-flag", "?aiAgent=true");
-    const withParam = await (await ssr("?app=bedrift&aiAgent=true")).json();
-    for (const body of [anonymous, flagOff, withParam]) {
-      expect(body.csp["connect-src"]).toEqual(["https://uniformen.dev.entur.no"]);
-    }
-    isOn.mockRestore();
-  });
-
-  test("an app that does not ask for the AI agent gets no connect-src", async () => {
-    for (const query of ["", "?app=bedrift", "?app=bedrift&aiAgent=false"]) {
-      const body = await (await ssr(query)).json();
-      expect(body.csp["connect-src"]).toBeUndefined();
-    }
   });
 
   test("other apps get no AI agent without aiAgent and do not check the flag", async () => {

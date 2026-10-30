@@ -1,5 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
-import { chatProxyConfig, chatProxyOrigin, issueChatToken } from "../chat/chatProxy";
+import { chatProxyConfig, issueChatToken } from "../chat/chatProxy";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
 import { optionalAuth } from "../auth/optionalAuth";
 import { type UserInfo, userInfoService } from "../auth/userInfo";
@@ -35,7 +35,7 @@ const FLAG_CACHE_MAX_ENTRIES = 5000;
  * The chat settings that `/ssr` uses. Only tests replace them, to simulate that
  * chat is off.
  */
-export const chat = { config: chatProxyConfig, origin: chatProxyOrigin };
+export const chat = { config: chatProxyConfig };
 
 export const aiAgentFlag = {
   /** Only changed by tests. */
@@ -235,15 +235,9 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         csp: {
           "style-src": [uniformenCssHash],
           "script-src": [uniformenHeadScriptHash, uniformenScriptsHash],
-          // The chat drawer sends questions to the chat proxy from the browser. This is
-          // sent to every user of an app that asks for the AI agent, so the CSP does not
-          // depend on the user. A `connect-src` replaces `default-src` for `fetch`, so
-          // a missing one for some users would break the app's own requests only for
-          // the other users.
-          ...(aiAgentRequested && chat.origin && { "connect-src": [chat.origin] }),
-          // Clicking a notification sends a request back to uniformen. `'self'` is
-          // the embedding page's own origin, which most pages need anyway, and it
-          // costs nothing to repeat for a page that already allows it.
+          // Clicking a notification or sending a chat question both send a request back
+          // to uniformen. `'self'` is the embedding page's own origin, which most pages
+          // need anyway, and it costs nothing to repeat for a page that already allows it.
           "connect-src": ["'self'", uniformenOrigin],
         },
       },
