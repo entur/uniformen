@@ -545,7 +545,7 @@ const previewQuerySchema = uniformenQuerySchema.extend({
   // Whether to render the bar for an Entur user. In `/ssr` this comes from the token.
   // The preview page has no token, so it is a parameter here.
   debugEnturUser: z.enum(["true", "false"]).optional(),
-  debugNotifications: z.enum(["none", "some", "all"]).optional(),
+  debugNotifications: z.enum(["none", "some", "max"]).optional(),
   // The value for `data-color-mode` on the page's `<html>`. In an app, the app sets
   // this attribute, so it is not a parameter of `/ssr`.
   colorMode: z.enum(["light", "dark"]).optional(),

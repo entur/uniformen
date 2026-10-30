@@ -226,6 +226,35 @@ describe("preview page simple", () => {
   });
 });
 
+describe("preview page hideNotifications", () => {
+  test("the signed-in preview loses the button, and keeps the rest of the bar", async () => {
+    const { html } = await preview("?hideNotifications=true&debugUser=Navn+Navnesen&app=partner");
+    // Look for the button's label, not the attribute name. The stylesheet and the
+    // handler mention the attribute on every page.
+    expect(html).not.toContain('aria-label="Varsler"');
+    expect(html).toContain('aria-label="Velg applikasjon"');
+  });
+
+  test("without it the button is there", async () => {
+    const { html } = await preview("?debugUser=Navn+Navnesen");
+    expect(html).toContain('aria-label="Varsler"');
+  });
+
+  test("the copyable link carries it", async () => {
+    const { html } = await preview("?hideNotifications=true");
+    expect(html).toContain(">/?hideNotifications=true&amp;locale=nb-NO<");
+  });
+
+  test("the control is also in production, because production reads the parameter", async () => {
+    const query = { locale: "nb-NO", hideNotifications: "true" } as const;
+    const prod = await renderComponentToString(
+      <PreviewControls query={query} environment="production" />,
+    );
+    expect(prod).toContain('name="hideNotifications" value="true" checked');
+    expect(prod).toContain(">/?hideNotifications=true&amp;locale=nb-NO<");
+  });
+});
+
 describe("preview page contrast", () => {
   test("the page behind the header goes dark with the bar", async () => {
     const { html } = await preview("?contrast=true");
@@ -500,6 +529,12 @@ describe("preview page code example", () => {
     expect(code).toContain('import { fetchUniformenComponents } from "@entur/uniformen/react";');
     expect(code).toContain("const { HeadAssets, Header, Footer, Scripts, csp } = await");
     expect(code).toContain('environment: "staging"');
+  });
+
+  test("hideNotifications reaches the snippet, so it renders the bar on the page", () => {
+    const code = previewCode({ locale: "nb-NO", hideNotifications: "true" }, "layout", "dev");
+    expect(code).toContain("hideNotifications: true,");
+    expect(previewCode({ locale: "nb-NO" }, "layout", "dev")).not.toContain("hideNotifications");
   });
 
   test("production is left out, because it is the package's default", () => {
