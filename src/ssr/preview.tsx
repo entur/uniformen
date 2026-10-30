@@ -661,7 +661,8 @@ export function previewRoutes(server: OpenAPIHono): void {
     // With `?sidebar=true`, also render the example sidebar, so the collapse button
     // has something to collapse.
     const sidebar = navProps.sidebar ? await renderComponentToString(<PreviewSidebar />) : "";
-    const notifications = user && navProps.simple ? undefined : await previewNotifications(query);
+    const notifications =
+      navProps.simple || navProps.hideNotifications ? undefined : await previewNotifications(query);
 
     // The locale codes are valid BCP 47 language tags.
     return ctx.html(`

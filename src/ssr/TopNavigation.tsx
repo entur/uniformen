@@ -101,7 +101,9 @@ export function TopNavigation({
           )}
           {user && (
             <>
-              {!simple && <NotificationsMenu locale={locale} notifications={notifications} />}
+              {!simple && notifications !== undefined && (
+                <NotificationsMenu locale={locale} notifications={notifications} />
+              )}
               <UserMenu
                 user={user}
                 simple={simple}

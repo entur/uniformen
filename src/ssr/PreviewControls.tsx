@@ -204,8 +204,24 @@ export function PreviewControls({
             {environment === "production" ? null : (
               <>
                 <Field
+                  label="notifications"
+                  hint="Skjul varsler i Uniformen - på automatisk om bruker er logget inn."
+                >
+                  <div class="preview-controls__row">
+                    <label class="preview-controls__check">
+                      <input
+                        type="checkbox"
+                        name="notifications"
+                        value="false"
+                        checked={query.notifications === "false"}
+                      />
+                      skjul varsler
+                    </label>
+                  </div>
+                </Field>
+                <Field
                   label="debugNotifications"
-                  hint="Bare i forhåndsvisningen — leses inn om bruker er logget inn."
+                  hint="Bare i forhåndsvisningen — varier antall varsler om varsler-menyen vises."
                 >
                   <div class="preview-controls__row">
                     {["none", "some", "all"].map((notificationOption) => (
