@@ -115,7 +115,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     const [info, notifications] = auth
       ? await Promise.all([
           userInfoService.getUserInfo(auth.tenant, auth.token, auth.sub),
-          navProps.simple
+          navProps.simple || navProps.hideNotifications
             ? Promise.resolve(undefined)
             : notificationService.getNotifications(auth.tenant, auth.token, auth.sub),
         ])

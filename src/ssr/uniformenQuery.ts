@@ -52,6 +52,9 @@ export const uniformenQuerySchema = z
         z.array(z.enum(LOCALES)).nonempty(),
       )
       .optional(),
+    // Notifications are shown by default. An app that already has its own
+    // notifications can turn them off here, so the page does not show two lists.
+    hideNotifications: z.enum(["true", "false"]).optional(),
   })
   // These checks use two fields, so they cannot be on the field itself. A repeated
   // language would be listed twice. A list without `locale` would have no option
@@ -85,6 +88,7 @@ export function topNavigationProps({
   availableLocales,
   loginUrl,
   logoutUrl,
+  hideNotifications,
 }: UniformenQuery) {
   const simpleMode = simple === "true";
   return {
@@ -99,5 +103,6 @@ export function topNavigationProps({
     availableLocales,
     loginUrl,
     logoutUrl,
+    hideNotifications: hideNotifications === "true",
   };
 }

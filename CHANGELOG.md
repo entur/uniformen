@@ -8,6 +8,15 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-10-30
+
+### Added
+
+- `hideNotifications=true` renders the bar without the notifications button, and the
+  service does not look up the user's notifications. Use it in an app that shows its
+  own notifications, so the page does not have two lists.
+- The preview page has a `hideNotifications` control.
+
 ## 2026-10-28
 
 ### Added

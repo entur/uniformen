@@ -613,6 +613,56 @@ describe("/ssr simple query param", () => {
   });
 });
 
+describe("/ssr hideNotifications query param", () => {
+  test("the button is gone, and the service never asks for the list", async () => {
+    const body = await signedIn("auth0|hide-notifications", "?hideNotifications=true");
+    expect(body.headerHtml).not.toContain("data-uniformen-notifications-menu-toggle");
+    expect(body.headerHtml).not.toContain('aria-label="Varsler"');
+    expect(notificationMock.calls).toBe(0);
+  });
+
+  test("the rest of the bar stays, so it is not simple mode by another name", async () => {
+    const body = await signedIn(
+      "auth0|hide-notifications-rest",
+      "?hideNotifications=true&app=partner",
+    );
+    expect(body.headerHtml).toContain('aria-label="Velg applikasjon"');
+    expect(body.headerHtml).toContain("data-uniformen-user-menu-toggle");
+    expect(body.headerHtml).toContain("Mine tilganger");
+  });
+
+  test("hideNotifications=false and no param keep the button and the lookup", async () => {
+    for (const [index, query] of ["", "?hideNotifications=false"].entries()) {
+      notificationMock.reset();
+      const body = await signedIn(`auth0|show-notifications-${index}`, query);
+      expect(body.headerHtml).toContain("data-uniformen-notifications-menu-toggle");
+      expect(notificationMock.calls).toBe(1);
+    }
+  });
+
+  test("a lookup that fails still renders the button, so a hidden one means the param", async () => {
+    notificationMock.respond = () => new Response("boom", { status: 500 });
+    const body = await signedIn("auth0|notifications-error");
+    expect(body.headerHtml).toContain("data-uniformen-notifications-menu-toggle");
+    expect(body.headerHtml).toContain("Ingen nye varsler");
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?hideNotifications=yes", "?hideNotifications=1", "?hideNotifications="]) {
+      expect((await app.request(`/ssr${query}`)).status).toBe(400);
+    }
+  });
+
+  test("the footer is untouched, and so are the hashes", async () => {
+    const hidden = await (await app.request("/ssr?hideNotifications=true")).json();
+    const shown = await (await app.request("/ssr")).json();
+    expect(hidden.footerHtml).toBe(shown.footerHtml);
+    expect(hidden.headAssets).toBe(shown.headAssets);
+    expect(hidden.scripts).toBe(shown.scripts);
+    expect(hidden.csp).toEqual(shown.csp);
+  });
+});
+
 describe("/ssr contrast query param", () => {
   const ssr = (query = "") => app.request(`/ssr${query}`);
 
