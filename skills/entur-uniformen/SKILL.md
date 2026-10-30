@@ -134,7 +134,6 @@ The page waits for the layout before it renders. So when you get `null`, render 
 `layout.csp` is a `Record<string, string[]>`. For each directive (`style-src`, `script-src` and so on) it lists the sources the header and footer need. Add those sources to the same directives in your page's `Content-Security-Policy` header. If you skip this, the browser blocks the styles and scripts of the header and footer.
 
 If your policy does not have one of these directives, the browser uses your `default-src` for it. Create the directive with your `default-src` sources first, then add uniformen's. Otherwise the new directive replaces `default-src` for that kind of request, and the browser blocks things that worked before.
-
 `fetchUniformenComponents` returns `csp` together with the four components, so the React entry point needs no second call:
 
 ```ts

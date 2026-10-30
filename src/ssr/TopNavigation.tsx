@@ -8,6 +8,9 @@ import { LogInIcon } from "../components/icons/LogInIcon";
 import { UserMenu, type UserMenuUser } from "../components/UserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NavigationLogo } from "./NavigationLogo";
+import { AiButton } from "../components/AiButton";
+import type { ChatAccessToken } from "../chat/chatProxy";
+import { ChatDrawer } from "../components/ChatDrawer";
 
 const texts = {
   "nb-NO": {
@@ -37,6 +40,8 @@ export function TopNavigation({
   loginUrl,
   logoutUrl,
   notifications,
+  aiAgent,
+  chatAccessToken,
 }: {
   /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
@@ -81,6 +86,10 @@ export function TopNavigation({
    * an anonymous user it is a separate control in the bar.
    */
   availableLocales?: Locale[];
+  /** Whether to render the AI agent button and its chat drawer. */
+  aiAgent?: boolean;
+  /** The chat proxy URL and token for the chat drawer. See `issueChatToken`. */
+  chatAccessToken?: ChatAccessToken;
 }) {
   const txt = texts[locale];
   // Also narrows the type, because `LocaleSwitcher` needs a defined list.
@@ -94,6 +103,7 @@ export function TopNavigation({
           {isEnturUser && <EnvironmentBadge activeAppId={activeAppId} locale={locale} />}
         </div>
         <div class="uniformen-top-nav__right">
+          {aiAgent && <AiButton locale={locale} />}
           {/* Only for anonymous users. Signed-in users get the language options in
               the user menu. */}
           {hasLocales && !user && (
@@ -127,6 +137,14 @@ export function TopNavigation({
           )}
         </div>
       </nav>
+      {aiAgent && (
+        <ChatDrawer
+          locale={locale}
+          chatAccessToken={chatAccessToken}
+          appName={appName}
+          activeAppId={activeAppId}
+        />
+      )}
     </header>
   );
 }

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { app } from "../index";
-import { previewIsEnturUser, previewNotifications, previewUser } from "./preview";
+import {
+  previewChatAccessToken,
+  previewIsEnturUser,
+  previewNotifications,
+  previewUser,
+} from "./preview";
 import { PreviewControls, previewCode } from "./PreviewControls";
 import { renderComponentToString } from "./renderComponentToString";
 import type { Environment } from "../config";
@@ -244,6 +249,57 @@ describe("preview page contrast", () => {
   test("the copyable link carries it", async () => {
     const { html } = await preview("?contrast=true");
     expect(html).toContain("contrast=true");
+  });
+});
+
+describe("preview page aiAgent", () => {
+  test("aiAgent=true checks the control and is kept in the copyable link", async () => {
+    const { res, html, chrome } = await preview("?aiAgent=true");
+    expect(res.status).toBe(200);
+    expect(html).toContain('name="aiAgent" value="true" checked=""');
+    expect(html).toContain(">/?aiAgent=true&amp;locale=nb-NO<");
+    expect(chrome).toContain("data-uniformen-ai-agent-toggle");
+  });
+
+  test("aiAgent=false leaves the control unchecked and the link without it", async () => {
+    const { res, html, chrome } = await preview("?aiAgent=false");
+    expect(res.status).toBe(200);
+    expect(html).toContain('name="aiAgent" value="true"/>');
+    expect(html).toContain(">/?locale=nb-NO<");
+    expect(chrome).not.toContain("data-uniformen-ai-agent-toggle");
+  });
+
+  test("anything other than true or false is rejected", async () => {
+    for (const query of ["?aiAgent=yes", "?aiAgent=1", "?aiAgent="]) {
+      expect((await preview(query)).res.status).toBe(400);
+    }
+  });
+
+  test("only local development gets a chat token, and only for a debug user", async () => {
+    const query = { debugUser: "Test", aiAgent: "true" } as const;
+    expect(await previewChatAccessToken(query, "local")).toEqual({
+      url: expect.stringMatching(/\/chat-proxy$/),
+      token: expect.any(String),
+    });
+    for (const env of ["dev", "staging", "production"] as const) {
+      expect(await previewChatAccessToken(query, env)).toBeUndefined();
+    }
+    expect(await previewChatAccessToken({ aiAgent: "true" }, "local")).toBeUndefined();
+    expect(
+      await previewChatAccessToken({ debugUser: "Test", aiAgent: "false" }, "local"),
+    ).toBeUndefined();
+  });
+
+  test("the drawer on the dev preview page has no chat token", async () => {
+    const { chrome } = await preview("?aiAgent=true&debugUser=Test");
+    expect(chrome).not.toContain("data-uniformen-chat-token");
+  });
+
+  test("the control sits with the right side of the bar", async () => {
+    const { html } = await preview();
+    const groups = html.split(/class="preview-controls__group preview-controls__group--/);
+    const group = groups.find((part) => part.includes('name="aiAgent"'));
+    expect(group?.match(/^[a-z]+/)?.[0]).toBe("right");
   });
 });
 

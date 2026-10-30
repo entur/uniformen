@@ -1,4 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
+import { chatProxyConfig, issueChatToken } from "../chat/chatProxy";
 import { isEnturOrganisation } from "../auth/enturOrganisation";
 import { optionalAuth } from "../auth/optionalAuth";
 import { type UserInfo, userInfoService } from "../auth/userInfo";
@@ -14,33 +15,83 @@ import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import { clientVersionLabel, ssrRequestMetric } from "../metrics";
 import { PostHog } from "posthog-node";
 
-// Without POSTHOG_API_KEY, the AI agent feature flag is off for everyone. Without
-// retries, a slow PostHog delays a response by at most the 3 second flag timeout.
+const featureFlagTimeoutMs = 200;
+
+// Without POSTHOG_API_KEY, the AI agent feature flag is off for everyone.
 const posthogApiKey = process.env["POSTHOG_API_KEY"];
+if (!posthogApiKey) console.warn("AI agent flag is off. POSTHOG_API_KEY is not set.");
 const posthog = posthogApiKey
   ? new PostHog(posthogApiKey, {
       host: "https://eu.i.posthog.com",
       featureFlagsRequestMaxRetries: 0,
+      featureFlagsRequestTimeoutMs: featureFlagTimeoutMs,
     })
   : undefined;
 
+const FLAG_CACHE_MS = 60_000;
+const FLAG_CACHE_MAX_ENTRIES = 5000;
+
+/**
+ * The chat settings that `/ssr` uses. Only tests replace them, to simulate that
+ * chat is off.
+ */
+export const chat = { config: chatProxyConfig };
+
 export const aiAgentFlag = {
+  /** Only changed by tests. */
+  client: posthog as Pick<PostHog, "getFeatureFlagResult"> | undefined,
+  /** The longest time a response waits for PostHog. Only changed by tests. */
+  timeoutMs: featureFlagTimeoutMs,
+  /** The flag per user `sub`. A failed request is stored as off. */
+  cache: new Map<string, { on: boolean; expiresAt: number }>(),
+  /** Flag requests that are running now, per user `sub`. */
+  inFlight: new Map<string, Promise<boolean>>(),
+
   /**
    * Checks whether the `ai-agent` feature flag in PostHog is on for the user.
-   * Returns false for an anonymous user and when PostHog fails, so PostHog never
-   * breaks the bar.
+   * Returns false for an anonymous user and when PostHog is slow or fails. A user
+   * has at most one request to PostHog at a time, and a failed request is not
+   * repeated until the cached result expires.
    */
   async isOn(info: UserInfo | undefined): Promise<boolean> {
-    if (!posthog || !info) return false;
-    const result = await posthog
-      .getFeatureFlagResult("ai-agent", info.sub, {
-        // The flag picks users by email. Only send a verified email, because anyone
-        // can sign up with an address that belongs to someone else.
-        personProperties: info.email_verified === true && info.email ? { email: info.email } : {},
-        sendFeatureFlagEvents: false,
+    if (!this.client || !info) return false;
+    const sub = info.sub;
+    const cached = this.cache.get(sub);
+    if (cached && cached.expiresAt > Date.now()) return cached.on;
+    const running = this.inFlight.get(sub);
+    if (running) return running;
+
+    // The SDK has its own timeout. The race is a second limit in case the SDK does
+    // not stop in time.
+    const request = Promise.race([
+      this.client
+        .getFeatureFlagResult("ai-agent", sub, {
+          // The flag picks users by email. Only send a verified email, because anyone
+          // can sign up with an address that belongs to someone else.
+          personProperties: info.email_verified === true && info.email ? { email: info.email } : {},
+          sendFeatureFlagEvents: false,
+        })
+        .catch(() => undefined),
+      Bun.sleep(this.timeoutMs).then(() => undefined),
+    ])
+      .then((result) => {
+        // The SDK returns undefined when the request fails or the flag does not exist.
+        if (result === undefined) console.warn("AI agent flag check failed or timed out.");
+        const on = result?.enabled ?? false;
+        // `Map` keeps keys in insertion order, and `set` does not move a key that
+        // already exists. So delete the key first. Then the first key is always the
+        // user whose flag was checked longest ago.
+        this.cache.delete(sub);
+        if (this.cache.size >= FLAG_CACHE_MAX_ENTRIES) {
+          const oldest = this.cache.keys().next().value;
+          if (oldest !== undefined) this.cache.delete(oldest);
+        }
+        this.cache.set(sub, { on, expiresAt: Date.now() + FLAG_CACHE_MS });
+        return on;
       })
-      .catch(() => undefined);
-    return result?.enabled ?? false;
+      .finally(() => this.inFlight.delete(sub));
+    this.inFlight.set(sub, request);
+    return request;
   },
 };
 
@@ -131,6 +182,20 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         }
       : undefined;
 
+    // Without a chat proxy config, which Helm only sets in some environments, the
+    // button would only show the error text. So it is not rendered at all. PostHog
+    // is only called when the app asks for the agent and chat is configured.
+    const aiAgentRequested = navProps.aiAgent;
+    const aiAgent = aiAgentRequested && chat.config !== undefined && (await aiAgentFlag.isOn(info));
+
+    // Only a user with a profile gets a chat token. This keeps machine tokens out,
+    // but it also means a signed-in user has no chat while userinfo fails. Without
+    // a token, the drawer shows the error text for every question.
+    const chatAccessToken =
+      info && tenant && payload?.sub && aiAgent
+        ? await issueChatToken(chat.config, `${tenant}|${payload.sub}`)
+        : undefined;
+
     ssrRequestMetric.inc({
       consumer_app: query?.app ?? "none",
       locale: query?.locale,
@@ -153,14 +218,16 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     return ctx.json(
       {
         headAssets: `${renderUniformenStyleTag()}${renderUniformenHeadScript()}`,
-        // Put `user` and `isEnturUser` after `navProps` so the query cannot override
-        // them. They must come from the verified token, never from the URL.
+        // Put `user`, `isEnturUser` and `aiAgent` after `navProps` so the query cannot
+        // override them. They depend on the verified token, never only on the URL.
         headerHtml: await renderComponentToString(
           <TopNavigation
             {...navProps}
             user={user}
             isEnturUser={isEnturOrganisation(info)}
             notifications={notifications}
+            aiAgent={aiAgent}
+            chatAccessToken={chatAccessToken}
           />,
         ),
         footerHtml: await renderComponentToString(<Footer contrast={navProps.contrast} />),
@@ -168,9 +235,9 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         csp: {
           "style-src": [uniformenCssHash],
           "script-src": [uniformenHeadScriptHash, uniformenScriptsHash],
-          // Clicking a notification sends a request back to uniformen. `'self'` is
-          // the embedding page's own origin, which most pages need anyway, and it
-          // costs nothing to repeat for a page that already allows it.
+          // Clicking a notification or sending a chat question both send a request back
+          // to uniformen. `'self'` is the embedding page's own origin, which most pages
+          // need anyway, and it costs nothing to repeat for a page that already allows it.
           "connect-src": ["'self'", uniformenOrigin],
         },
       },
