@@ -1,5 +1,6 @@
 import aiAgentHandlers from "../components/aiAgentHandlers.ts";
 import localeHandlers from "../components/localeHandlers.ts";
+import notificationsHandler from "../components/notificationsHandler.ts";
 import panelToggle from "../components/panelToggle.ts";
 import retargetEnvironmentLinks from "../components/retargetEnvironmentLinks.ts";
 import { sha256Source } from "./sha256.ts";
@@ -19,6 +20,7 @@ ${panelToggle.toString().trim()}
 ${retargetEnvironmentLinks.toString().trim()}
 ${localeHandlers.toString().trim()}
 ${aiAgentHandlers.toString().trim()}
+${notificationsHandler.toString().trim()}
 panelToggle("[data-uniformen-app-switcher-toggle]", "uniformen-app-switcher-panel");
 panelToggle("[data-uniformen-env-switcher-toggle]", "uniformen-environment-switcher-panel", retargetEnvironmentLinks);
 panelToggle("[data-uniformen-notifications-menu-toggle]", "uniformen-notifications-menu-panel");
@@ -26,6 +28,7 @@ panelToggle("[data-uniformen-user-menu-toggle]", "uniformen-user-menu-panel");
 panelToggle("[data-uniformen-locale-switcher-toggle]", "uniformen-locale-switcher-panel");
 localeHandlers();
 aiAgentHandlers();
+notificationsHandler();
 })();`;
 
 export const uniformenScriptsHash = await sha256Source(UNIFORMEN_SCRIPTS);

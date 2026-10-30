@@ -622,7 +622,7 @@
 
 .uniformen-notifications-menu__item {
   display: flex;
-  border-top: 1px solid var(--uniformen-color-blue-70);
+  border-top: 1px solid var(--uniformen-panel-border);
   padding: var(--uniformen-space-medium);
   text-decoration: none;
   color: inherit;
@@ -686,7 +686,7 @@
 
 .uniformen-notifications-menu__empty {
   padding: var(--uniformen-space-large);
-  border-top: 1px solid var(--uniformen-color-blue-70);
+  border-top: 1px solid var(--uniformen-panel-border);
   margin: 0;
   user-select: none;
   transition: background 0.15s ease;
@@ -696,7 +696,7 @@
   display: flex;
   font-size: var(--uniformen-font-md);
   font-weight: bold;
-  border-top: 1px solid var(--uniformen-color-blue-70);
+  border-top: 1px solid var(--uniformen-panel-border);
   padding: var(--uniformen-space-medium);
   justify-content: center;
   text-decoration: none;

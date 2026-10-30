@@ -133,6 +133,7 @@ The page waits for the layout before it renders. So when you get `null`, render 
 
 `layout.csp` is a `Record<string, string[]>`. For each directive (`style-src`, `script-src` and so on) it lists the sources the header and footer need. Add those sources to the same directives in your page's `Content-Security-Policy` header. If you skip this, the browser blocks the styles and scripts of the header and footer.
 
+If your policy does not have one of these directives, the browser uses your `default-src` for it. Create the directive with your `default-src` sources first, then add uniformen's. Otherwise the new directive replaces `default-src` for that kind of request, and the browser blocks things that worked before.
 `csp` can have a `connect-src`, for the AI agent's chat. A `connect-src` replaces `default-src` for `fetch`. If your page has no `connect-src`, copy the sources from your `default-src` into the new one, or your app's own requests are blocked.
 
 `fetchUniformenComponents` returns `csp` together with the four components, so the React entry point needs no second call:
@@ -185,6 +186,16 @@ window.addEventListener("uniformen:locale", (event) => {
 ```
 
 The reload is needed because the server-rendered header and your app's loaded modules both pick their language when the document loads. On the next render, send the saved choice as `params.locale` and set `<html lang>` to the same value.
+
+## Dark mode
+
+The header and footer follow the design system's dark mode. Set the same attribute that the design system's components use, on `<html>`:
+
+```html
+<html data-color-mode="dark"></html>
+```
+
+There is no parameter for dark mode, so do not add one to `params`. If the app offers a "system" choice, resolve it with `prefers-color-scheme` in the app and set the attribute to `light` or `dark`. In dark mode, `contrast: true` looks the same as the default, because the design system gives the standard and the contrast colours the same dark colours.
 
 ## Checking the result by hand
 

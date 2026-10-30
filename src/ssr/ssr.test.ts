@@ -389,6 +389,12 @@ describe("/ssr", () => {
     expect(body.csp["style-src"].some((s: string) => s.startsWith("'sha256-"))).toBe(true);
   });
 
+  test("csp field lets the page call uniformen, so a notification click is not blocked", async () => {
+    const res = await app.request("/ssr");
+    const body = await res.json();
+    expect(body.csp["connect-src"]).toEqual(["'self'", "https://uniformen.dev.entur.no"]);
+  });
+
   test("published hashes match the exact rendered inline bytes", async () => {
     const res = await app.request("/ssr");
     const body = await res.json();
@@ -829,6 +835,22 @@ describe("/ssr aiAgent query param", () => {
     expect(withAgent.scripts).toBe(without.scripts);
     expect(withAgent.csp["style-src"]).toEqual(without.csp["style-src"]);
     expect(withAgent.csp["script-src"]).toEqual(without.csp["script-src"]);
+describe("/ssr dark mode", () => {
+  const ssr = (query = "") => app.request(`/ssr${query}`);
+
+  test("the stylesheet has dark colours for the bar and the footer", async () => {
+    const body = await (await ssr()).json();
+    expect(body.headAssets).toContain(
+      '[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {',
+    );
+    expect(body.headAssets).toContain("color-scheme: dark;");
+  });
+
+  test("no query param turns it on, so the markup is the same", async () => {
+    const dark = await (await ssr("?colorMode=dark")).json();
+    const light = await (await ssr()).json();
+    expect(dark).toEqual(light);
+    expect(light.headerHtml).not.toContain("data-color-mode");
   });
 });
 

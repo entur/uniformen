@@ -30,11 +30,43 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   `default-src` for `fetch`, so the app must also copy the sources from its
   `default-src` into its `connect-src`.
   
+## 2026-10-28
+
+### Added
+
+- Dark mode. When the page has `data-color-mode="dark"` on `<html>` or another element
+  around the header and footer, the bar, the footer and their panels use the design
+  system's dark colours. This also applies with `contrast=true`, because the design
+  system gives the standard and the contrast colours the same dark colours.
+- The preview page has a `colorMode` control that turns on dark mode.
+
+### Fixed
+
+- The lines between rows in the notifications panel use the panel's border colour.
+  In contrast mode they were light grey on the dark blue panel.
+
 ## 2026-10-27
 
 ### Added
 
 - `app=omsetning` renders Omsetning beside the logo. It is not an entry in the app switcher.
+
+## 2026-10-26
+
+### Added
+
+- Clicking a notification deletes it. The bar can still show it for up to 5 seconds
+  after the click.
+
+### Changed
+
+- The `csp` field now has a `connect-src` directive, `'self'` and uniformen's own
+  origin. Merge it into your page's Content-Security-Policy like the other
+  directives. Without it the browser blocks the request that deletes a notification.
+  If your policy has no `connect-src`, the browser uses your `default-src` for
+  requests. Create `connect-src` with your `default-src` sources first, then add
+  uniformen's. Otherwise the new directive replaces `default-src` for requests, and
+  the browser blocks requests that worked before.
 
 ## 2026-10-22
 

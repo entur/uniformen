@@ -13,8 +13,10 @@ import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenH
 import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import notificationsDummyData from "./notificationsDummyData.json";
-import { notificationService, toNotificationList } from "../auth/notifications";
-import type { NotificationList } from "../types";
+import { decodeJwt } from "jose";
+import { notificationService } from "../auth/notifications";
+import type { Notifications } from "../types";
+import { uniformenOrigin } from "../auth/browserTokens";
 
 // Base styles for the preview page: fonts and layout. It is a constant so its exact
 // text can be hashed for the CSP `style-src` directive.
@@ -52,20 +54,19 @@ const PREVIEW_BASE_CSS = `
                     }
                     main { flex: 1 0 auto; display: flex; }
 
-                    /* With contrast=true the app's page behind the header is dark, so
-                       the preview page is dark too. The contrast colours are hard to
-                       judge on a white page. The controls keep their white card. */
-                    body.preview--contrast { background: #08091c; }
+                    /* With contrast=true or in dark mode the app's page behind the
+                       header is dark, so the preview page is dark too. The header
+                       colours are hard to judge on a white page. The controls keep
+                       their white card. */
+                    body.preview--contrast,
+                    [data-color-mode="dark"] body { background: #08091c; }
 
-                    /* Dark colours for the example sidebar in contrast mode, so it can
-                       be read on the dark page. */
-                    .preview--contrast .preview-sidebar { border-right-color: #393d79; }
-                    .preview--contrast .preview-sidebar__title,
-                    .preview--contrast .preview-sidebar__close,
-                    .preview--contrast .preview-sidebar__link { color: #ffffff; }
-                    .preview--contrast .preview-sidebar__heading { color: #aeb7e2; }
-                    .preview--contrast .preview-sidebar__close:hover,
-                    .preview--contrast .preview-sidebar__link:hover { background: #393d79; }
+                    /* Dark colours for the example sidebar, so it can be read on the
+                       dark page. */
+                    :is(.preview--contrast, [data-color-mode="dark"]) .preview-sidebar { border-right-color: #393d79; }
+                    :is(.preview--contrast, [data-color-mode="dark"]) :is(.preview-sidebar__title, .preview-sidebar__close, .preview-sidebar__link) { color: #ffffff; }
+                    :is(.preview--contrast, [data-color-mode="dark"]) .preview-sidebar__heading { color: #aeb7e2; }
+                    :is(.preview--contrast, [data-color-mode="dark"]) :is(.preview-sidebar__close:hover, .preview-sidebar__link:hover) { background: #393d79; }
 
                     /* Example side navigation, for testing the collapse button by hand.
                        The width animates. The inner column has a fixed width, so the
@@ -527,6 +528,7 @@ const previewScriptHash = await sha256Source(PREVIEW_SCRIPT);
 const previewCsp = [
   `script-src ${uniformenHeadScriptHash} ${uniformenScriptsHash} ${previewScriptHash}`,
   `style-src ${previewBaseCssHash} ${uniformenCssHash}`,
+  `connect-src 'self' ${uniformenOrigin}`,
 ].join("; ");
 
 /**
@@ -545,6 +547,9 @@ const previewQuerySchema = uniformenQuerySchema.extend({
   // The preview page has no token, so it is a parameter here.
   debugEnturUser: z.enum(["true", "false"]).optional(),
   debugNotifications: z.enum(["none", "some", "all"]).optional(),
+  // The value for `data-color-mode` on the page's `<html>`. In an app, the app sets
+  // this attribute, so it is not a parameter of `/ssr`.
+  colorMode: z.enum(["light", "dark"]).optional(),
 });
 
 export type PreviewQuery = z.infer<typeof previewQuerySchema>;
@@ -565,22 +570,59 @@ export function previewUser(
   return { name: debugUser, email: debugEmail };
 }
 
+/**
+ * Turns the made-up notifications into a list the bar can render.
+ *
+ * The items have no `markAsReadToken`, so the markup has nothing for the click handler to
+ * find and opening the preview page cannot delete anyone's notification. With
+ * `DEV_ACCESS_TOKEN` set, the preview shows your own notifications instead, and
+ * clicking one deletes it.
+ */
+function dummyNotifications(): Notifications {
+  const nonNullNotifications = notificationsDummyData.filter((item) => item.messages[0]);
+
+  const notifications = nonNullNotifications.slice(0, 5).map((item) => ({
+    referenceId: item.referenceId,
+    date: item.created,
+    message: item.messages[0]!.body,
+  }));
+  return { items: notifications, totalCount: nonNullNotifications.length };
+}
+
+/**
+ * Returns `DEV_ACCESS_TOKEN` together with its `sub` claim, or undefined when the
+ * variable is missing or does not hold a readable JWT. A bad value falls back to
+ * the made-up notifications instead of breaking the preview page.
+ *
+ * `decodeJwt` does not check the signature. The notification service checks the
+ * token when it is used.
+ */
+function devAccessToken(): { token: string; sub: string } | undefined {
+  const token = process.env["DEV_ACCESS_TOKEN"];
+  if (!token) return undefined;
+  try {
+    return { token, sub: decodeJwt(token).sub ?? "" };
+  } catch {
+    console.warn("DEV_ACCESS_TOKEN is not a readable JWT. Showing made-up notifications.");
+    return undefined;
+  }
+}
+
 export async function previewNotifications({
   debugNotifications,
-}: Pick<PreviewQuery, "debugNotifications">): Promise<NotificationList | undefined> {
+}: Pick<PreviewQuery, "debugNotifications">): Promise<Notifications | undefined> {
   if (debugNotifications === "none") {
-    return [];
+    return { items: [], totalCount: 0 };
   }
 
-  const notifications = process.env["DEV_ACCESS_TOKEN"]
-    ? await notificationService.getNotifications(
-        "internal",
-        process.env["DEV_ACCESS_TOKEN"],
-        "debugUser",
-      )
-    : toNotificationList(notificationsDummyData);
+  const devToken = devAccessToken();
+  const notifications = devToken
+    ? await notificationService.getNotifications("internal", devToken.token, devToken.sub)
+    : dummyNotifications();
 
-  return debugNotifications === "some" ? notifications?.slice(0, 3) : notifications;
+  return debugNotifications === "some" && notifications
+    ? { items: notifications.items.slice(0, 3), totalCount: notifications.items.slice(0, 3).length }
+    : notifications;
 }
 
 /**
@@ -638,7 +680,7 @@ export function previewRoutes(server: OpenAPIHono): void {
 
     // The locale codes are valid BCP 47 language tags.
     return ctx.html(`
-        <html lang="${navProps.locale}">
+        <html lang="${navProps.locale}"${query.colorMode === "dark" ? ' data-color-mode="dark"' : ""}>
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />

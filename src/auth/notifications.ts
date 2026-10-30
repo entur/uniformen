@@ -1,11 +1,7 @@
 import { config, type AuthTenant } from "../config";
 import { CachedLookup } from "./cachedLookup";
-import type { NotificationList } from "../types";
-
-/**
- * Path to get user notifications
- */
-const MESSAGES_PATH = "/v1/messages";
+import type { Notifications } from "../types";
+import { createReadNotificationToken, MESSAGES_PATH } from "./notificationsProxy";
 
 /** One notification text in one language. `language` is an ISO 639-3 code, e.g. "nob". */
 export type LocalisedMessage = {
@@ -45,22 +41,23 @@ export type NotificationService = {
   /**
    * Fetches the signed-in user's notifications. Returns `undefined` on any
    * failure and never throws, so callers can render the bar without a try/catch.
-   * A user with no notifications gets an empty array, which is different from a
-   * failed lookup.
+   * `items` holds at most the five newest notifications, and `totalCount` counts
+   * all of them. A user with no notifications gets an empty `items` and a
+   * `totalCount` of 0, which is different from a failed lookup.
    */
   getNotifications(
     tenantName: AuthTenant["name"],
     token: string,
     sub: string,
-  ): Promise<NotificationList | undefined>;
+  ): Promise<Notifications | undefined>;
 };
 
 export type NotificationServiceOptions = {
-  /** How long a successful fetch is cached. Default 30 seconds. */
+  /** How long a successful fetch is cached. Default 5 seconds. */
   positiveTtlMs?: number;
-  /** How long a failed lookup is cached. Default 15 seconds. */
+  /** How long a failed lookup is cached. Default 30 seconds. */
   negativeTtlMs?: number;
-  /** Timeout for the request. Default 5 seconds. */
+  /** Timeout for the request. Defaults to 1 second. */
   timeoutMs?: number;
   /** Maximum number of cached users. When the cache is full, the oldest entry is removed. Default 5000. */
   maxEntries?: number;
@@ -73,6 +70,10 @@ export type NotificationServiceOptions = {
  * for both tenants, and the API reads the user from the access token, so the
  * tenant and `sub` are only used for the key. The times to live are much shorter
  * than for userinfo, because a notification list goes out of date quickly.
+ *
+ * Deleting a notification does not clear this cache. Each instance of uniformen has
+ * its own cache, so the instance that handles the delete cannot clear the others.
+ * The bar can show a deleted notification for up to 5 seconds.
  */
 export class NotificationServiceImpl implements NotificationService {
   private readonly notificationMessagesUri: string;
@@ -84,8 +85,8 @@ export class NotificationServiceImpl implements NotificationService {
     this.notificationMessagesUri = apiBaseUri + MESSAGES_PATH;
     this.timeoutMs = options.timeoutMs ?? 1_000;
     this.cache = new CachedLookup({
-      positiveTtlMs: options.positiveTtlMs ?? 30_000,
-      negativeTtlMs: options.negativeTtlMs ?? 15_000,
+      positiveTtlMs: options.positiveTtlMs ?? 5_000,
+      negativeTtlMs: options.negativeTtlMs ?? 30_000,
       maxEntries: options.maxEntries ?? 5_000,
     });
   }
@@ -94,14 +95,14 @@ export class NotificationServiceImpl implements NotificationService {
     tenantName: AuthTenant["name"],
     token: string,
     sub: string,
-  ): Promise<NotificationList | undefined> {
+  ): Promise<Notifications | undefined> {
     if (!token) return undefined;
 
     const response = await this.cache.get(`${tenantName}|${sub}`, () =>
       this.fetchNotifications(token),
     );
 
-    return toNotificationList(response);
+    return transformNotificationResponse(response, sub);
   }
 
   private async fetchNotifications(token: string): Promise<NotificationResponse | undefined> {
@@ -138,25 +139,33 @@ export const notificationService: NotificationService = new NotificationServiceI
 );
 
 /**
- * Transform raw Notification response to simpler NotificationList type.
+ * Transform raw Notification response to Notifications type.
  * Temporary till Notification Service has been rewritten
  *
  */
-export function toNotificationList(
+async function transformNotificationResponse(
   response: NotificationResponse | undefined,
-): NotificationList | undefined {
-  return response
-    ?.map((responseItem) => {
-      const notification = Array.isArray(responseItem?.messages)
-        ? responseItem.messages[0]
-        : undefined;
-      return notification
-        ? {
-            referenceId: responseItem.referenceId,
-            date: responseItem.created,
-            message: notification.body,
-          }
-        : undefined;
-    })
-    .filter((notification) => !!notification);
+  sub: string,
+): Promise<Notifications | undefined> {
+  if (!response) return undefined;
+  const filteredItems = response.filter((r) => Array.isArray(r?.messages) && r.messages[0]);
+
+  const notifications = await Promise.all(
+    filteredItems.slice(0, 5).map(async (item) => {
+      let markAsReadToken: string | undefined;
+      try {
+        markAsReadToken = await createReadNotificationToken(sub, item.id);
+      } catch (error) {
+        console.warn("failed to create markAsReadToken:", error);
+      }
+
+      return {
+        referenceId: item.referenceId,
+        date: item.created,
+        message: item.messages[0]!.body,
+        markAsReadToken,
+      };
+    }),
+  );
+  return { items: notifications, totalCount: filteredItems.length };
 }
