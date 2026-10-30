@@ -100,6 +100,14 @@ export type FetchUniformenParams = {
   contrast?: boolean;
 
   /**
+   * Hides the notifications button in the top bar. The default is `false`. The
+   * service then does not look up the user's notifications either. Use it in an app
+   * that shows its own notifications, so the page does not have two lists. With
+   * `simple` set, the button is hidden anyway.
+   */
+  hideNotifications?: boolean;
+
+  /**
    * Shows a minimal top bar. The default is `false`. It hides the app switcher,
    * notifications, the sidebar button (even if `sidebar` is set) and "Mine
    * tilganger". The left side shows the logo, the app name and, for users who get

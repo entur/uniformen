@@ -111,6 +111,11 @@ name and the login link from `params.loginUrl`, or the user's name with a menu t
 only has the `params.logoutUrl` row. It overrides `params.sidebar`. The footer does
 not change.
 
+`params.hideNotifications` (`boolean`, default `false`) renders the top bar without
+the notifications button, and the service does not look up the user's notifications.
+Use it in an app that shows its own notifications, so the page does not have two
+lists. With `params.simple` set, the button is hidden anyway.
+
 `params.loginUrl` (`string`) is the path the "Logg inn" link in the top bar points
 to when no `token` is passed. If you leave it out, no login link is shown. It must be
 a path on your own origin. An absolute URL, `//host` or `javascript:` makes the
