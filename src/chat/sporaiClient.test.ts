@@ -134,6 +134,11 @@ describe("chat", () => {
     expect(await client.chat(question)).toEqual({ kind: "sessionGone" });
   });
 
+  test("sporai 429 means the user is rate limited", async () => {
+    sporaiMock.respond = () => new Response("slow down", { status: 429 });
+    expect(await client.chat(question)).toEqual({ kind: "rateLimited" });
+  });
+
   test.each([400, 403, 500])("sporai %i gives an error", async (status) => {
     sporaiMock.respond = () => new Response("no", { status });
     expect(await client.chat(question)).toEqual({ kind: "error" });

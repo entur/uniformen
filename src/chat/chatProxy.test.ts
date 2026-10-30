@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { SignJWT } from "jose";
-import { INTERNAL_AUDIENCE, signInternalToken } from "../test/authTestKeys";
+import { signInternalToken } from "../test/authTestKeys";
 import { machineTokenMock, SPORAI_SESSION_ID, sporaiMock } from "../test/authTestSetup";
 import {
   allowedOrigin,
@@ -22,8 +22,7 @@ let token: string;
 beforeEach(async () => {
   machineTokenMock.reset();
   sporaiMock.reset();
-  // A new app for every test, so the counter of active sporai calls and the machine token
-  // cache do not carry over.
+  // A new app for every test, so the machine token cache does not carry over.
   proxyConfig = loadChatProxyConfig()!;
   app = new OpenAPIHono();
   chatProxyRoutes(app, proxyConfig, "dev");
@@ -43,15 +42,6 @@ function ask(body: unknown, auth: string | null = token, signal?: AbortSignal) {
     },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
-}
-
-/** Waits until `condition` is true. Fails after one second, so a broken limiter does not hang the test. */
-async function waitFor(condition: () => boolean) {
-  const deadline = Date.now() + 1000;
-  while (!condition()) {
-    if (Date.now() > deadline) throw new Error("waitFor timed out");
-    await Bun.sleep(5);
-  }
 }
 
 describe("POST /chat-proxy", () => {
@@ -253,85 +243,6 @@ describe("chat token", () => {
   });
 });
 
-test("answers 429 when one user has too many questions open, and not other users", async () => {
-  let release!: () => void;
-  const waiting = new Promise<void>((resolve) => (release = resolve));
-  sporaiMock.respond = async () => {
-    await waiting;
-    return new Response("svar");
-  };
-  const open = Array.from({ length: 2 }, async () => ask({ query: "Hei" }));
-  // Wait until both calls have reached sporai.
-  await waitFor(() => sporaiMock.calls >= 2);
-
-  const busy = await ask({ query: "Hei" });
-  expect(busy.status).toBe(429);
-  expect(busy.headers.get("Retry-After")).toBe("5");
-  expect(await busy.json()).toEqual({ title: "Too Many Open Chats", status: 429 });
-
-  // Another user can still ask.
-  const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;
-  const otherOpen = ask({ query: "Hei" }, other);
-  await waitFor(() => sporaiMock.calls >= 3);
-
-  release();
-  const statuses = (await Promise.all([...open, otherOpen])).map((res) => res.status);
-  expect(statuses).toEqual(Array(3).fill(200));
-  // The counter goes down again when the calls end.
-  expect((await ask({ query: "Hei" })).status).toBe(200);
-});
-
-describe("a failed call gives the open call back", () => {
-  // The limit is 2 open calls, so 3 failures in a row only pass if each one gives its place back.
-  async function expectPlaceIsGivenBack(
-    call: (i: number) => Response | Promise<Response>,
-    status: number,
-  ) {
-    for (let i = 0; i < 3; i++) expect((await call(i)).status).toBe(status);
-    sporaiMock.reset();
-    expect((await ask({ query: "Hei" })).status).toBe(200);
-  }
-
-  test("when sporai answers with an error", async () => {
-    sporaiMock.respond = () => new Response("boom", { status: 500 });
-    await expectPlaceIsGivenBack(() => ask({ query: "Hei" }), 503);
-  });
-
-  test("when sporai takes too long", async () => {
-    const slow = new SporaiClient(
-      {
-        baseUrl: process.env["SPORAI_URL"]!,
-        tokenUri: process.env["AUTH0_INTERNAL_TOKEN_URI"]!,
-        clientId: process.env["MNG_AUTH0_INT_CLIENT_ID"]!,
-        clientSecret: process.env["MNG_AUTH0_INT_CLIENT_SECRET"]!,
-        audience: INTERNAL_AUDIENCE,
-      },
-      { timeoutMs: 50 },
-    );
-    app = new OpenAPIHono();
-    chatProxyRoutes(app, { ...proxyConfig, client: slow }, "dev");
-    sporaiMock.respond = async () => {
-      await Bun.sleep(300);
-      return new Response("svar");
-    };
-    await expectPlaceIsGivenBack(() => ask({ query: "Hei" }), 503);
-  });
-
-  test("when the user cancels the request", async () => {
-    sporaiMock.respond = async () => {
-      await Bun.sleep(300);
-      return new Response("svar");
-    };
-    await expectPlaceIsGivenBack(async (i) => {
-      const controller = new AbortController();
-      const response = ask({ query: "Hei" }, token, controller.signal);
-      await waitFor(() => sporaiMock.calls > i);
-      controller.abort();
-      return response;
-    }, 503);
-  });
-});
-
 test("returns 503 when sporai cannot create a session, and does not ask the question", async () => {
   const create = spyOn(SporaiClient.prototype, "createSession").mockResolvedValue({
     kind: "error",
@@ -344,102 +255,21 @@ test("returns 503 when sporai cannot create a session, and does not ask the ques
   } finally {
     create.mockRestore();
   }
-  // The open call was given back.
-  expect((await ask({ query: "Hei" })).status).toBe(200);
 });
 
-describe("rate limit", () => {
-  test("answers 429 after 10 calls to sporai in a minute, and allows calls again later", async () => {
-    setSystemTime(new Date("2026-01-01T12:00:00Z"));
-    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
+test("answers 429 when sporai answers 429 to a new session or to a question", async () => {
+  sporaiMock.respond = (req) =>
+    new URL(req.url).pathname === "/api/chat/sessions"
+      ? Response.json({ sessionId: SPORAI_SESSION_ID })
+      : new Response("slow down", { status: 429 });
+  const asked = await ask({ query: "Hei" });
+  expect(asked.status).toBe(429);
+  expect(await asked.json()).toEqual({ title: "Too Many Requests", status: 429 });
 
-    setSystemTime(new Date("2026-01-01T12:00:20Z"));
-    const calls = sporaiMock.calls;
-    const limited = await ask({ query: "Hei" });
-    expect(limited.status).toBe(429);
-    expect(limited.headers.get("Retry-After")).toBe("40");
-    expect(await limited.json()).toEqual({ title: "Too Many Requests", status: 429 });
-    expect(sporaiMock.calls).toBe(calls);
-
-    // Another user is not affected.
-    const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;
-    expect((await ask({ query: "Hei" }, other)).status).toBe(200);
-
-    setSystemTime(new Date("2026-01-01T12:01:01Z"));
-    expect((await ask({ query: "Hei" })).status).toBe(200);
-  });
-
-  test.each([
-    [
-      "another user's session",
-      () =>
-        ask({
-          query: "Hei",
-          sessionId: signSessionId(proxyConfig.sessionKey, "internal|user-2", "s-1"),
-        }),
-      404,
-    ],
-    [
-      "a changed session id",
-      () => ask({ query: "Hei", sessionId: `${SPORAI_SESSION_ID}.AAAA` }),
-      404,
-    ],
-    ["an invalid body", () => ask({ query: "   " }), 400],
-    ["a body that is not JSON", () => ask("{not json"), 400],
-    ["a missing chat token", () => ask({ query: "Hei" }, null), 401],
-  ])("does not count %s, because it never reaches sporai", async (_name, failing, status) => {
-    for (let i = 0; i < 10; i++) expect((await failing()).status).toBe(status);
-    expect(sporaiMock.calls).toBe(0);
-    // All 10 calls are still free.
-    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
-    expect((await ask({ query: "Hei" })).status).toBe(429);
-  });
-
-  test("counts a question when sporai fails", async () => {
-    sporaiMock.respond = () => new Response("boom", { status: 500 });
-    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(503);
-    expect((await ask({ query: "Hei" })).status).toBe(429);
-  });
-
-  test("allows a call again exactly 60 seconds after the call that used the last slot", async () => {
-    const start = new Date("2026-01-01T12:00:00Z").getTime();
-    setSystemTime(start);
-    for (let i = 0; i < 10; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
-
-    setSystemTime(start + 59_999);
-    const limited = await ask({ query: "Hei" });
-    expect(limited.status).toBe(429);
-    expect(limited.headers.get("Retry-After")).toBe("1");
-
-    setSystemTime(start + 60_000);
-    expect((await ask({ query: "Hei" })).status).toBe(200);
-  });
-
-  test("rounds Retry-After up to whole seconds", async () => {
-    const start = new Date("2026-01-01T12:00:00Z").getTime();
-    setSystemTime(start);
-    for (let i = 0; i < 10; i++) await ask({ query: "Hei" });
-
-    // 59.5 seconds are left.
-    setSystemTime(start + 500);
-    expect((await ask({ query: "Hei" })).headers.get("Retry-After")).toBe("60");
-  });
-
-  test("uses a sliding window, and Retry-After counts from the oldest call", async () => {
-    const start = new Date("2026-01-01T12:00:00Z").getTime();
-    setSystemTime(start);
-    for (let i = 0; i < 5; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
-    setSystemTime(start + 30_000);
-    for (let i = 0; i < 5; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
-
-    // The 5 calls from the start are now out of the window. The 5 later calls are not.
-    setSystemTime(start + 60_000);
-    for (let i = 0; i < 5; i++) expect((await ask({ query: "Hei" })).status).toBe(200);
-    const limited = await ask({ query: "Hei" });
-    expect(limited.status).toBe(429);
-    // The oldest call left is from 30 seconds ago.
-    expect(limited.headers.get("Retry-After")).toBe("30");
-  });
+  sporaiMock.respond = () => new Response("slow down", { status: 429 });
+  const created = await ask({ query: "Hei" });
+  expect(created.status).toBe(429);
+  expect(await created.json()).toEqual({ title: "Too Many Requests", status: 429 });
 });
 
 describe("CORS", () => {
@@ -507,85 +337,5 @@ describe("loadChatProxyConfig", () => {
     const off = new OpenAPIHono();
     chatProxyRoutes(off, undefined, "dev");
     expect((await off.request("/chat-proxy", { method: "POST" })).status).toBe(404);
-  });
-});
-
-describe("rate limit cleanup", () => {
-  let runCleanup: () => void;
-  let cleanupPeriodMs: number | undefined;
-
-  beforeEach(() => {
-    // Catch the timer instead of waiting 60 seconds. The timer must be created while the
-    // spy is on, so these tests build their own app.
-    const intervalSpy = spyOn(globalThis, "setInterval").mockImplementation(((
-      callback: () => void,
-      ms: number,
-    ) => {
-      runCleanup = callback;
-      cleanupPeriodMs = ms;
-      return { unref() {} };
-    }) as never);
-    try {
-      app = new OpenAPIHono();
-      chatProxyRoutes(app, proxyConfig, "dev");
-    } finally {
-      intervalSpy.mockRestore();
-    }
-  });
-
-  /** Runs the cleanup once and returns the users that it removed from the map. */
-  function removedUsers() {
-    const deleteSpy = spyOn(Map.prototype, "delete");
-    try {
-      runCleanup();
-      return deleteSpy.mock.calls
-        .map(([key]) => String(key))
-        .filter((key) => key.startsWith("internal|"));
-    } finally {
-      deleteSpy.mockRestore();
-    }
-  }
-
-  test("runs every 60 seconds", () => {
-    expect(cleanupPeriodMs).toBe(60_000);
-  });
-
-  test("removes a user 60 seconds after the last call, and not before", async () => {
-    const start = new Date("2026-01-01T12:00:00Z").getTime();
-    setSystemTime(start);
-    await ask({ query: "Hei" });
-
-    setSystemTime(start + 59_999);
-    expect(removedUsers()).toEqual([]);
-
-    setSystemTime(start + 60_000);
-    expect(removedUsers()).toEqual(["internal|user-1"]);
-  });
-
-  test("keeps a user whose newest call is less than 60 seconds old", async () => {
-    const start = new Date("2026-01-01T12:00:00Z").getTime();
-    setSystemTime(start);
-    await ask({ query: "Hei" });
-    setSystemTime(start + 50_000);
-    await ask({ query: "Hei" });
-
-    // The first call is 60 seconds old, but the second is only 10 seconds old.
-    setSystemTime(start + 60_000);
-    expect(removedUsers()).toEqual([]);
-
-    setSystemTime(start + 110_000);
-    expect(removedUsers()).toEqual(["internal|user-1"]);
-  });
-
-  test("removes only the users who have been quiet", async () => {
-    const start = new Date("2026-01-01T12:00:00Z").getTime();
-    const other = (await issueChatToken(proxyConfig, "internal|user-2"))!.token;
-    setSystemTime(start);
-    await ask({ query: "Hei" });
-    setSystemTime(start + 30_000);
-    await ask({ query: "Hei" }, other);
-
-    setSystemTime(start + 60_000);
-    expect(removedUsers()).toEqual(["internal|user-1"]);
   });
 });

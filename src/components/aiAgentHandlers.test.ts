@@ -283,7 +283,6 @@ function install({
       "data-uniformen-chat-error-text": "Feil",
       "data-uniformen-chat-error-text-refresh": "Last inn på nytt",
       "data-uniformen-chat-error-text-rate-limit": "For raskt",
-      "data-uniformen-chat-error-text-too-many-chats": "For mange samtaler",
       ...chatAttributes,
     },
     [
@@ -576,16 +575,6 @@ describe("aiAgentHandlers", () => {
     page.send.click();
     await replied();
     expect(page.messages()).toEqual(["Hei!", "Hei", "For raskt"]);
-  });
-
-  test("shows the too many chats text when the user has too many chats open", async () => {
-    const page = install({
-      respond: () => Response.json({ title: "Too Many Open Chats", status: 429 }, { status: 429 }),
-    });
-    page.type("Hei");
-    page.send.click();
-    await replied();
-    expect(page.messages()).toEqual(["Hei!", "Hei", "For mange samtaler"]);
   });
 
   test("an expired session shows a divider and asks the question again", async () => {

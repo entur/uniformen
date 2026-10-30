@@ -14,7 +14,6 @@ const texts = {
     error: "Beklager, jeg kunne ikke svare nå. Prøv igjen litt senere.",
     errorRefresh: "Samtalen har vært åpen for lenge. Last inn nettsiden på nytt og prøv igjen.",
     errorRateLimit: "Du sender spørsmål for raskt. Vent litt og prøv igjen.",
-    errorTooManyChats: "Du har for mange samtaler åpne samtidig. Vent litt og prøv igjen.",
     restarted:
       "Samtalen ble tidsavbrutt og startet på nytt. Assistenten husker ikke meldingene over.",
     examples: ["Hvor er jeg?", "Hva kan du hjelpe meg med?", "Hvem kontakter man ved problemer?"],
@@ -25,7 +24,6 @@ const texts = {
     error: "Beklagar, eg kunne ikkje svare no. Prøv igjen litt seinare.",
     errorRefresh: "Samtalen har vore open for lenge. Last inn nettsida på nytt og prøv igjen.",
     errorRateLimit: "Du sender spørsmål for raskt. Vent litt og prøv igjen.",
-    errorTooManyChats: "Du har for mange samtalar opne samtidig. Vent litt og prøv igjen.",
     restarted:
       "Samtalen vart tidsavbroten og starta på nytt. Assistenten hugsar ikkje meldingane over.",
     examples: ["Kvar er eg?", "Kva kan du hjelpe meg med?", "Kven kontaktar ein ved problem?"],
@@ -37,8 +35,6 @@ const texts = {
     errorRefresh:
       "The conversation has been open for too long. Please refresh the website and try again.",
     errorRateLimit: "You are sending questions too fast. Please wait a moment and try again.",
-    errorTooManyChats:
-      "You have too many chats open at the same time. Please wait a moment and try again.",
     restarted:
       "The conversation timed out and was restarted. The assistant does not remember the messages above.",
     examples: [
@@ -78,7 +74,6 @@ export function ChatDrawer({
       data-uniformen-chat-error-text={txt.error}
       data-uniformen-chat-error-text-refresh={txt.errorRefresh}
       data-uniformen-chat-error-text-rate-limit={txt.errorRateLimit}
-      data-uniformen-chat-error-text-too-many-chats={txt.errorTooManyChats}
       role="dialog"
       aria-modal="false"
       aria-labelledby="uniformen-chat-drawer-title"

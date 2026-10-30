@@ -91,8 +91,6 @@ export default function aiAgentHandlers() {
   const errorText = drawer.getAttribute("data-uniformen-chat-error-text") ?? "";
   const errorTextRefresh = drawer.getAttribute("data-uniformen-chat-error-text-refresh") ?? "";
   const errorTextRateLimit = drawer.getAttribute("data-uniformen-chat-error-text-rate-limit") ?? "";
-  const errorTextTooManyChats =
-    drawer.getAttribute("data-uniformen-chat-error-text-too-many-chats") ?? "";
 
   /**
    * Adds the question in the text field to the chat, empties the field and adds the
@@ -253,11 +251,7 @@ export default function aiAgentHandlers() {
         return null;
       }
       if (res.status === 401) return errorTextRefresh;
-      if (res.status === 429) {
-        // The title says which limit the user hit. Neither text names a wait time.
-        const body: { title?: string } = await res.json().catch(() => ({}));
-        return body.title === "Too Many Open Chats" ? errorTextTooManyChats : errorTextRateLimit;
-      }
+      if (res.status === 429) return errorTextRateLimit;
       if (!res.ok) return errorText;
       const body: { reply: string; sessionId: string } = await res.json();
       if (count === questionCount) sessionId = body.sessionId;

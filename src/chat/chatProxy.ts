@@ -26,13 +26,6 @@ const CHAT_PROXY_URLS: Record<Environment, string> = {
 const CHAT_TOKEN_AUDIENCE = "uniformen-chat";
 const CHAT_TOKEN_LIFETIME = "8h";
 
-// The number of calls to sporai that one user can have open at the same time in one pod.
-const MAX_ACTIVE_SPORAI_CALLS_PER_USER = 2;
-
-// The number of questions that one user can send to sporai in 60 seconds in one pod.
-const MAX_SPORAI_CALLS_PER_MINUTE_PER_USER = 10;
-const RATE_WINDOW_MS = 60_000;
-
 // The same pattern as sporai's. Sporai rejects any other `location` with a 400.
 const LOCATION_PATTERN = /^[a-zA-Z0-9/_-]{0,100}$/;
 
@@ -217,9 +210,7 @@ const chatProxyRoute = createRoute({
     ),
     413: problemResponse("The request body is larger than 8 KiB."),
     415: problemResponse("The `Content-Type` header is missing or is not `application/json`."),
-    429: problemResponse(
-      "The user has sent too many questions to sporai in the last minute (title `Too Many Requests`), or has too many questions open at the same time (title `Too Many Open Chats`). The `Retry-After` header says how many seconds to wait.",
-    ),
+    429: problemResponse("Sporai says the user has sent too many questions."),
     500: problemResponse("An unexpected error happened in the proxy."),
     503: problemResponse("Sporai could not answer."),
   },
@@ -242,23 +233,6 @@ export function chatProxyRoutes(
     scheme: "bearer",
     bearerFormat: "JWT",
   });
-
-  // The number of open sporai calls for each user. The key is the `sub` of the chat token.
-  const activeCallsPerUser = new Map<string, number>();
-
-  // The times of each user's calls to sporai. A time older than 60 seconds does not
-  // count. The old times are removed when the user sends a new question, and the user
-  // is removed by the timer below when the user has been quiet for 60 seconds.
-  const recentCallsPerUser = new Map<string, number[]>();
-
-  // Remove users who have not called sporai for 60 seconds, so the map does not grow
-  // for the life of the pod.
-  setInterval(() => {
-    const now = Date.now();
-    for (const [user, times] of recentCallsPerUser) {
-      if (now - times[times.length - 1]! >= RATE_WINDOW_MS) recentCallsPerUser.delete(user);
-    }
-  }, RATE_WINDOW_MS).unref();
 
   server.use(
     "/chat-proxy",
@@ -303,22 +277,7 @@ export function chatProxyRoutes(
       } catch {
         return c.text("Unauthorized", 401, { "WWW-Authenticate": 'Bearer error="invalid_token"' });
       }
-      const user = c.get("chatUser");
-      const active = activeCallsPerUser.get(user) ?? 0;
-      if (active >= MAX_ACTIVE_SPORAI_CALLS_PER_USER) {
-        c.header("Retry-After", "5");
-        // The browser tells this apart from the rate limit by the title.
-        return problem(c, 429, "Too Many Open Chats");
-      }
-      activeCallsPerUser.set(user, active + 1);
-      try {
-        return await next();
-      } finally {
-        // Remove the user at 0, so the map does not grow for the life of the pod.
-        const callsLeft = activeCallsPerUser.get(user)! - 1;
-        if (callsLeft === 0) activeCallsPerUser.delete(user);
-        else activeCallsPerUser.set(user, callsLeft);
-      }
+      return next();
     }),
   );
 
@@ -339,22 +298,9 @@ export function chatProxyRoutes(
         if (!sessionId) return problem(c, 404, "Not Found");
       }
 
-      // Only a question that will reach sporai counts, so the checks above do not use
-      // up the user's calls.
-      const now = Date.now();
-      const recent = (recentCallsPerUser.get(user) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-      if (recent.length >= MAX_SPORAI_CALLS_PER_MINUTE_PER_USER) {
-        // Save the list without the old times. This call is rejected, so it is not counted.
-        recentCallsPerUser.set(user, recent);
-        c.header("Retry-After", String(Math.ceil((recent[0]! + RATE_WINDOW_MS - now) / 1000)));
-        return problem(c, 429, "Too Many Requests");
-      }
-
-      //save the list only with the recent calls and the new call.
-      recentCallsPerUser.set(user, [...recent, now]);
-
       if (sessionId === undefined) {
         const created = await client.createSession(signal);
+        if (created.kind === "rateLimited") return problem(c, 429, "Too Many Requests");
         if (created.kind !== "ok") return problem(c, 503, "Service Unavailable");
         sessionId = created.sessionId;
       }
@@ -370,6 +316,7 @@ export function chatProxyRoutes(
         signal,
       );
       if (result.kind === "sessionGone") return problem(c, 404, "Not Found");
+      if (result.kind === "rateLimited") return problem(c, 429, "Too Many Requests");
       if (result.kind === "error") return problem(c, 503, "Service Unavailable");
       return c.json(
         { reply: result.reply, sessionId: signSessionId(sessionKey, user, sessionId) },

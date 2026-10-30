@@ -17,9 +17,16 @@ export type SporaiClientOptions = {
 /** Sporai could not answer. The reason is in the log. */
 export type SporaiError = { kind: "error" };
 
-export type SessionResult = { kind: "ok"; sessionId: string } | SporaiError;
+/** Sporai answered 429, because the user sent too many questions. */
+export type SporaiRateLimited = { kind: "rateLimited" };
+
+export type SessionResult = { kind: "ok"; sessionId: string } | SporaiRateLimited | SporaiError;
 /** `sessionGone` means sporai does not know the session, for example because it expired. */
-export type ChatResult = { kind: "ok"; reply: string } | { kind: "sessionGone" } | SporaiError;
+export type ChatResult =
+  | { kind: "ok"; reply: string }
+  | { kind: "sessionGone" }
+  | SporaiRateLimited
+  | SporaiError;
 
 export type ChatRequest = {
   sessionId: string;
@@ -62,6 +69,7 @@ export class SporaiClient {
   async createSession(signal?: AbortSignal): Promise<SessionResult> {
     const res = await this.request("/api/chat/sessions", { method: "POST" }, signal);
     if (!(res instanceof Response)) return res;
+    if (res.status === 429) return { kind: "rateLimited" };
     if (!res.ok) return this.logFailure(res.status);
     // Invalid JSON is handled in the same way as a missing session id.
     const sessionId = readField(await res.json().catch(() => undefined), "sessionId");
@@ -78,6 +86,7 @@ export class SporaiClient {
     );
     if (!(res instanceof Response)) return res;
     if (res.status === 404) return { kind: "sessionGone" };
+    if (res.status === 429) return { kind: "rateLimited" };
     if (!res.ok) return this.logFailure(res.status);
     let reply: string;
     try {
