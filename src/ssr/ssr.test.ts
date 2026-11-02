@@ -829,6 +829,26 @@ describe("/ssr dark mode", () => {
     expect(body.headAssets).toContain("color-scheme: dark;");
   });
 
+  test("the stylesheet has dark colours for the chat drawer", async () => {
+    const body = await (await ssr()).json();
+    const darkRule = body.headAssets
+      .split('[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {')[1]
+      .split("}")[0];
+    for (const name of ["drawer", "on-drawer", "form-fill", "secondary", "floating"]) {
+      expect(darkRule).toContain(`--uniformen-${name}:`);
+    }
+  });
+
+  test("the chat window and the new chat button have their own dark mode rules", async () => {
+    const body = await (await ssr()).json();
+    expect(body.headAssets).toContain(
+      '[data-color-mode="dark"] .uniformen-chat-window {\n  color-scheme: light;',
+    );
+    expect(body.headAssets).toContain(
+      '[data-color-mode="dark"] .uniformen-top-nav .uniformen-new-chat-button {',
+    );
+  });
+
   test("no query param turns it on, so the markup is the same", async () => {
     const dark = await (await ssr("?colorMode=dark")).json();
     const light = await (await ssr()).json();

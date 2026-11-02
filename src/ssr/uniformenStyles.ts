@@ -36,6 +36,12 @@ const darkFloatingButton = componentVariables.dark.components.button.floating;
 // Colours for form fields in the Entur design system.
 const form = componentVariables.light.components.form.baseForm;
 
+// The dark theme's colours for the same components.
+const darkSecondaryButton = componentVariables.dark.components.button.secondary;
+const darkIconButton = componentVariables.dark.components.button.iconButton;
+const darkDrawer = componentVariables.dark.components.modal.drawer;
+const darkForm = componentVariables.dark.components.form.baseForm;
+
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
 
@@ -206,8 +212,10 @@ const topbarDark = componentColors.dark.components.menu.topbar.contrast;
  * overlay colours.
  *
  * In the design system, the standard and the contrast colours have the same dark
- * colours. So this rule also applies to a contrast header and footer. The selector has
- * two parts, so it is more specific than `.uniformen-contrast` and wins over it.
+ * colours. So the first rule also applies to a contrast header and footer. The selector
+ * has two parts, so it is more specific than `.uniformen-contrast` and wins over it.
+ *
+ * The last two rules are exceptions for the chat-drawer.
  */
 const DARK_VARS = `[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {
   color-scheme: dark;
@@ -227,6 +235,42 @@ const DARK_VARS = `[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-f
   --uniformen-shadow-bar: none;
   --uniformen-shadow-panel: ${shadows.boxShadow};
   --uniformen-shadow-focus: ${shadows.focusContrast};
+  --uniformen-secondary: ${darkSecondaryButton.standard.default};
+  --uniformen-secondary-hover: ${darkSecondaryButton.standard.hover};
+  --uniformen-secondary-active: ${darkSecondaryButton.standard.active};
+  --uniformen-secondary-border: ${darkSecondaryButton.standard.border};
+  --uniformen-secondary-border-active: ${darkSecondaryButton.standard.borderActive};
+  --uniformen-on-secondary: ${darkSecondaryButton.standard.text};
+  --uniformen-on-secondary-active: ${darkSecondaryButton.standard.textActive};
+  --uniformen-icon-button-hover: ${darkIconButton.standard.hover};
+  --uniformen-icon-button-active: ${darkIconButton.standard.active};
+  --uniformen-on-icon-button-active: ${darkIconButton.standard.iconActive};
+  --uniformen-drawer: ${darkDrawer.standard.background};
+  --uniformen-on-drawer: ${darkDrawer.standard.text};
+  --uniformen-form-fill: ${darkForm.standard.fillDefault};
+  --uniformen-form-border: ${darkForm.standard.borderDefault};
+  --uniformen-form-border-interactive: ${darkForm.standard.borderInteractive};
+  --uniformen-form-label: ${darkForm.standard.textLabel};
+  --uniformen-form-text: ${darkForm.standard.textContent};
+  --uniformen-floating: ${darkFloatingButton.standard.default};
+  --uniformen-floating-hover: ${darkFloatingButton.standard.hover};
+  --uniformen-floating-active: ${darkFloatingButton.standard.active};
+  --uniformen-on-floating: ${darkFloatingButton.standard.icon};
+  --uniformen-shadow-floating: ${shadows.boxShadow};
+}
+
+[data-color-mode="dark"] .uniformen-chat-window {
+  color-scheme: light;
+  --uniformen-form-fill: ${form.standard.fillDefault};
+  --uniformen-secondary-border: ${secondaryButton.standard.border};
+  --uniformen-secondary-hover: ${secondaryButton.standard.hover};
+  --uniformen-on-secondary: ${secondaryButton.standard.text};
+  --uniformen-shadow-focus: ${shadows.focus};
+}
+
+[data-color-mode="dark"] .uniformen-top-nav .uniformen-new-chat-button {
+  --uniformen-secondary: ${darkSecondaryButton.standard.default};
+  --uniformen-on-secondary: ${darkSecondaryButton.standard.text};
 }
 `;
 
