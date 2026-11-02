@@ -8,9 +8,9 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
-## 2026-10-30
+## 2026-11-2
 
-### Added
+## Added
 
 - An AI agent button in the bar, for a signed-in user who has the `ai-agent` feature
   flag on in PostHog. It is shown with `aiAgent=true`.
@@ -24,6 +24,15 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   and bold text. Links in a reply are shown as plain text.
 - The drawer sends questions from the browser to the service's `POST /chat-proxy`
   endpoint. The `connect-src` that `csp` already has allows this.
+
+## 2026-10-30
+
+### Added
+
+- `hideNotifications=true` renders the bar without the notifications button, and the
+  service does not look up the user's notifications. Use it in an app that shows its
+  own notifications, so the page does not have two lists.
+- The preview page has a `hideNotifications` control.
 
 ## 2026-10-28
 

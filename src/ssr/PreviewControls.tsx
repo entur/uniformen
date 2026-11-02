@@ -24,6 +24,7 @@ export function previewUrl(
   if (query.colorMode === "dark") params.set("colorMode", "dark");
   if (query.loginUrl) params.set("loginUrl", query.loginUrl);
   if (query.logoutUrl) params.set("logoutUrl", query.logoutUrl);
+  if (query.hideNotifications === "true") params.set("hideNotifications", "true");
   params.set("locale", query.locale);
   for (const locale of query.availableLocales ?? []) params.append("availableLocales", locale);
   if (environment !== "production") {
@@ -83,6 +84,7 @@ export function previewCode(
   if (query.contrast === "true") params.push("contrast: true");
   if (query.simple === "true") params.push("simple: true");
   if (query.aiAgent === "true") params.push("aiAgent: true");
+  if (query.hideNotifications === "true") params.push("hideNotifications: true");
 
   return [
     `import { ${fetch} } from "${module}";`,
@@ -202,24 +204,39 @@ export function PreviewControls({
           </Group>
 
           <Group where="right">
+            <Field
+              label="hideNotifications"
+              hint="Skjuler varsel-knappen. For apper som har sine egne varsler."
+            >
+              <label class="preview-controls__check">
+                <input
+                  type="checkbox"
+                  name="hideNotifications"
+                  value="true"
+                  checked={query.hideNotifications === "true"}
+                />
+                appen viser varsler selv
+              </label>
+            </Field>
+
             {/* Hidden in production, because production ignores these parameters. */}
             {environment === "production" ? null : (
               <>
                 <Field
                   label="debugNotifications"
-                  hint="Bare i forhåndsvisningen — leses inn om bruker er logget inn."
+                  hint="Bare i forhåndsvisningen — hvor mange varsler panelet viser. Krever innlogget bruker."
                 >
                   <div class="preview-controls__row">
-                    {["none", "some", "all"].map((notificationOption) => (
+                    {["none", "some", "max"].map((notificationOption) => (
                       <label class="preview-controls__check">
                         <input
                           type="radio"
                           name="debugNotifications"
                           value={notificationOption}
-                          checked={(query.debugNotifications ?? "all") === notificationOption}
+                          checked={(query.debugNotifications ?? "max") === notificationOption}
                         />
-                        {notificationOption === "all"
-                          ? "alle"
+                        {notificationOption === "max"
+                          ? "maks"
                           : notificationOption === "some"
                             ? "noen"
                             : "ingen"}

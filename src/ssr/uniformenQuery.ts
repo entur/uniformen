@@ -56,6 +56,9 @@ export const uniformenQuerySchema = z
     // with the `ai-agent` feature flag on in PostHog sees them, and only where chat is
     // configured.
     aiAgent: z.enum(["true", "false"]).optional(),
+    // Notifications are shown by default. An app that already has its own
+    // notifications can turn them off here, so the page does not show two lists.
+    hideNotifications: z.enum(["true", "false"]).optional(),
   })
   // These checks use two fields, so they cannot be on the field itself. A repeated
   // language would be listed twice. A list without `locale` would have no option
@@ -90,6 +93,7 @@ export function topNavigationProps({
   loginUrl,
   logoutUrl,
   aiAgent,
+  hideNotifications,
 }: UniformenQuery) {
   const simpleMode = simple === "true";
   return {
@@ -105,5 +109,6 @@ export function topNavigationProps({
     loginUrl,
     logoutUrl,
     aiAgent: !simpleMode && aiAgent === "true",
+    hideNotifications: hideNotifications === "true",
   };
 }

@@ -42,6 +42,7 @@ export function TopNavigation({
   notifications,
   aiAgent,
   chatAccessToken,
+  hideNotifications,
 }: {
   /** The signed-in user. Without it, the bar is rendered for an anonymous user. */
   user?: UserMenuUser;
@@ -80,6 +81,8 @@ export function TopNavigation({
   locale: Locale;
   /** The notifications to show, and how many there are in total. */
   notifications?: Notifications;
+  /** When `true`, the bar has no notifications button at all. */
+  hideNotifications?: boolean;
   /**
    * The languages to offer, in this order. Without it, or when it is empty, there is
    * no language switcher. For a signed-in user it is a section in the user menu. For
@@ -111,7 +114,9 @@ export function TopNavigation({
           )}
           {user && (
             <>
-              {!simple && <NotificationsMenu locale={locale} notifications={notifications} />}
+              {!simple && !hideNotifications && (
+                <NotificationsMenu locale={locale} notifications={notifications} />
+              )}
               <UserMenu
                 user={user}
                 simple={simple}
