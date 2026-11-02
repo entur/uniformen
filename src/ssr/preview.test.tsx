@@ -551,6 +551,15 @@ describe("preview page code example", () => {
     );
   });
 
+  test("aiAgent=true adds aiAgent: true, and aiAgent=false leaves it out", () => {
+    expect(previewCode({ locale: "nb-NO", aiAgent: "true" }, "layout", "dev")).toContain(
+      "    aiAgent: true,",
+    );
+    expect(previewCode({ locale: "nb-NO", aiAgent: "false" }, "layout", "dev")).not.toContain(
+      "aiAgent",
+    );
+  });
+
   test("the React example imports the adapter", () => {
     const code = previewCode({ locale: "nb-NO" }, "react", "staging");
     expect(code).toContain('import { fetchUniformenComponents } from "@entur/uniformen/react";');
