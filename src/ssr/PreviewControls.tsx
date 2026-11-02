@@ -20,6 +20,7 @@ export function previewUrl(
   if (query.sidebar === "true") params.set("sidebar", "true");
   if (query.simple === "true") params.set("simple", "true");
   if (query.contrast === "true") params.set("contrast", "true");
+  if (query.aiAgent === "true") params.set("aiAgent", "true");
   if (query.colorMode === "dark") params.set("colorMode", "dark");
   if (query.loginUrl) params.set("loginUrl", query.loginUrl);
   if (query.logoutUrl) params.set("logoutUrl", query.logoutUrl);
@@ -82,6 +83,7 @@ export function previewCode(
   if (query.logoutUrl) params.push(`logoutUrl: ${JSON.stringify(query.logoutUrl)}`);
   if (query.contrast === "true") params.push("contrast: true");
   if (query.simple === "true") params.push("simple: true");
+  if (query.aiAgent === "true") params.push("aiAgent: true");
   if (query.hideNotifications === "true") params.push("hideNotifications: true");
 
   return [
@@ -328,6 +330,21 @@ export function PreviewControls({
                   ),
                 )}
               </div>
+            </Field>
+
+            <Field
+              label="aiAgent"
+              hint="KI-agent-knappen. I /ssr vises den bare for brukere med feature-flagget ai-agent i PostHog."
+            >
+              <label class="preview-controls__check">
+                <input
+                  type="checkbox"
+                  name="aiAgent"
+                  value="true"
+                  checked={query.aiAgent === "true"}
+                />
+                Vis KI-agent-knapp
+              </label>
             </Field>
           </Group>
         </div>

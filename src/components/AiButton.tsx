@@ -1,0 +1,29 @@
+import type { Locale } from "../types";
+import { AiIcon } from "./icons/AiIcon";
+
+const texts = {
+  "nb-NO": { aiAgent: "KI-agent" },
+  "nn-NO": { aiAgent: "KI-agent" },
+  "en-GB": { aiAgent: "AI agent" },
+} as const;
+
+/**
+ * Renders the button that opens and closes the AI agent's chat drawer. It looks like
+ * the secondary button in the Entur design system.
+ */
+export function AiButton({ locale }: { locale: Locale }) {
+  const txt = texts[locale];
+  return (
+    <button
+      type="button"
+      class="uniformen-top-nav__action uniformen-top-nav__action--secondary"
+      aria-label={txt.aiAgent}
+      data-uniformen-ai-agent-toggle
+      aria-controls="uniformen-chat-drawer"
+      aria-expanded="false"
+    >
+      <AiIcon />
+      <span class="uniformen-top-nav__action-label">{txt.aiAgent}</span>
+    </button>
+  );
+}

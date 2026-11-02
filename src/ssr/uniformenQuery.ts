@@ -52,6 +52,10 @@ export const uniformenQuerySchema = z
         z.array(z.enum(LOCALES)).nonempty(),
       )
       .optional(),
+    // Shows the AI agent button and its chat drawer. In `/ssr`, only a signed-in user
+    // with the `ai-agent` feature flag on in PostHog sees them, and only where chat is
+    // configured.
+    aiAgent: z.enum(["true", "false"]).optional(),
     // Notifications are shown by default. An app that already has its own
     // notifications can turn them off here, so the page does not show two lists.
     hideNotifications: z.enum(["true", "false"]).optional(),
@@ -88,6 +92,7 @@ export function topNavigationProps({
   availableLocales,
   loginUrl,
   logoutUrl,
+  aiAgent,
   hideNotifications,
 }: UniformenQuery) {
   const simpleMode = simple === "true";
@@ -103,6 +108,7 @@ export function topNavigationProps({
     availableLocales,
     loginUrl,
     logoutUrl,
+    aiAgent: !simpleMode && aiAgent === "true",
     hideNotifications: hideNotifications === "true",
   };
 }
