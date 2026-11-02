@@ -27,6 +27,9 @@ const CHAT_PROXY_URLS: Record<Environment, string> = {
 const CHAT_TOKEN_AUDIENCE = "uniformen-chat";
 const CHAT_TOKEN_LIFETIME = "8h";
 
+// The most time one question may take in total.
+const CHAT_DEADLINE_MS = 35_000;
+
 // The same pattern as sporai's. Sporai rejects any other `location` with a 400.
 const LOCATION_PATTERN = /^[a-zA-Z0-9/_-]{0,100}$/;
 
@@ -300,8 +303,7 @@ export function chatProxyRoutes(
       const { query, location, sessionId: signedSessionId } = c.req.valid("json");
       const user = c.get("chatUser");
       c.header("Cache-Control", "no-store");
-      // Stop the call to sporai when the browser goes away.
-      const signal = c.req.raw.signal;
+      const signal = AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(CHAT_DEADLINE_MS)]);
 
       let sessionId: string | undefined;
       if (signedSessionId !== undefined) {

@@ -54,7 +54,7 @@ app.doc("/doc", {
 // without starting a server.
 if (import.meta.main) {
   // Bun closes a connection that has been quiet for 10 seconds by default. A chat
-  // answer can take up to 30 seconds, plus 5 seconds for the machine token.
+  // answer can take up to `CHAT_DEADLINE_MS`, so keep this higher.
   const server = Bun.serve({ port: PORT, fetch: app.fetch, idleTimeout: 60 });
   console.info(`Uniformen is running on ${server.url}`);
 
