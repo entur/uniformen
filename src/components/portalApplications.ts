@@ -50,6 +50,14 @@ const APPLICATIONS = [
     },
   },
   {
+    id: "miljokalkulator",
+    appName: "Miljøkalkulator",
+    unlisted: true,
+    hosts: {
+      production: "miljokalkulator.entur.no",
+    },
+  },
+  {
     id: "nplan",
     appName: "Nplan",
     hosts: {
@@ -84,6 +92,15 @@ const APPLICATIONS = [
       dev: "entur-partner.dev.entur.org",
       staging: "entur-partner.staging.entur.org",
       production: "entur-partner.entur.org",
+    },
+  },
+  {
+    id: "reisevaner",
+    appName: "Reisevaner",
+    unlisted: true,
+    hosts: {
+      staging: "reisevaner.staging.entur.no",
+      production: "reisevaner.entur.no",
     },
   },
   {
