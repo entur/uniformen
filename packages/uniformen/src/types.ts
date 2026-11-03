@@ -15,10 +15,12 @@ export type FetchUniformenParams = {
   app?:
     | "bedrift"
     | "cleos"
+    | "miljokalkulator"
     | "nplan"
     | "omsetning"
     | "ops-center"
     | "partner"
+    | "reisevaner"
     | "skoleskyss"
     | "sorvis"
     | "varslingssenter";
