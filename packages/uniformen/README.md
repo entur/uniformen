@@ -80,11 +80,7 @@ service, retry included. When the timeout is reached, the call handles it like e
 other failure. See [Caching and failures](#caching-and-failures). Your page can then
 render without the header and footer instead of waiting for them.
 
-`params.app` (`"bedrift" | "cleos" | "nplan" | "omsetning" | "ops-center" | "partner" | "skoleskyss" | "sorvis" | "varslingssenter"`)
-is the portal application that asks for the layout. The top bar shows the app name
-next to the Entur logo. The app switcher marks this application as the current one,
-unless the application is unlisted. An unknown value makes the service answer `400`,
-and the call returns `null`.
+`params.app` is the portal application that asks for the layout. The top bar shows the app name next to the Entur logo. The app switcher marks this application as the current one, unless the application is unlisted. An unknown value makes the service answer `400`, and the call returns `null`.
 
 Params with an `undefined` value are left out of the query string. Array params are
 sent as a repeated key (`?key=a&key=b`).
