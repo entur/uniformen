@@ -8,6 +8,14 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-4
+
+### Fixed
+
+- Content that scrolls under the bar now goes under the bar's shadow too. Before,
+  positioned elements in the app, such as cards, covered the shadow. The bar now has
+  the z-index of the popover level, so the app's popovers and modals still cover it.
+
 ## 2026-11-2
 
 ## Added
