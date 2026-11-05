@@ -26,11 +26,14 @@ const iconButton = componentVariables.light.components.button.iconButton;
 // Colours for the drawer in the Entur design system.
 const drawer = componentVariables.light.components.modal.drawer;
 
+// Colours for the side navigation in the Entur design system. Its hover colour is
+// used for hover in the panels.
+const sideNavigation = componentVariables.light.components.menu.sideNavigation;
+
 // Colours for the floating button in the Entur design system.
 const floatingButton = componentVariables.light.components.button.floating;
 
-// Contrast mode uses the dark theme's floating button. The text area behind the
-// button is white in both modes, and the contrast button is also white.
+// Dark mode uses the dark theme's floating button.
 const darkFloatingButton = componentVariables.dark.components.button.floating;
 
 // Colours for form fields in the Entur design system.
@@ -98,6 +101,7 @@ export function buildRootVars(env: Environment): string {
   --uniformen-color-blue-80: ${colors.blues.blue80};
   --uniformen-color-blue-90: ${colors.blues.blue90};
   --uniformen-color-grey-30: ${primitive.grey._30};
+  --uniformen-color-menu-hover: ${sideNavigation.standard.fill.hover};
   --uniformen-color-env: ${palette.strip};
   --uniformen-color-env-tint: ${palette.tint};
   --uniformen-color-env-border: ${palette.border};
@@ -153,10 +157,27 @@ export function buildRootVars(env: Environment): string {
 `;
 }
 
+// The panels that open from the bar, and the chat drawer. In contrast mode they keep
+// the light colours. See `CONTRAST_VARS`.
+const PANELS = [
+  ".uniformen-env-switcher__panel",
+  ".uniformen-app-switcher__panel",
+  ".uniformen-user-menu__panel",
+  ".uniformen-locale-switcher__panel",
+  ".uniformen-notifications-menu__surface",
+  ".uniformen-chat-drawer",
+].join(", ");
+
 /**
  * Colours for contrast mode, for a navy bar. They are set on the modifier class, not
- * on `:root`, so they only apply inside a contrast header, footer and its panels. All
- * values are the design system's `contrast` variants.
+ * on `:root`, so they only apply inside a contrast header and footer. All values are
+ * the design system's `contrast` variants.
+ *
+ * The panels and the chat drawer look the same as in light mode. The variables that
+ * only panels use are not set here, so the panels get the `:root` values. The second
+ * rule sets the variables that both the bar and the panels use back to the light
+ * values inside the panels. It also sets the text colour again, because text without
+ * its own colour inherits the white text colour of the bar.
  *
  * The environment badge keeps its colours. It has its own background, so its text
  * contrast does not depend on the bar colour.
@@ -167,16 +188,7 @@ const CONTRAST_VARS = `.uniformen-contrast {
   --uniformen-surface-active: ${semantic.fill.selected.hover.contrast};
   --uniformen-on-surface: ${semantic.text.light};
   --uniformen-divider: ${semantic.fill.selected.hover.contrast};
-  --uniformen-panel: ${semantic.fill.background.contrast.lightalt2};
-  --uniformen-panel-body: ${semantic.fill.background.contrast.light};
-  --uniformen-panel-hover: ${semantic.fill.background.contrast.lightalt};
-  --uniformen-panel-selected: ${semantic.fill.selected.hover.contrast};
-  --uniformen-panel-border: ${semantic.fill.selected.hover.contrast};
-  --uniformen-panel-border-strong: ${semantic.fill.selected.hover.contrast};
-  --uniformen-on-panel: ${semantic.text.light};
-  --uniformen-on-panel-subdued: ${semantic.text.contrast};
   --uniformen-shadow-bar: ${shadows.boxShadowContrast};
-  --uniformen-shadow-panel: ${shadows.cardShadowContrast};
   --uniformen-shadow-focus: ${shadows.focusContrast};
   --uniformen-secondary: ${secondaryButton.contrast.default};
   --uniformen-secondary-hover: ${secondaryButton.contrast.hover};
@@ -185,21 +197,21 @@ const CONTRAST_VARS = `.uniformen-contrast {
   --uniformen-secondary-border-active: ${secondaryButton.contrast.borderActive};
   --uniformen-on-secondary: ${secondaryButton.contrast.text};
   --uniformen-on-secondary-active: ${secondaryButton.contrast.textActive};
-  --uniformen-icon-button-hover: ${iconButton.contrast.hover};
-  --uniformen-icon-button-active: ${iconButton.contrast.active};
-  --uniformen-on-icon-button-active: ${iconButton.contrast.iconActive};
-  --uniformen-drawer: ${drawer.contrast.background};
-  --uniformen-on-drawer: ${drawer.contrast.text};
-  --uniformen-form-fill: ${form.contrast.fillDefault};
-  --uniformen-form-border: ${form.contrast.borderDefault};
-  --uniformen-form-border-interactive: ${form.contrast.borderInteractive};
-  --uniformen-form-label: ${form.contrast.textLabel};
-  --uniformen-form-text: ${form.contrast.textContent};
-  --uniformen-floating: ${darkFloatingButton.standard.default};
-  --uniformen-floating-hover: ${darkFloatingButton.standard.hover};
-  --uniformen-floating-active: ${darkFloatingButton.standard.active};
-  --uniformen-on-floating: ${darkFloatingButton.standard.icon};
-  --uniformen-shadow-floating: ${shadows.boxShadowContrast};
+}
+
+.uniformen-contrast :is(${PANELS}) {
+  color: var(--uniformen-on-surface);
+  --uniformen-on-surface: var(--uniformen-color-brand-blue);
+  --uniformen-surface-hover: var(--uniformen-color-blue-20);
+  --uniformen-surface-active: var(--uniformen-color-brand-lavender);
+  --uniformen-shadow-focus: ${shadows.focus};
+  --uniformen-secondary: ${secondaryButton.standard.default};
+  --uniformen-secondary-hover: ${secondaryButton.standard.hover};
+  --uniformen-secondary-active: ${secondaryButton.standard.active};
+  --uniformen-secondary-border: ${secondaryButton.standard.border};
+  --uniformen-secondary-border-active: ${secondaryButton.standard.borderActive};
+  --uniformen-on-secondary: ${secondaryButton.standard.text};
+  --uniformen-on-secondary-active: ${secondaryButton.standard.textActive};
 }
 `;
 
@@ -214,10 +226,12 @@ const topbarDark = componentColors.dark.components.menu.topbar.contrast;
  * In the design system, the standard and the contrast colours have the same dark
  * colours. So the first rule also applies to a contrast header and footer. The selector
  * has two parts, so it is more specific than `.uniformen-contrast` and wins over it.
+ * The rule also sets the colours on the panels. Contrast mode sets light colours on
+ * them with a selector of the same specificity, and this rule comes later, so it wins.
  *
  * The last two rules are exceptions for the chat-drawer.
  */
-const DARK_VARS = `[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {
+const DARK_VARS = `[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer, ${PANELS}) {
   color-scheme: dark;
   --uniformen-surface: ${topbarDark.background};
   --uniformen-surface-hover: ${topbarDark.fillHover};
