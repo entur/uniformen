@@ -213,7 +213,7 @@ describe("preview page simple", () => {
     const anonymous = await preview("?simple=true&app=partner&loginUrl=/auth/login");
     expect(anonymous.res.status).toBe(200);
     expect(anonymous.html).toContain('href="/auth/login"');
-    expect(anonymous.html).not.toContain('aria-label="Velg applikasjon"');
+    expect(anonymous.html).not.toContain('aria-label="Apper"');
 
     const signedIn = await preview("?simple=true&debugUser=Navn+Navnesen&logoutUrl=/auth/logout");
     expect(signedIn.html).toContain("Navn Navnesen");
@@ -237,7 +237,7 @@ describe("preview page hideNotifications", () => {
     // Look for the button's label, not the attribute name. The stylesheet and the
     // handler mention the attribute on every page.
     expect(html).not.toContain('aria-label="Varsler"');
-    expect(html).toContain('aria-label="Velg applikasjon"');
+    expect(html).toContain('aria-label="Apper"');
   });
 
   test("without it the button is there", async () => {

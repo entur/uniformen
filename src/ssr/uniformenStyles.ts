@@ -162,7 +162,7 @@ export function buildRootVars(env: Environment): string {
  * contrast does not depend on the bar colour.
  */
 const CONTRAST_VARS = `.uniformen-contrast {
-  --uniformen-surface: ${semantic.fill.background.contrast.light};
+  --uniformen-surface: ${semantic.fill.background.contrast.lightalt2};
   --uniformen-surface-hover: ${semantic.fill.background.contrast.lightalt};
   --uniformen-surface-active: ${semantic.fill.selected.hover.contrast};
   --uniformen-on-surface: ${semantic.text.light};
