@@ -38,6 +38,13 @@
   display: flex;
   /* For the notifications menu to use screen width as placement base */
   position: relative;
+  /* Paint the bar and its shadow above the app's content. Without a z-index,
+     positioned elements in the app, such as cards, come later in the page and
+     cover the shadow when they scroll up. The value is the popover level, so the
+     app's sticky elements go under the bar. The app's popovers have the same
+     value but come later in the page, so they still cover the bar, and the app's
+     modals have a higher value. */
+  z-index: var(--uniformen-z-popover);
   justify-content: space-between;
   align-items: center;
   flex: 1;
