@@ -13,6 +13,8 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 ### Fixed
 
 - The environment chip is now 32px high, up from 27px, so it is easier to click.
+- The AI chat closes when the user opens one of the bar's panels, such as the
+  notifications or the app switcher. Before, the chat stayed open behind the panel.
 
 ### Changed
 
@@ -25,6 +27,11 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   closed.
 - In contrast mode, the bar and the footer have the background colour #292B6A,
   instead of #181C56.
+- In contrast mode, the panels that open from the bar and the AI chat look the same
+  as in light mode. Before, they were navy.
+- Hover in the panels is lighter: #D9DAE8, the hover colour of the design system's
+  side navigation, instead of #AEB7E2. The notifications menu uses the same hover
+  colour as the other panels.
 
 ## 2026-11-4
 

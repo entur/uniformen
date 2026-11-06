@@ -8,6 +8,7 @@ import {
   signPartnerToken,
   signInternalToken,
 } from "../test/authTestKeys";
+import { shadows } from "@entur/tokens";
 import { app } from "../index";
 import { aiAgentFlag, chat } from "./ssr";
 import { PORTAL_APPLICATION_IDS, portalApplicationName } from "../components/portalApplications";
@@ -724,6 +725,27 @@ describe("/ssr contrast query param", () => {
     expect(contrast.csp).toEqual(light.csp);
     expect(contrast.headAssets).toContain(".uniformen-contrast");
   });
+
+  test("panel hover uses the side navigation hover colour from the design system", async () => {
+    const { headAssets } = await (await ssr()).json();
+    expect(headAssets).toContain("--uniformen-color-menu-hover: #d9dae8;");
+    expect(headAssets).toContain("--uniformen-panel-hover: var(--uniformen-color-menu-hover);");
+  });
+
+  test("panels and the chat drawer keep the light colours in contrast mode", async () => {
+    const { headAssets } = await (await ssr("?contrast=true")).json();
+    const contrastBlock = headAssets.match(/\.uniformen-contrast \{([^}]*)\}/)?.[1];
+    expect(contrastBlock).toBeDefined();
+    expect(contrastBlock).not.toContain("--uniformen-panel");
+    expect(contrastBlock).not.toContain("--uniformen-on-panel");
+    expect(contrastBlock).not.toContain("--uniformen-drawer");
+    const panelBlock = headAssets.match(/\.uniformen-contrast :is\(([^)]*)\) \{([^}]*)\}/);
+    expect(panelBlock?.[1]).toContain(".uniformen-notifications-menu__surface");
+    expect(panelBlock?.[1]).toContain(".uniformen-chat-drawer");
+    expect(panelBlock?.[2]).toContain(`--uniformen-shadow-focus: ${shadows.focus};`);
+    // Text without its own colour must not inherit the white text of the bar.
+    expect(panelBlock?.[2]).toContain("color: var(--uniformen-on-surface);");
+  });
 });
 
 describe("/ssr aiAgent query param", () => {
@@ -874,15 +896,26 @@ describe("/ssr dark mode", () => {
   test("the stylesheet has dark colours for the bar and the footer", async () => {
     const body = await (await ssr()).json();
     expect(body.headAssets).toContain(
-      '[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {',
+      '[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer, ',
     );
     expect(body.headAssets).toContain("color-scheme: dark;");
+  });
+
+  test("the dark rule also covers the panels, so it wins over the contrast panel rule", async () => {
+    const body = await (await ssr()).json();
+    const selector = body.headAssets.split('[data-color-mode="dark"] :is(')[1].split(") {")[0];
+    expect(selector).toContain(".uniformen-user-menu__panel");
+    expect(selector).toContain(".uniformen-chat-drawer");
+    const dark = body.headAssets.indexOf('[data-color-mode="dark"] :is(');
+    const contrastPanels = body.headAssets.indexOf(".uniformen-contrast :is(");
+    expect(contrastPanels).toBeGreaterThan(-1);
+    expect(dark).toBeGreaterThan(contrastPanels);
   });
 
   test("the stylesheet has dark colours for the chat drawer", async () => {
     const body = await (await ssr()).json();
     const darkRule = body.headAssets
-      .split('[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer) {')[1]
+      .split('[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer, ')[1]
       .split("}")[0];
     for (const name of ["drawer", "on-drawer", "form-fill", "secondary", "floating"]) {
       expect(darkRule).toContain(`--uniformen-${name}:`);

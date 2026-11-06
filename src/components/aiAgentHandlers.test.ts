@@ -408,6 +408,27 @@ describe("aiAgentHandlers", () => {
     expect(page.button.getAttribute("aria-expanded")).toBe("false");
   });
 
+  test("opening one of the bar's panels closes the drawer", () => {
+    const page = install();
+    const icon = new FakeElement();
+    const panelButton = new FakeElement({ "aria-haspopup": "dialog" }, [icon]);
+    page.button.click();
+    page.doc.fire("click", { target: icon });
+    expect(page.drawer.hidden).toBe(true);
+    expect(page.button.getAttribute("aria-expanded")).toBe("false");
+    // A panel button that closes its panel while the drawer is closed changes nothing.
+    page.doc.fire("click", { target: panelButton });
+    expect(page.drawer.hidden).toBe(true);
+  });
+
+  test("other clicks outside the drawer keep it open", () => {
+    const page = install();
+    page.button.click();
+    page.doc.fire("click", { target: new FakeElement({ class: "app-content" }) });
+    page.doc.fire("click", { target: null });
+    expect(page.drawer.hidden).toBe(false);
+  });
+
   test("opening moves focus to the text field", () => {
     const page = install();
     page.button.click();

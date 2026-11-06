@@ -51,6 +51,17 @@ export default function aiAgentHandlers() {
     }
   });
 
+  // Close the drawer when the user opens one of the bar's panels, such as the
+  // notifications or the app switcher. The panel buttons have `aria-haspopup`.
+  // The drawer does not close on other clicks, so the user can use the page while
+  // the chat is open.
+  document.addEventListener("click", (event) => {
+    if (drawer.hidden) return;
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest("[aria-haspopup]")) return;
+    setDrawerOpen(false);
+  });
+
   // Enter sends the question. Shift+Enter adds a new line.
   drawer.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" || event.shiftKey) return;

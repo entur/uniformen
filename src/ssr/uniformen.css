@@ -9,7 +9,7 @@
   --uniformen-divider: var(--uniformen-color-grey-30);
   --uniformen-panel: var(--uniformen-color-brand-white);
   --uniformen-panel-body: var(--uniformen-color-blue-90);
-  --uniformen-panel-hover: var(--uniformen-color-brand-lavender);
+  --uniformen-panel-hover: var(--uniformen-color-menu-hover);
   --uniformen-panel-selected: var(--uniformen-color-blue-80);
   --uniformen-panel-border: var(--uniformen-color-blue-70);
   --uniformen-panel-border-strong: var(--uniformen-color-blue-60);
@@ -637,7 +637,7 @@
 }
 .uniformen-notifications-menu__item:hover,
 .uniformen-notifications-menu__footer:hover {
-  background: var(--uniformen-surface-hover);
+  background: var(--uniformen-panel-hover);
 }
 
 .uniformen-notifications-menu__item:visited,
@@ -1190,9 +1190,8 @@
 
 /* The secondary fill is transparent, so on the light drawer the button would blend
    with the background. A white fill sets it apart. The text uses the drawer text
-   colour. In contrast mode the drawer is navy, and the design
-   system's contrast secondary button is used without changes. */
-.uniformen-top-nav:not(.uniformen-contrast) .uniformen-new-chat-button {
+   colour. */
+.uniformen-top-nav .uniformen-new-chat-button {
   --uniformen-secondary: var(--uniformen-color-brand-white);
   --uniformen-on-secondary: var(--uniformen-on-drawer);
 }
