@@ -3,6 +3,7 @@ import type { Locale } from "../types";
 import { LocaleMenu } from "./LocaleMenu";
 import { UserIcon } from "./icons/UserIcon";
 import { EyeIcon } from "./icons/EyeIcon";
+import { LogOutIcon } from "./icons/LogOutIcon";
 import { portalApplicationUrl } from "./portalApplications";
 
 const texts = {
@@ -123,6 +124,7 @@ export function UserMenu({
             different kind of action from the items above. */}
         {logoutUrl && (
           <a class="uniformen-user-menu__item uniformen-user-menu__logout" href={logoutUrl}>
+            <LogOutIcon />
             {txt.loggUt}
           </a>
         )}

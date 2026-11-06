@@ -8,6 +8,24 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-5
+
+### Fixed
+
+- The environment chip is now 32px high, up from 27px, so it is easier to click.
+
+### Changed
+
+- The "Logg ut" row in the user menu has an icon, like the other rows.
+- The app switcher button shows the text "Apper" ("Appar" in Nynorsk, "Apps" in
+  English) next to the grid icon. The text is hidden on small screens. The button's
+  accessible name is the same text, instead of "Velg applikasjon".
+- The button that hides and shows the sidebar has a new icon. It is a rounded frame
+  with a short line when the sidebar is open, and a full-height line when it is
+  closed.
+- In contrast mode, the bar and the footer have the background colour #292B6A,
+  instead of #181C56.
+
 ## 2026-11-4
 
 ### Fixed

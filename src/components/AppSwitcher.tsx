@@ -5,15 +5,15 @@ import { PORTAL_APPLICATIONS, type PortalApplicationId } from "./portalApplicati
 
 const texts = {
   "nb-NO": {
-    velgApplikasjon: "Velg applikasjon",
+    apper: "Apper",
     velgTjeneste: "Velg tjeneste",
   },
   "nn-NO": {
-    velgApplikasjon: "Vel applikasjon",
+    apper: "Appar",
     velgTjeneste: "Vel teneste",
   },
   "en-GB": {
-    velgApplikasjon: "Choose application",
+    apper: "Apps",
     velgTjeneste: "Choose service",
   },
 } as const;
@@ -45,13 +45,14 @@ export function AppSwitcher({
       <button
         type="button"
         class="uniformen-top-nav__action"
-        aria-label={txt.velgApplikasjon}
+        aria-label={txt.apper}
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-controls="uniformen-app-switcher-panel"
         data-uniformen-app-switcher-toggle
       >
         <AppGridIcon />
+        <span class="uniformen-top-nav__action-label">{txt.apper}</span>
       </button>
       <div
         id="uniformen-app-switcher-panel"

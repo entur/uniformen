@@ -78,11 +78,11 @@
   width: 2rem;
 }
 
-/* The icon contains both chevrons. The sidebar attribute on the root element
-   decides which one is shown. The selector checks for "not collapsed" instead of
-   "expanded", so a missing attribute shows the expanded state. */
-:root[data-uniformen-sidebar="collapsed"] .uniformen-sidebar-toggle__chevron--collapse,
-:root:not([data-uniformen-sidebar="collapsed"]) .uniformen-sidebar-toggle__chevron--expand {
+/* The icon contains a line for each sidebar state. The sidebar attribute on the
+   root element decides which one is shown. The selector checks for "not collapsed"
+   instead of "expanded", so a missing attribute shows the expanded state. */
+:root[data-uniformen-sidebar="collapsed"] .uniformen-sidebar-toggle__line--expanded,
+:root:not([data-uniformen-sidebar="collapsed"]) .uniformen-sidebar-toggle__line--collapsed {
   display: none;
 }
 
@@ -185,13 +185,13 @@
 }
 
 .uniformen-env-badge {
-  --env-badge-height: 1.6875rem;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  height: var(--env-badge-height);
+  /* 2rem (32px) is the smallest height we allow for something the user clicks. */
+  height: 2rem;
   min-width: 6rem;
   padding: 0 var(--uniformen-space-small);
   background: var(--uniformen-color-env-tint);
@@ -205,12 +205,12 @@
   user-select: none;
 }
 
-/* A triangle in the strip colour, pointing down at the badge. It is placed 20px
+/* A triangle in the strip colour, pointing down at the badge. It is placed 17.5px
    above the top of the badge, so it overlaps the strip. */
 .uniformen-env-badge__pointer {
   position: absolute;
   left: 50%;
-  top: -20px;
+  top: -17.5px;
   width: 1rem;
   height: 0.5rem;
   transform: translateX(-50%);
@@ -859,20 +859,6 @@
    globe. */
 .uniformen-locale-switcher__toggle[aria-expanded="true"] > svg:last-of-type {
   transform: translateY(-0.08em) rotate(180deg);
-}
-
-/* The logout row has no icon. The indent is the width of an icon and its gap, so
-   its label lines up with the labels above. */
-.uniformen-user-menu__logout {
-  padding-left: calc(
-    var(--uniformen-space-medium) + var(--menu-icon-size) + var(--uniformen-space-small)
-  );
-}
-
-/* The simple menu has no icons above the logout row, so it needs no indent. If the
-   language options are shown, keep the indent to line up with their radio markers. */
-.uniformen-user-menu__panel--simple:not(:has(.uniformen-locale-menu)) .uniformen-user-menu__logout {
-  padding-left: var(--uniformen-space-medium);
 }
 
 .uniformen-footer__inner {

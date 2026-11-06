@@ -1,38 +1,26 @@
 /**
- * Sidebar toggle icon. It is a frame with a vertical line and a chevron next to it.
- * The paths are copied unchanged from the Figma export. The `translate` moves them
- * so the viewBox starts at 0, with the stroke width inside the bounds.
+ * Sidebar toggle icon. It is a rounded frame with a line inside it. It uses the same
+ * 20x20 frame as the other top bar icons. The outer edge of the stroke is 20 wide,
+ * so the icon uses the full width of the frame.
  *
- * The icon has both chevron directions. CSS shows the one that matches
+ * The icon has a line for each sidebar state. CSS shows the one that matches
  * `data-uniformen-sidebar` on the root element. See `uniformen.css`.
  */
 export const SidebarToggleIcon = () => (
   <svg
     aria-hidden="true"
-    viewBox="0 0 17.52 12.51"
-    width="1.095em"
-    height="0.782em"
+    viewBox="0 0 20 20"
+    width="1.25rem"
+    height="1.25rem"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <g
-      transform="translate(-39.25 -29.78)"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linejoin="round"
-    >
-      <path d="M40 41.5395V30.5312H56.02V41.5395H40Z" />
-      <path d="M52.3848 30.1172V41.6376" />
-      {/* Shown while expanded. It points at the line, which means "collapse". */}
-      <path
-        class="uniformen-sidebar-toggle__chevron--collapse"
-        d="M47.957 38.3516L45.5768 35.9713L47.957 33.5911"
-      />
-      {/* Shown while collapsed. It is the same chevron mirrored, which means "expand". */}
-      <path
-        class="uniformen-sidebar-toggle__chevron--expand"
-        d="M45.5768 38.3516L47.957 35.9713L45.5768 33.5911"
-      />
+    <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <rect x="0.75" y="3.75" width="18.5" height="12.5" rx="2.5" />
+      {/* Shown while expanded. It is a short line near the left edge. */}
+      <path class="uniformen-sidebar-toggle__line--expanded" d="M4.25 7v6" />
+      {/* Shown while collapsed. It is a line from top to bottom that divides the frame. */}
+      <path class="uniformen-sidebar-toggle__line--collapsed" d="M7.25 3.75v12.5" />
     </g>
   </svg>
 );
