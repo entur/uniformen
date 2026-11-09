@@ -2,6 +2,16 @@ import { prometheus } from "@hono/prometheus";
 import { createMiddleware } from "hono/factory";
 import { routePath } from "hono/route";
 import { Counter, Registry } from "prom-client";
+import type { PortalApplicationId } from "./components/portalApplications";
+
+declare module "hono" {
+  interface ContextVariableMap {
+    /**
+     * The app that asked for the header, or "other" or "none". The /ssr middleware
+     * sets it.
+     */ consumer_app: PortalApplicationId | "other" | "none";
+  }
+}
 
 const registry = new Registry();
 
@@ -13,7 +23,10 @@ const { printMetrics, registerMetrics } = prometheus({
       // Use this name instead of 'http_request_duration_seconds', as described in
       // entur/ai observability.md.
       name: "http_server_requests_seconds",
-      customLabels: { uri: (c) => routePath(c) },
+      customLabels: {
+        uri: (c) => routePath(c),
+        consumer_app: (c) => c.get("consumer_app") ?? "none",
+      },
     },
     requestsTotal: { disabled: true },
   },

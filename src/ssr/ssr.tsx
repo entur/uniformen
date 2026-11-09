@@ -14,6 +14,7 @@ import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenH
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import { clientVersionLabel, ssrRequestMetric } from "../metrics";
 import { PostHog } from "posthog-node";
+import { isPortalApplicationId } from "../components/portalApplications";
 
 const featureFlagTimeoutMs = 200;
 
@@ -128,6 +129,20 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
   // user to the rendered header.
   server.use("/ssr", optionalAuth);
 
+  // Set the app label here, before the query is validated, so requests that fail validation are also labelled.
+  server.use("/ssr", async (ctx, next) => {
+    const appQueryParam = ctx.req.queries("app");
+    const consumerApp =
+      appQueryParam === undefined || appQueryParam[0] === undefined
+        ? "none"
+        : appQueryParam.length === 1 && isPortalApplicationId(appQueryParam[0])
+          ? appQueryParam[0]
+          : "other";
+
+    ctx.set("consumer_app", consumerApp);
+    await next();
+  });
+
   const rootRoute = createRoute({
     method: "get",
     path: "/ssr",
@@ -196,13 +211,6 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         ? await issueChatToken(chat.config, `${tenant}|${payload.sub}`)
         : undefined;
 
-    ssrRequestMetric.inc({
-      consumer_app: query?.app ?? "none",
-      locale: query?.locale,
-      authenticated: String(!!info),
-      client_version: clientVersionLabel(ctx.req.header("X-Uniformen-Client")),
-    });
-
     // A response for a signed-in user contains the user's name, so no cache may
     // store it. Any request with an `Authorization` header is treated this way, even
     // if the token is invalid, so a personal response is never shared. Other
@@ -214,6 +222,13 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       "Cache-Control",
       ctx.req.header("Authorization") ? "private, no-store" : "public, max-age=60",
     );
+
+    ssrRequestMetric.inc({
+      consumer_app: query.app ?? "none",
+      locale: query.locale,
+      authenticated: String(!!info),
+      client_version: clientVersionLabel(ctx.req.header("X-Uniformen-Client")),
+    });
 
     return ctx.json(
       {
