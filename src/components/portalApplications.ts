@@ -232,7 +232,7 @@ const APPLICATION_URLS = Object.fromEntries(
   APPLICATIONS_WITH_URLS.map(({ id, urls }) => [id, urls]),
 ) as ApplicationUrlTable;
 
-const isPortalApplicationId = (id: string): id is PortalApplicationId =>
+export const isPortalApplicationId = (id: string): id is PortalApplicationId =>
   Object.hasOwn(APPLICATION_URLS, id);
 
 /** Returns the environment whose hosts the given environment links to. */

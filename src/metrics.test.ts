@@ -26,6 +26,35 @@ describe("http metrics", () => {
     ).toBe(true);
   });
 
+  test("an /ssr request is labelled with the app that asked for it", async () => {
+    await app.request("/ssr?app=partner");
+
+    const series = seriesFor(await metricLines(), "http_server_requests_seconds_count");
+    expect(series).toContainEqual(
+      expect.stringMatching(/(?=.*route="\/ssr")(?=.*consumer_app="partner")(?=.*status="200")/),
+    );
+  });
+
+  test("an /ssr request with an unknown app is counted as other, with its 400 status", async () => {
+    const res = await app.request("/ssr?app=not-an-app");
+    expect(res.status).toBe(400);
+
+    const series = seriesFor(await metricLines(), "http_server_requests_seconds_count");
+    expect(series).toContainEqual(
+      expect.stringMatching(/(?=.*route="\/ssr")(?=.*consumer_app="other")(?=.*status="400")/),
+    );
+    expect(series).not.toContainEqual(expect.stringContaining("not-an-app"));
+  });
+
+  test("an /ssr request without an app is counted as none", async () => {
+    await app.request("/ssr");
+
+    const series = seriesFor(await metricLines(), "http_server_requests_seconds_count");
+    expect(series).toContainEqual(
+      expect.stringMatching(/(?=.*route="\/ssr")(?=.*consumer_app="none")(?=.*status="200")/),
+    );
+  });
+
   test("actuator paths are not counted", async () => {
     await app.request("/actuator/health/liveness");
     await app.request("/actuator/health/readiness");
