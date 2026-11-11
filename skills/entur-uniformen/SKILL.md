@@ -28,7 +28,7 @@ Start a new B2B or partner-facing portal from the template, not from an empty Vi
 gh repo create entur/<app-name> --template entur/create-entur-frontend --internal
 ```
 
-https://github.com/entur/create-entur-frontend is a TanStack Start app with the Entur design system, Tailwind, Vitest and Bun. Uniformen is already set up in it. `fetchUniformenComponents` is called in the root loader (`src/routes/__root.tsx`), the options are in `config.uniformen` (`src/server/auth/config.ts`), and the environment variables `ENVIRONMENT` and `UNIFORMEN_APP` set those options. If you start from the template, use the rest of this skill to change the setup, not to build it.
+https://github.com/entur/create-entur-frontend is a TanStack Start app with the Entur design system, Tailwind, Vitest and Bun. Uniformen is already set up in it. `fetchUniformenComponents` is called in the root loader (`src/routes/__root.tsx`), the options are in `config.uniformen` (`src/server/auth/config.ts`), and the environment variables `ENVIRONMENT` and `UNIFORMEN_APP` set those options. If you start from the template, use the rest of this skill to change the setup, not to build it. If the template's call does not pass `consumerApp` yet, add it with the same value as `app` (see Step 2).
 
 Follow the steps below only when the app already exists and you need to add Uniformen to it.
 
@@ -56,6 +56,7 @@ import { fetchUniformenLayout } from "@entur/uniformen";
 
 const layout = await fetchUniformenLayout({
   token, // optional; the user's Auth0 access token
+  consumerApp: "partner", // your app's id, sent in a header for statistics
   environment: "dev", // "local" | "dev" | "staging" | "production" (default)
   params: {
     app: "partner",
@@ -73,6 +74,8 @@ Call this on the server, where the document is rendered. The layout is part of t
 `token` adds the signed-in user to the bar. Without a token the layout still renders, as a bar with no app switcher and no user menu. So a page that is rendered before sign-in just leaves out `token`. That bar shows a "Logg inn" link only if you send `params.loginUrl`, which must be a path on your own origin. The service does not know your login route, and any value that is not a path returns `400`. The "Logg ut" link in the signed-in user's menu works the same way, with `params.logoutUrl`. Your app ends the session, so your app sets the route.
 
 `environment` selects which Uniformen instance the layout comes from. It must match the environment your app runs in. The app switcher links to apps in the environment you fetched from, so a production layout in dev sends your users to the production versions of all the other portal applications.
+
+`consumerApp` tells Uniformen which app is calling. The package sends it in the `X-Uniformen-Consumer` header, and the service uses it only for statistics. Always set it to your app's id, also on pages that leave out `params.app`. `params.app` is a separate setting. It shows your app's name in the bar and marks it in the app switcher. Most apps set both to the same id. Until your app is registered (see below), leave out both.
 
 The `params` are documented in the JSDoc on `FetchUniformenParams`. Read the type instead of guessing.
 
@@ -96,7 +99,7 @@ The pull request adds one entry to `APPLICATIONS` in `src/components/portalAppli
 
 Put the entry in the order the switcher shows them. The order is alphabetical by `appName` in Norwegian collation, with Ø last. Add `unlisted: true` for an app that uses the header and footer but should not appear in the app switcher. Add `path` for an app that is served below the root of its host, such as `path: "/my-app"`. Do not put the path in `hosts`. The logo, the app switcher and the environment switcher then link to that path.
 
-Then add the same id to the `app` union of `FetchUniformenParams` in `packages/uniformen/src/types.ts`. Apps can use it after the next release of the package. If you are not sure where the app belongs in the portal, ask in **#work-micro-frontend**.
+Then add the same id to the `app` union of `FetchUniformenParams` in `packages/uniformen/src/types.ts`. `consumerApp` uses the same union. Apps can use the id after the next release of the package. If you are not sure where the app belongs in the portal, ask in **#work-micro-frontend**.
 
 ### Step 3: Render all four pieces, in their places
 
@@ -116,6 +119,7 @@ import { fetchUniformenComponents } from "@entur/uniformen/react";
 
 const { HeadAssets, Header, Footer, Scripts } = await fetchUniformenComponents({
   token,
+  consumerApp: "partner",
   environment: "dev",
   params: { app: "partner", sidebar: true, locale: "nb-NO" },
 });

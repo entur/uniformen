@@ -230,6 +230,12 @@ Every request sends an `X-Uniformen-Client` header with the package name and
 version, for example `@entur/uniformen@0.15.0`. The service uses it to see which
 versions are in use.
 
+Set `consumerApp` to your app's id, usually the same value as `params.app`. The
+package sends it in an `X-Uniformen-Consumer` header. The service uses it only to
+see which apps call it, and it does not change the layout. Unlike `params.app`, it
+does not show your app's name in the bar, so set it also on pages that leave out
+`params.app`.
+
 ## Sidebar
 
 Pass `params.sidebar: true` to show a collapse button at the far left of the top

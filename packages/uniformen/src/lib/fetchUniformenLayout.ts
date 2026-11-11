@@ -130,11 +130,10 @@ function parseLayout(body: unknown): UniformenLayout | null {
  */
 async function fetchLayout(
   url: string,
-  token: string | undefined,
+  headers: Record<string, string>,
   timeoutMs: number,
 ): Promise<{ layout: UniformenLayout; freshMs: number } | null> {
   const signal = AbortSignal.timeout(timeoutMs);
-  const headers = token ? { ...CLIENT_HEADER, Authorization: `Bearer ${token}` } : CLIENT_HEADER;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const res = await fetch(url, { headers, signal });
@@ -173,6 +172,12 @@ async function fetchLayout(
 export type FetchUniformenLayoutProps = {
   /** The signed-in user's Auth0 access token. It is sent as a bearer token, and the top bar then shows the user. Leave it out for an anonymous top bar. */
   token?: string;
+  /**
+   * The portal application that calls Uniformen, usually the same value as
+   * `params.app`. It is sent in the `X-Uniformen-Consumer` header and is only used
+   * for statistics about which apps call the service. It does not change the layout.
+   */
+  consumerApp?: NonNullable<FetchUniformenParams["app"]>;
   /** The Uniformen environment to fetch the layout from. The default is `production`. */
   environment?: Environment;
   /** The query parameters for the layout. See `FetchUniformenParams`. */
@@ -190,12 +195,16 @@ export type FetchUniformenLayoutProps = {
  * there is one. Otherwise it returns `null`.
  */
 export async function fetchUniformenLayout({
+  consumerApp,
   environment = "production",
   params,
   token,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 }: FetchUniformenLayoutProps = {}): Promise<UniformenLayout | null> {
   const url = `${ENVIRONMENT_HOSTNAMES[environment]}/ssr${buildQueryString(params)}`;
+  const headers: Record<string, string> = { ...CLIENT_HEADER };
+  if (consumerApp) headers["X-Uniformen-Consumer"] = consumerApp;
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   // If hashing fails, the call goes on without the cache.
   const key = await cacheKey(url, token).catch(() => undefined);
   const signedIn = Boolean(token);
@@ -204,7 +213,7 @@ export async function fetchUniformenLayout({
 
   let pending = key === undefined ? undefined : inFlight.get(key);
   if (!pending) {
-    const request = fetchAndCache(url, token, timeoutMs, key, signedIn);
+    const request = fetchAndCache(url, headers, timeoutMs, key, signedIn);
     if (key !== undefined) {
       inFlight.set(key, request);
       // Only remove this request. After a clear, the key can belong to a newer one.
@@ -230,7 +239,7 @@ export async function fetchUniformenLayout({
  */
 async function fetchAndCache(
   url: string,
-  token: string | undefined,
+  headers: Record<string, string>,
   timeoutMs: number,
   key: string | undefined,
   signedIn: boolean,
@@ -243,7 +252,7 @@ async function fetchAndCache(
     });
     // `AbortSignal.timeout` throws for a `timeoutMs` such as `NaN` or -1. The catch
     // below turns that into `null`.
-    const result = await Promise.race([fetchLayout(url, token, timeoutMs), deadline]);
+    const result = await Promise.race([fetchLayout(url, headers, timeoutMs), deadline]);
     if (!result) return null;
     if (key !== undefined) {
       // A signed-in layout gets no fresh lifetime, so it is only used when a later
