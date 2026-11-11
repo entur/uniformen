@@ -31,7 +31,7 @@ const metricsRoute = createMiddleware((c, next) =>
 export const ssrRequestMetric = new Counter({
   name: "uniformen_ssr_requests",
   help: "SSR layout renders, by app, locale, whether a user is authenticated or not, and client package version",
-  labelNames: ["consumer_app", "locale", "authenticated", "client_version"],
+  labelNames: ["rendered_app", "locale", "authenticated", "client_version"],
   registers: [registry],
 });
 

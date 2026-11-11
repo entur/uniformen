@@ -86,7 +86,7 @@ viewer does not have access to.
 
 | Header                 | Values                                                                           | What it does                                                                                                                                                                                                             |
 | ---------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `X-Uniformen-Consumer` | See [src/components/portalApplications.ts](src/components/portalApplications.ts) | The app that calls the service. It sets the `consumer_app` label on `http_server_requests_seconds`. A missing header is counted as `none`, and any other value as `other`. It is separate from the `app` query parameter. |
+| `X-Uniformen-Consumer` | See [src/components/portalApplications.ts](src/components/portalApplications.ts) | The app that calls the service. It sets the `consumer_app` label on `http_server_requests_seconds`. A missing header is counted as `none`, and any other value as `other`. It is separate from the `app` query parameter, which sets the `rendered_app` label on `uniformen_ssr_requests`. |
 | `X-Uniformen-Client`   | `@entur/uniformen@<version>`, sent by the client package                         | The version of the client package. It sets the `client_version` label on `uniformen_ssr_requests`.                                                                                                                       |
 
 ## Dark mode

@@ -109,16 +109,24 @@ describe("ssr request metric", () => {
     await app.request("/ssr?app=partner");
 
     const series = seriesFor(await metricLines(), "uniformen_ssr_requests");
-    expect(series).toContainEqual(expect.stringContaining('consumer_app="partner"'));
-    expect(series).not.toContainEqual(expect.stringContaining('consumer_app="Partner"'));
+    expect(series).toContainEqual(expect.stringContaining('rendered_app="partner"'));
+    expect(series).not.toContainEqual(expect.stringContaining('rendered_app="Partner"'));
+  });
+
+  test("labels the app from the query parameter, not the X-Uniformen-Consumer header", async () => {
+    await app.request("/ssr?app=nplan", { headers: { "X-Uniformen-Consumer": "partner" } });
+
+    const series = seriesFor(await metricLines(), "uniformen_ssr_requests");
+    expect(series).toContainEqual(expect.stringContaining('rendered_app="nplan"'));
+    expect(series).not.toContainEqual(expect.stringContaining("consumer_app"));
   });
 
   test("a request without an app is counted as none", async () => {
     await app.request("/ssr");
 
     const series = seriesFor(await metricLines(), "uniformen_ssr_requests");
-    expect(series).toContainEqual(expect.stringContaining('consumer_app="none"'));
-    expect(series).not.toContainEqual(expect.stringContaining('consumer_app="undefined"'));
+    expect(series).toContainEqual(expect.stringContaining('rendered_app="none"'));
+    expect(series).not.toContainEqual(expect.stringContaining('rendered_app="undefined"'));
   });
 
   test("an unknown app is rejected before it can become a label", async () => {
