@@ -2,16 +2,7 @@ import { prometheus } from "@hono/prometheus";
 import { createMiddleware } from "hono/factory";
 import { routePath } from "hono/route";
 import { Counter, Registry } from "prom-client";
-import type { PortalApplicationId } from "./components/portalApplications";
-
-declare module "hono" {
-  interface ContextVariableMap {
-    /**
-     * The app that asked for the header, or "other" or "none". The /ssr middleware
-     * sets it.
-     */ consumer_app: PortalApplicationId | "other" | "none";
-  }
-}
+import { isPortalApplicationId } from "./components/portalApplications";
 
 const registry = new Registry();
 
@@ -25,7 +16,7 @@ const { printMetrics, registerMetrics } = prometheus({
       name: "http_server_requests_seconds",
       customLabels: {
         uri: (c) => routePath(c),
-        consumer_app: (c) => c.get("consumer_app") ?? "none",
+        consumer_app: (c) => consumerAppLabel(c.req.header("X-Uniformen-Consumer")),
       },
     },
     requestsTotal: { disabled: true },
@@ -43,6 +34,17 @@ export const ssrRequestMetric = new Counter({
   labelNames: ["consumer_app", "locale", "authenticated", "client_version"],
   registers: [registry],
 });
+
+/**
+ * Returns the portal application id from the `X-Uniformen-Consumer` header. Returns
+ * "none" when the header is missing or empty, and "other" for any value that is not a
+ * portal application id. Anyone can send the header, so only known ids become label
+ * values.
+ */
+export function consumerAppLabel(header: string | undefined): string {
+  if (!header) return "none";
+  return isPortalApplicationId(header) ? header : "other";
+}
 
 /**
  * The most client versions that get their own label value. Anyone can send the

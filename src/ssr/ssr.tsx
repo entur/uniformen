@@ -14,7 +14,6 @@ import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenH
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import { clientVersionLabel, ssrRequestMetric } from "../metrics";
 import { PostHog } from "posthog-node";
-import { isPortalApplicationId } from "../components/portalApplications";
 
 const featureFlagTimeoutMs = 200;
 
@@ -128,20 +127,6 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
   // Public endpoint. A valid Auth0 token is optional. It is only used to add the
   // user to the rendered header.
   server.use("/ssr", optionalAuth);
-
-  // Set the app label here, before the query is validated, so requests that fail validation are also labelled.
-  server.use("/ssr", async (ctx, next) => {
-    const appQueryParam = ctx.req.queries("app");
-    const consumerApp =
-      appQueryParam === undefined || appQueryParam[0] === undefined
-        ? "none"
-        : appQueryParam.length === 1 && isPortalApplicationId(appQueryParam[0])
-          ? appQueryParam[0]
-          : "other";
-
-    ctx.set("consumer_app", consumerApp);
-    await next();
-  });
 
   const rootRoute = createRoute({
     method: "get",
