@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { Hono } from "hono";
 import { app } from "../index";
+import { requestLogging } from "./requestLogging";
 import { issueChatToken, chatProxyConfig } from "../chat/chatProxy";
 import { SporaiClient } from "../chat/sporaiClient";
 import { signInternalToken } from "../test/authTestKeys";
@@ -50,6 +52,27 @@ describe("access log", () => {
     expect(res.status).toBe(401);
     expect(await res.text()).toBe("Missing token");
     expect(accessLines()[0]?.["severity"]).toBe("WARNING");
+  });
+
+  test("logs a 5xx on a route that is otherwise not logged", async () => {
+    const small = new Hono();
+    small.use(
+      "*",
+      requestLogging(() => true),
+    );
+    small.onError((_error, c) => c.text("Internal Server Error", 500));
+    small.get("/fails", () => {
+      throw new Error("boom");
+    });
+    small.get("/works", (c) => c.text("ok"));
+    await small.request("/works");
+    await small.request("/fails");
+    expect(accessLines()).toEqual([
+      expect.objectContaining({
+        message: "GET /fails 500",
+        err: { type: "Error", message: "boom" },
+      }),
+    ]);
   });
 
   test("does not log health checks, metrics, static files or CORS preflight requests", async () => {
@@ -151,7 +174,8 @@ describe("security events", () => {
         securityEvent: {
           type: "token_rejected",
           tenant: "internal",
-          reason: expect.stringContaining("ERR_JWT_EXPIRED"),
+          reason: "ERR_JWT_EXPIRED",
+          detail: expect.any(String),
         },
       }),
     ]);
@@ -173,5 +197,18 @@ describe("security events", () => {
     expect(logs.lines.find((line) => line["logType"] === "security")).toMatchObject({
       securityEvent: { type: "token_rejected", route: "chat-proxy", reason: "ERR_JWS_INVALID" },
     });
+  });
+
+  test("gives the same reason for a missing token on every route", async () => {
+    await app.request("/chat-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: "Hei" }),
+    });
+    await app.request("/notifications-proxy", { method: "POST" });
+    const reasons = logs.lines
+      .filter((line) => line["logType"] === "security")
+      .map((line) => (line["securityEvent"] as { reason: string }).reason);
+    expect(reasons).toEqual(["missing token", "missing token"]);
   });
 });

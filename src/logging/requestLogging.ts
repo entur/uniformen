@@ -13,9 +13,8 @@ const CORRELATION_ID = /^[0-9a-z-]{1,64}$/;
  * when the value is valid, and makes a new id when it is not. The id is added to
  * every line the request logs.
  *
- * Requests for which `skip` returns true are not logged, but they still get a
- * correlation id. The query string is never logged, because it can hold personal
- * data.
+ * Requests for which `skip` returns true are only logged when they fail with a 5xx.
+ * The query string is never logged, because it can hold personal data.
  */
 export const requestLogging = (skip: (method: string, path: string) => boolean = () => false) =>
   createMiddleware((c, next) => {
@@ -27,9 +26,9 @@ export const requestLogging = (skip: (method: string, path: string) => boolean =
     return requestContext.run({ correlationId }, async () => {
       await next();
       const { method, path } = c.req;
-      if (skip(method, path)) return;
-
       const status = c.res.status;
+      if (status < 500 && skip(method, path)) return;
+
       const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";
       logger[level](
         {

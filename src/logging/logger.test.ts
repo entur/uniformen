@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { captureLogs } from "../test/captureLogs";
-import { correlationHeaders, logger, logSecurityEvent, requestContext } from "./logger";
+import {
+  correlationHeaders,
+  logger,
+  logLevel,
+  logSecurityEvent,
+  rejectionReason,
+  requestContext,
+} from "./logger";
 
 let logs: ReturnType<typeof captureLogs>;
 
@@ -64,6 +71,16 @@ describe("logger", () => {
     expect(JSON.stringify(line)).not.toContain("Ola Nordmann");
   });
 
+  test("stops after a few causes when a cause points back to the error", () => {
+    const first = new Error("first");
+    const second = new Error("second", { cause: first });
+    first.cause = second;
+    logger.error({ err: first }, "Loop");
+    const err = logs.lines[0]?.["err"] as { cause: { cause: { cause: { cause?: unknown } } } };
+    expect(err.cause.cause.cause).toMatchObject({ message: "second" });
+    expect(err.cause.cause.cause.cause).toBeUndefined();
+  });
+
   test("shortens a long message and a long stack", () => {
     const error = new Error("big");
     error.stack = "x".repeat(50_000);
@@ -107,5 +124,35 @@ test("logSecurityEvent logs a warning with logType security", () => {
     logType: "security",
     securityEvent: { type: "token_rejected", reason: "ERR_JWT_EXPIRED" },
     message: "Rejected access token",
+  });
+});
+
+describe("logLevel", () => {
+  test("accepts pino levels in any case, and warning", () => {
+    expect(logLevel("debug")).toBe("debug");
+    expect(logLevel("ERROR")).toBe("error");
+    expect(logLevel(" Warning ")).toBe("warn");
+    expect(logLevel("silent")).toBe("silent");
+  });
+
+  test("returns undefined for an unknown level", () => {
+    expect(logLevel("verbose")).toBeUndefined();
+  });
+});
+
+describe("rejectionReason", () => {
+  test("uses the code of an error that has one, and keeps the message as detail", () => {
+    const error = Object.assign(new Error('"exp" claim timestamp check failed'), {
+      code: "ERR_JWT_EXPIRED",
+    });
+    expect(rejectionReason(error)).toEqual({
+      reason: "ERR_JWT_EXPIRED",
+      detail: '"exp" claim timestamp check failed',
+    });
+  });
+
+  test("uses the message of an error without a code, and a string as it is", () => {
+    expect(rejectionReason(new Error("missing token"))).toEqual({ reason: "missing token" });
+    expect(rejectionReason("unknown issuer")).toEqual({ reason: "unknown issuer" });
   });
 });

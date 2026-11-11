@@ -29,13 +29,16 @@ const truncate = (text: string, max: number): string =>
 
 type ErrorWithDetails = Error & { code?: unknown; status?: unknown };
 
+/** How many causes of an error are logged. A cause can point back to the error. */
+const MAX_CAUSE_DEPTH = 3;
+
 /**
  * Returns the fields of an error that are safe to log: type, message, code, status
  * and cause. It leaves out every other property, because errors from HTTP clients
  * can hold the request headers, including the Authorization header. The stack is
  * written to `stack_trace` instead, see `formatters.log` below.
  */
-export function serializeError(error: unknown): Record<string, unknown> {
+export function serializeError(error: unknown, depth = 0): Record<string, unknown> {
   if (!(error instanceof Error)) return { message: String(error) };
   const { name, message, code, status, cause } = error as ErrorWithDetails;
   return {
@@ -43,7 +46,10 @@ export function serializeError(error: unknown): Record<string, unknown> {
     message,
     code,
     status,
-    cause: cause === undefined ? undefined : serializeError(cause),
+    cause:
+      cause === undefined || depth >= MAX_CAUSE_DEPTH
+        ? undefined
+        : serializeError(cause, depth + 1),
   };
 }
 
@@ -63,6 +69,19 @@ const SENSITIVE_KEYS = [
 ];
 
 /**
+ * Returns the pino level for a LOG_LEVEL value, or `undefined` for an unknown value.
+ * It accepts upper case and "warning", which other Entur services use. pino throws
+ * on an unknown level, and the service would not start. It is exported only for tests.
+ */
+export function logLevel(value: string): string | undefined {
+  const level = value.trim().toLowerCase();
+  if (level === "warning") return "warn";
+  return level in SEVERITY || level === "silent" ? level : undefined;
+}
+
+const configuredLevel = process.env["LOG_LEVEL"];
+
+/**
  * The stream the logger writes to. It writes to stdout without a buffer, so the last
  * lines are not lost when the process exits. It is exported only for tests.
  */
@@ -76,7 +95,7 @@ export const logDestination = pino.destination({ dest: 1, sync: true });
  */
 export const logger = pino(
   {
-    level: process.env["LOG_LEVEL"] ?? "info",
+    level: (configuredLevel && logLevel(configuredLevel)) || "info",
     messageKey: "message",
     timestamp: pino.stdTimeFunctions.isoTime,
     // Error Reporting groups errors by `serviceContext.service`. In Kubernetes,
@@ -118,6 +137,10 @@ export const logger = pino(
   logDestination,
 );
 
+if (configuredLevel && !logLevel(configuredLevel)) {
+  logger.warn(`Unknown LOG_LEVEL "${configuredLevel}". Logging at info.`);
+}
+
 /** The kinds of security events. Add a kind here when the code logs a new one. */
 type SecurityEventType = "token_rejected";
 
@@ -131,6 +154,20 @@ export function logSecurityEvent(
   message: string,
 ): void {
   logger.warn({ logType: "security", securityEvent: { type, ...details } }, message);
+}
+
+/**
+ * Returns the reason to log when a token is rejected. For an error with a code, such
+ * as `ERR_JWT_EXPIRED`, the reason is the code and `detail` is the message, which
+ * says, for example, which claim failed. For another error the reason is the
+ * message, and for a string it is the string.
+ */
+export function rejectionReason(error: unknown): { reason: string; detail?: string } {
+  if (!(error instanceof Error)) return { reason: String(error) };
+  const { code } = error as ErrorWithDetails;
+  return typeof code === "string"
+    ? { reason: code, detail: error.message }
+    : { reason: error.message };
 }
 
 /**

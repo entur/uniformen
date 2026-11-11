@@ -7,13 +7,12 @@ import {
   verifyBrowserToken,
 } from "./browserTokens";
 import { HTTPException } from "hono/http-exception";
-import { errors } from "jose";
 import { config } from "../config";
 import { createHmac } from "crypto";
 import { Hono } from "hono";
 import { type OpenAPIHono } from "@hono/zod-openapi";
 import { machineToken, type MachineTokenProvider } from "./machineToken";
-import { correlationHeaders, logger, logSecurityEvent } from "../logging/logger";
+import { correlationHeaders, logger, logSecurityEvent, rejectionReason } from "../logging/logger";
 
 const NOTIFICATION_PROXY_AUDIENCE = "uniformen-notification-proxy";
 const NOTIFICATION_PROXY_TOKEN_LIFETIME = "1h";
@@ -52,10 +51,10 @@ export async function createReadNotificationToken(
 
 type ProxyPayload = { messageId: string };
 
-function rejectedToken(reason: string): void {
+function rejectedToken(error: unknown): void {
   logSecurityEvent(
     "token_rejected",
-    { route: "notifications-proxy", reason },
+    { route: "notifications-proxy", ...rejectionReason(error) },
     "Rejected notification token",
   );
 }
@@ -91,7 +90,7 @@ export function notificationsProxyRoute(server: OpenAPIHono): void {
         }));
       } catch (error) {
         // Do not log the token. It is a credential.
-        rejectedToken(error instanceof errors.JOSEError ? error.code : "invalid token");
+        rejectedToken(error);
         throw new HTTPException(401, { message: "Invalid token" });
       }
 

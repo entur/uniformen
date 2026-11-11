@@ -3,7 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { createRemoteJWKSet, decodeJwt, errors, jwtVerify } from "jose";
 import type { JWTPayload, JWTVerifyGetKey } from "jose";
 import { config, type AuthTenant } from "../config";
-import { logSecurityEvent } from "../logging/logger";
+import { logSecurityEvent, rejectionReason } from "../logging/logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -36,9 +36,16 @@ function unauthorized(_ctx: { req: { url: string } }, error: string, description
   });
 }
 
-/** Logs a rejected access token. A missing token is not logged, because it is normal on public endpoints. */
-function rejectedToken(reason: string, tenant?: AuthTenant["name"]): void {
-  logSecurityEvent("token_rejected", { tenant, reason }, "Rejected access token");
+/**
+ * Logs a rejected access token. A missing token is not logged, because it is normal
+ * on public endpoints.
+ */
+function rejectedToken(reason: unknown, tenant?: AuthTenant["name"]): void {
+  logSecurityEvent(
+    "token_rejected",
+    { tenant, ...rejectionReason(reason) },
+    "Rejected access token",
+  );
 }
 
 /**
@@ -112,10 +119,7 @@ export function createValidateJwt(tenants: AuthTenant[]) {
       if (error instanceof JwksUnavailableError) throw error;
       // The response does not say why the token failed, so log the reason
       // (for example expired, bad signature or wrong audience) for debugging.
-      rejectedToken(
-        error instanceof errors.JOSEError ? `${error.code} ${error.message}` : String(error),
-        validator.tenant.name,
-      );
+      rejectedToken(error, validator.tenant.name);
       unauthorized(c, "invalid_token", "token verification failure");
     }
 

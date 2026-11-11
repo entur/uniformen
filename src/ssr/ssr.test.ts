@@ -851,7 +851,6 @@ describe("/ssr aiAgent query param", () => {
   });
 
   test("a PostHog that never answers still gives a full bar without the AI agent", async () => {
-    const logs = captureLogs();
     aiAgentFlag.timeoutMs = 10;
     fakePostHog(() => new Promise(() => {}));
     const token = await signInternalToken({ sub: "auth0|agent-posthog-down" });
@@ -860,7 +859,6 @@ describe("/ssr aiAgent query param", () => {
     const body = await res.json();
     expect(body.headerHtml).toContain("uniformen-top-nav__user");
     expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
-    logs.restore();
   });
 
   test("anything other than true or false is rejected", async () => {
@@ -1359,16 +1357,19 @@ describe("aiAgentFlag", () => {
   });
 
   test("is off when PostHog does not answer, and asks again only after the cache expires", async () => {
-    const logs = captureLogs();
     aiAgentFlag.timeoutMs = 10;
     const getFlag = fakePostHog(() => new Promise(() => {}));
-    expect(await Promise.all([aiAgentFlag.isOn(user), aiAgentFlag.isOn(user)])).toEqual([
-      false,
-      false,
-    ]);
-    expect(await aiAgentFlag.isOn(user)).toBe(false);
+    const logs = captureLogs();
+    try {
+      expect(await Promise.all([aiAgentFlag.isOn(user), aiAgentFlag.isOn(user)])).toEqual([
+        false,
+        false,
+      ]);
+      expect(await aiAgentFlag.isOn(user)).toBe(false);
+    } finally {
+      logs.restore();
+    }
     expect(getFlag).toHaveBeenCalledTimes(1);
-    logs.restore();
     const output = JSON.stringify(logs.lines);
     expect(output).toContain("AI agent flag check failed or timed out.");
     expect(output).not.toContain(user.sub);

@@ -5,11 +5,11 @@ import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { errors, jwtVerify, SignJWT } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 import { machineToken } from "../auth/machineToken";
 import { environment, type Environment } from "../config";
 import { SporaiClient } from "./sporaiClient";
-import { logger, logSecurityEvent } from "../logging/logger";
+import { logger, logSecurityEvent, rejectionReason } from "../logging/logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -284,7 +284,7 @@ export function chatProxyRoutes(
     createMiddleware(async (c, next) => {
       const token = /^Bearer (\S+)$/i.exec(c.req.header("Authorization") ?? "")?.[1];
       try {
-        if (!token) throw new Error("no token");
+        if (!token) throw new Error("missing token");
         const { payload } = await jwtVerify(token, key, {
           algorithms: ["HS256"],
           audience: CHAT_TOKEN_AUDIENCE,
@@ -292,8 +292,11 @@ export function chatProxyRoutes(
         });
         c.set("chatUser", payload.sub!);
       } catch (error) {
-        const reason = error instanceof errors.JOSEError ? error.code : String(error);
-        logSecurityEvent("token_rejected", { route: "chat-proxy", reason }, "Rejected chat token");
+        logSecurityEvent(
+          "token_rejected",
+          { route: "chat-proxy", ...rejectionReason(error) },
+          "Rejected chat token",
+        );
         return c.text("Unauthorized", 401, { "WWW-Authenticate": 'Bearer error="invalid_token"' });
       }
       return next();
