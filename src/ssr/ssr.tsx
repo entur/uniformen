@@ -209,7 +209,7 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     );
 
     ssrRequestMetric.inc({
-      consumer_app: query.app ?? "none",
+      app: query.app ?? "none",
       locale: query.locale,
       authenticated: String(!!info),
       client_version: clientVersionLabel(ctx.req.header("X-Uniformen-Client")),
