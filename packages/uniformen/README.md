@@ -263,6 +263,19 @@ If the collapse is animated, add a transition on `visibility` together with the
 width (`transition: width 150ms ease, visibility 150ms ease`). Then the content stays
 visible until the animation has finished.
 
+If your sidebar is inside a shadow root, the `:root[…]` selector does not reach it.
+Set a custom property on the root instead. Custom properties are inherited into the
+shadow root, so the styles inside it can use the value:
+
+```css
+:root {
+  --my-sidebar-width: 240px;
+}
+:root[data-uniformen-sidebar="collapsed"] {
+  --my-sidebar-width: 0px;
+}
+```
+
 **To use a different default**, render `<html data-uniformen-sidebar="collapsed">` on
 the server. Uniformen only writes the attribute when the user has a stored
 preference or when the attribute is not set, so your value is kept.
@@ -291,6 +304,44 @@ window.addEventListener("uniformen:sidebar", (event) => {
   setCollapsed(event.detail.collapsed);
 });
 ```
+
+**If a component needs the state in JavaScript**, for example a sidebar component
+with a `collapsed` prop, read the attribute and watch it. A `MutationObserver` sees
+every write to the attribute. Unlike the event, it also works on a page where the
+Uniformen head script is missing, for example when the layout fetch failed. Then
+your sidebar works the same way with and without the top bar. In React:
+
+```tsx
+import { useCallback, useSyncExternalStore } from "react";
+
+const ATTRIBUTE = "data-uniformen-sidebar";
+const root = () => document.documentElement;
+
+function subscribe(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(root(), { attributeFilter: [ATTRIBUTE] });
+  return () => observer.disconnect();
+}
+
+export function useSidebarCollapsed() {
+  const collapsed = useSyncExternalStore(
+    subscribe,
+    () => root().getAttribute(ATTRIBUTE) === "collapsed",
+    // The server does not know the user's preference.
+    () => false,
+  );
+  const setCollapsed = useCallback((next: boolean) => {
+    root().setAttribute(ATTRIBUTE, next ? "collapsed" : "expanded");
+  }, []);
+  return [collapsed, setCollapsed] as const;
+}
+```
+
+In a server-rendered app, the server renders the expanded sidebar. If the user's
+preference is collapsed, the sidebar changes after hydration, and the user sees it
+jump. The CSS approach does not have this problem, so use it for everything that
+CSS can do. In a single-page app that renders only in the browser, the state is
+correct from the first render.
 
 `event.detail` is typed. This event and `uniformen:locale` are declared on
 `WindowEventMap`, so in a project that imports from the package, every file gets
@@ -337,9 +388,13 @@ dispatches one event and does nothing else. It does not set a cookie, write to
 `localStorage`, reload or change the labels in the bar:
 
 ```ts
+import { writeLocaleCookie } from "@entur/uniformen";
+
+// The tags your app is translated into. Send them as `params.availableLocales`.
+const SUPPORTED = ["nb-NO", "en-GB"] as const;
+
 window.addEventListener("uniformen:locale", (event) => {
-  const { locale } = event.detail;
-  // persist however your app persists it, then:
+  writeLocaleCookie(event.detail.locale);
   window.location.reload();
 });
 ```
@@ -348,25 +403,96 @@ The reload changes the language. The server renders the header in one language,
 and your own texts are loaded when your modules load. If the top bar changed its
 labels without a reload, the rest of the page would still be in the old language.
 
-On the next render, send the stored choice as `params.locale` and set `<html lang>`
-to the same value. For example, your server reads a cookie, sends its value as
-`locale`, and one event listener writes the cookie.
-
 If the user picks the language that is already shown, no event is dispatched, so the
 page does not reload.
+
+### Choose the language on the server
+
+On the next render, send the stored choice as `params.locale` and set `<html lang>`
+to the same value. `readLocaleCookie` and `resolveLocale` take plain strings, so they
+work with any server framework:
+
+```ts
+import { fetchUniformenLayout, readLocaleCookie, resolveLocale } from "@entur/uniformen";
+
+const SUPPORTED = ["nb-NO", "en-GB"] as const;
+
+const locale = resolveLocale({
+  chosen: readLocaleCookie(request.headers.get("cookie")),
+  acceptLanguage: request.headers.get("accept-language"),
+  supported: SUPPORTED,
+  fallback: "nb-NO",
+});
+
+const layout = await fetchUniformenLayout({
+  token,
+  params: { app: "partner", locale, availableLocales: [...SUPPORTED] },
+});
+// Render <html lang={locale}> with the layout.
+```
+
+`resolveLocale` uses the first of these that your app supports:
+
+1. `chosen`, the language the user picked. A value your app does not support is
+   ignored, so an old or changed cookie cannot break the page.
+2. The languages in `acceptLanguage`, sorted by their `q` values. Tags with `q=0`
+   and `*` are left out.
+3. `fallback`.
+
+A tag matches when it is the same tag, in any case, or when its language part
+matches: `en-US` gives `en-GB`, and `nb` and `no` give `nb-NO`. Browsers often send
+only these short or regional tags, so an exact match alone would miss many users.
+
+The return type is the type of your `supported` list, so the result can be used
+where your app expects its own locale type.
+
+**Use the same function in the browser** if your own texts pick their language
+there. Pass `navigator.languages`, which is used in its own order. The browser
+builds `Accept-Language` from the same list, so the page and the header get the
+same language, also on the first visit before the cookie is set:
+
+```ts
+const locale = resolveLocale({
+  chosen: readLocaleCookie(document.cookie),
+  acceptLanguage: navigator.languages,
+  supported: SUPPORTED,
+  fallback: "nb-NO",
+});
+```
+
+### The `entur_locale` cookie
+
+`writeLocaleCookie` writes the `entur_locale` cookie (`LOCALE_COOKIE`) for the whole
+site and for one year, with `SameSite=Lax`, and with `Secure` on HTTPS. Only your app
+reads it. The Uniformen service does not. Use the name so that all Entur apps store
+the choice the same way.
+
+By default the cookie belongs to the host that sets it. Pass `domain`, for example
+`writeLocaleCookie(locale, { domain: "entur.org" })`, to share the choice with other
+apps on the same domain. **All apps on a domain must then do the same.** If one app
+sets the cookie with `domain` and another without, the browser sends two cookies with
+the same name, and the order between them is not reliable. `readLocaleCookie` returns
+the first one. `domain` must be the page's host or a parent of it, so it does not work
+on `localhost`. With another domain, the browser ignores the cookie without an error.
+
+If you move an app from a host-only cookie to `domain`, delete the old host-only
+cookie before you write the new one:
+`document.cookie = "entur_locale=; path=/; max-age=0"`.
 
 ## Project structure
 
 ```
 packages/uniformen/
 ├── src/
-│   ├── index.ts               # Public API: exports fetchUniformenLayout + UniformenLayout type
+│   ├── index.ts               # Public API: fetchUniformenLayout, the locale helpers and the types
 │   ├── types.ts               # UniformenLayout type definition
 │   ├── index.test.ts          # Tests for fetchUniformenLayout
+│   ├── locale.test.ts         # Tests for the locale helpers
 │   ├── reactAdapter.tsx       # React adapter: fetchUniformenComponents
 │   ├── version.ts             # Package version, updated by release-please
 │   └── lib/
 │       ├── fetchUniformenLayout.ts  # Fetches layout from the Uniformen SSR endpoint
+│       ├── locale.ts                # Locale cookie and resolveLocale
 │       └── layoutCache.ts           # In-memory cache of fetched layouts
 ├── dist/                      # Compiled output (generated by bun run build)
 ├── tsconfig.json              # TypeScript config for type checking and local dev
