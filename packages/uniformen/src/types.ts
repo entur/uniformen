@@ -49,12 +49,13 @@ export type FetchUniformenParams = {
    * page, because the header is rendered on the server:
    *
    *   window.addEventListener("uniformen:locale", (event) => {
-   *     writeLocaleCookie(event.detail.locale);
+   *     const { locale } = event.detail;
+   *     // persist however your app persists it, then:
    *     window.location.reload();
    *   });
    *
    * On the next render, send the stored choice as `locale` and set `<html lang>` to
-   * the same value. `readLocaleCookie` and `resolveLocale` choose it on the server.
+   * the same value.
    */
   availableLocales?: Locale[];
 
