@@ -2,6 +2,7 @@ import { prometheus } from "@hono/prometheus";
 import { createMiddleware } from "hono/factory";
 import { routePath } from "hono/route";
 import { Counter, Registry } from "prom-client";
+import { isPortalApplicationId } from "./components/portalApplications";
 
 const registry = new Registry();
 
@@ -13,7 +14,10 @@ const { printMetrics, registerMetrics } = prometheus({
       // Use this name instead of 'http_request_duration_seconds', as described in
       // entur/ai observability.md.
       name: "http_server_requests_seconds",
-      customLabels: { uri: (c) => routePath(c) },
+      customLabels: {
+        uri: (c) => routePath(c),
+        consumer_app: (c) => consumerAppLabel(c.req.header("X-Uniformen-Consumer")),
+      },
     },
     requestsTotal: { disabled: true },
   },
@@ -27,9 +31,20 @@ const metricsRoute = createMiddleware((c, next) =>
 export const ssrRequestMetric = new Counter({
   name: "uniformen_ssr_requests",
   help: "SSR layout renders, by app, locale, whether a user is authenticated or not, and client package version",
-  labelNames: ["consumer_app", "locale", "authenticated", "client_version"],
+  labelNames: ["rendered_app", "locale", "authenticated", "client_version"],
   registers: [registry],
 });
+
+/**
+ * Returns the portal application id from the `X-Uniformen-Consumer` header. Returns
+ * "none" when the header is missing or empty, and "other" for any value that is not a
+ * portal application id. Anyone can send the header, so only known ids become label
+ * values.
+ */
+export function consumerAppLabel(header: string | undefined): string {
+  if (!header) return "none";
+  return isPortalApplicationId(header) ? header : "other";
+}
 
 /**
  * The most client versions that get their own label value. Anyone can send the

@@ -196,13 +196,6 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
         ? await issueChatToken(chat.config, `${tenant}|${payload.sub}`)
         : undefined;
 
-    ssrRequestMetric.inc({
-      consumer_app: query?.app ?? "none",
-      locale: query?.locale,
-      authenticated: String(!!info),
-      client_version: clientVersionLabel(ctx.req.header("X-Uniformen-Client")),
-    });
-
     // A response for a signed-in user contains the user's name, so no cache may
     // store it. Any request with an `Authorization` header is treated this way, even
     // if the token is invalid, so a personal response is never shared. Other
@@ -214,6 +207,13 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
       "Cache-Control",
       ctx.req.header("Authorization") ? "private, no-store" : "public, max-age=60",
     );
+
+    ssrRequestMetric.inc({
+      rendered_app: query.app ?? "none",
+      locale: query.locale,
+      authenticated: String(!!info),
+      client_version: clientVersionLabel(ctx.req.header("X-Uniformen-Client")),
+    });
 
     return ctx.json(
       {
