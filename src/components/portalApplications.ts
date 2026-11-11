@@ -36,8 +36,8 @@ const APPLICATIONS = [
     unlisted: true,
     path: "/bedrift",
     hosts: {
-      staging: "skoleskyss.staging.entur.no",
-      production: "skoleskyss.entur.no",
+      staging: "proff.staging.entur.no",
+      production: "proff.entur.no",
     },
   },
   {
@@ -108,8 +108,8 @@ const APPLICATIONS = [
     appName: "Skoleskyss",
     unlisted: true,
     hosts: {
-      staging: "skoleskyss.staging.entur.no",
-      production: "skoleskyss.entur.no",
+      staging: "proff.staging.entur.no",
+      production: "proff.entur.no",
     },
   },
   {

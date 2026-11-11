@@ -65,7 +65,7 @@ describe("app switcher rendering", () => {
     for (const env of ENVIRONMENTS) {
       const html = await render({ environment: env, activeAppId: "skoleskyss" });
       expect(html).not.toContain("Skoleskyss");
-      expect(html).not.toContain("skoleskyss.entur.no");
+      expect(html).not.toContain("proff.entur.no");
       expect(html).not.toContain('aria-current="page"');
       expect(hrefs(html)).toEqual(listedUrls(env));
     }
