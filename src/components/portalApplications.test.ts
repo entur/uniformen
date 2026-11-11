@@ -106,8 +106,8 @@ describe("portalApplicationUrls", () => {
 
   test("returns only the environments the application is deployed to", () => {
     expect(portalApplicationUrls("skoleskyss")).toEqual({
-      staging: "https://skoleskyss.staging.entur.no",
-      production: "https://skoleskyss.entur.no",
+      staging: "https://proff.staging.entur.no",
+      production: "https://proff.entur.no",
     });
   });
 
@@ -119,8 +119,8 @@ describe("portalApplicationUrls", () => {
 
   test("Bedrift's URLs include its path", () => {
     expect(portalApplicationUrls("bedrift")).toEqual({
-      staging: "https://skoleskyss.staging.entur.no/bedrift",
-      production: "https://skoleskyss.entur.no/bedrift",
+      staging: "https://proff.staging.entur.no/bedrift",
+      production: "https://proff.entur.no/bedrift",
     });
   });
 });

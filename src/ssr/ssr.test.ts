@@ -434,7 +434,7 @@ describe("/ssr app query param", () => {
     const body = await enturSignedIn("auth0|app-unlisted", "?app=skoleskyss");
     expect(body.headerHtml).toContain('<span class="uniformen-logo__app">Skoleskyss</span>');
     expect(body.headerHtml).toContain("data-uniformen-app-switcher-toggle");
-    expect(body.headerHtml).not.toContain("skoleskyss.entur.no");
+    expect(body.headerHtml).not.toContain("proff.entur.no");
     expect(body.headerHtml).not.toContain("data-uniformen-env-switcher-toggle");
     expect(body.headerHtml).toContain('class="uniformen-env-badge"');
   });

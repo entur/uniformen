@@ -8,6 +8,13 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-11
+
+### Changed
+
+- Links to Skoleskyss and Bedrift go to `proff.entur.no` (`proff.staging.entur.no`
+  in staging) instead of `skoleskyss.entur.no`. Bedrift keeps its `/bedrift` path.
+
 ## 2026-11-5
 
 ### Fixed
