@@ -1,4 +1,5 @@
 import { config } from "../config";
+import { logger } from "../logging/logger";
 
 export type MachineTokenOptions = {
   tokenUri: string;
@@ -90,13 +91,13 @@ export class MachineTokenProvider {
       });
 
       if (!response.ok) {
-        console.warn(`machine token request failed: HTTP ${response.status}`);
+        logger.warn(`machine token request failed: HTTP ${response.status}`);
         return undefined;
       }
 
       const body: unknown = await response.json();
       if (!isTokenResponse(body)) {
-        console.warn("machine token request failed: unexpected response from Auth0");
+        logger.warn("machine token request failed: unexpected response from Auth0");
         return undefined;
       }
 
@@ -108,7 +109,7 @@ export class MachineTokenProvider {
       return body.access_token;
     } catch (error) {
       // Timeout, network error or invalid JSON.
-      console.warn("machine token request failed:", error);
+      logger.warn({ err: error }, "machine token request failed");
       return undefined;
     }
   }

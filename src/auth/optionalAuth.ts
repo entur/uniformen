@@ -2,6 +2,7 @@ import type { MiddlewareHandler } from "hono";
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { JwksUnavailableError, validateJwt } from "./validateJwt";
+import { logger } from "../logging/logger";
 
 /**
  * Wraps `validate` so that a failed login does not reject the request. If
@@ -22,6 +23,7 @@ export function createOptionalAuth(validate: MiddlewareHandler) {
       if (error instanceof JwksUnavailableError) {
         // We cannot check the token without the signing keys. The endpoint is
         // public, so it should not fail because of this. Continue as anonymous.
+        logger.warn({ err: error }, "Could not check the access token. Continuing as anonymous.");
         return next();
       }
       throw error;

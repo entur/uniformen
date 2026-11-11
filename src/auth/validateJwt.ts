@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { createRemoteJWKSet, decodeJwt, errors, jwtVerify } from "jose";
 import type { JWTPayload, JWTVerifyGetKey } from "jose";
 import { config, type AuthTenant } from "../config";
+import { logSecurityEvent } from "../logging/logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -33,6 +34,11 @@ function unauthorized(_ctx: { req: { url: string } }, error: string, description
       },
     }),
   });
+}
+
+/** Logs a rejected access token. A missing token is not logged, because it is normal on public endpoints. */
+function rejectedToken(reason: string, tenant?: AuthTenant["name"]): void {
+  logSecurityEvent("token_rejected", { tenant, reason }, "Rejected access token");
 }
 
 /**
@@ -74,6 +80,7 @@ export function createValidateJwt(tenants: AuthTenant[]) {
     const parts = credentials.split(/\s+/);
     // Require the Bearer scheme. RFC 9110 says the scheme name is case-insensitive.
     if (parts.length !== 2 || parts[0]?.toLowerCase() !== "bearer" || !parts[1]) {
+      rejectedToken("not a bearer token");
       unauthorized(c, "invalid_request", "invalid credentials structure");
     }
     const token = parts[1];
@@ -84,10 +91,12 @@ export function createValidateJwt(tenants: AuthTenant[]) {
     try {
       issuer = decodeJwt(token).iss;
     } catch {
+      rejectedToken("token is not a JWT");
       unauthorized(c, "invalid_token", "token decoding failure");
     }
     const validator = typeof issuer === "string" ? validators.get(issuer) : undefined;
     if (!validator) {
+      rejectedToken("unknown issuer");
       unauthorized(c, "invalid_token", "unknown token issuer");
     }
 
@@ -103,9 +112,9 @@ export function createValidateJwt(tenants: AuthTenant[]) {
       if (error instanceof JwksUnavailableError) throw error;
       // The response does not say why the token failed, so log the reason
       // (for example expired, bad signature or wrong audience) for debugging.
-      console.warn(
-        `JWT verification failed for tenant "${validator.tenant.name}":`,
-        error instanceof errors.JOSEError ? `${error.code} ${error.message}` : error,
+      rejectedToken(
+        error instanceof errors.JOSEError ? `${error.code} ${error.message}` : String(error),
+        validator.tenant.name,
       );
       unauthorized(c, "invalid_token", "token verification failure");
     }

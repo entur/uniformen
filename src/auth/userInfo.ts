@@ -1,5 +1,6 @@
 import { config, type AuthTenant } from "../config";
 import { CachedLookup } from "./cachedLookup";
+import { logger } from "../logging/logger";
 
 /**
  * The Auth0 userinfo response. It has the standard OIDC profile claims and custom
@@ -94,19 +95,19 @@ export class UserInfoServiceImpl implements UserInfoService {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       if (!res.ok) {
-        console.warn(`userinfo fetch failed for tenant "${tenantName}": HTTP ${res.status}`);
+        logger.warn(`userinfo fetch failed for tenant "${tenantName}": HTTP ${res.status}`);
         return undefined;
       }
       const body: unknown = await res.json();
       // OpenID Connect requires `sub` in every userinfo response.
       if (!isUserInfo(body)) {
-        console.warn(`userinfo fetch failed for tenant "${tenantName}": no sub in response`);
+        logger.warn(`userinfo fetch failed for tenant "${tenantName}": no sub in response`);
         return undefined;
       }
       return body;
     } catch (error) {
       // Timeout, network error or invalid JSON. The caller treats the user as anonymous.
-      console.warn(`userinfo fetch failed for tenant "${tenantName}":`, error);
+      logger.warn({ err: error }, `userinfo fetch failed for tenant "${tenantName}"`);
       return undefined;
     }
   }

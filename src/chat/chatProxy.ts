@@ -5,10 +5,11 @@ import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { jwtVerify, SignJWT } from "jose";
+import { errors, jwtVerify, SignJWT } from "jose";
 import { machineToken } from "../auth/machineToken";
 import { environment, type Environment } from "../config";
 import { SporaiClient } from "./sporaiClient";
+import { logger, logSecurityEvent } from "../logging/logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -54,7 +55,7 @@ export function loadChatProxyConfig(
   const names = ["SPORAI_URL", "MNG_AUTH0_INT_CLIENT_SECRET"] as const;
   const missing = names.filter((name) => !env[name]);
   if (missing.length > 0 || !machineToken) {
-    console.warn(`Chat is off. Missing env vars: ${missing.join(", ")}`);
+    logger.warn(`Chat is off. Missing env vars: ${missing.join(", ")}`);
     return undefined;
   }
   const clientSecret = env["MNG_AUTH0_INT_CLIENT_SECRET"]!;
@@ -290,7 +291,9 @@ export function chatProxyRoutes(
           requiredClaims: ["sub", "exp"],
         });
         c.set("chatUser", payload.sub!);
-      } catch {
+      } catch (error) {
+        const reason = error instanceof errors.JOSEError ? error.code : String(error);
+        logSecurityEvent("token_rejected", { route: "chat-proxy", reason }, "Rejected chat token");
         return c.text("Unauthorized", 401, { "WWW-Authenticate": 'Bearer error="invalid_token"' });
       }
       return next();

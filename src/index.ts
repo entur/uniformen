@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { serveStatic } from "hono/bun";
+import { HTTPException } from "hono/http-exception";
 import { chatProxyConfig, chatProxyRoutes } from "./chat/chatProxy";
 import { environment } from "./config";
 import { beginShutdown, isReady } from "./lifecycle";
@@ -7,6 +8,8 @@ import { previewRoutes } from "./ssr/preview";
 import { uniformenSsrRoutes } from "./ssr/ssr";
 import { printMetrics, metricsRoute } from "./metrics";
 import { notificationsProxyRoute } from "./auth/notificationsProxy";
+import { logger, logUncaughtErrors } from "./logging/logger";
+import { requestLogging } from "./logging/requestLogging";
 
 export const app = new OpenAPIHono();
 
@@ -24,6 +27,24 @@ const SHUTDOWN_DRAIN_MS = 5_000;
 
 /** How long open requests get to finish before their connections are closed. */
 const SHUTDOWN_STOP_MS = 10_000;
+
+// Do not log health checks, metrics, static files or CORS preflight requests.
+app.use(
+  "*",
+  requestLogging(
+    (method, path) =>
+      method === "OPTIONS" || path.startsWith("/actuator") || path.startsWith("/static/"),
+  ),
+);
+// Returns the same responses as Hono's default error handler, but does not print the
+// error. See `requestLogging`.
+app.onError((error, c) => {
+  if (error instanceof HTTPException) {
+    const res = error.getResponse();
+    return c.newResponse(res.body, res);
+  }
+  return c.text("Internal Server Error", 500);
+});
 
 app.use("*", metricsRoute);
 app.get("/actuator/prometheus", printMetrics);
@@ -53,10 +74,12 @@ app.doc("/doc", {
 // Only start the server when this file is run directly. Tests import `app`
 // without starting a server.
 if (import.meta.main) {
+  logUncaughtErrors();
+
   // Bun closes a connection that has been quiet for 10 seconds by default. A chat
   // answer can take up to `CHAT_DEADLINE_MS`, so keep this higher.
   const server = Bun.serve({ port: PORT, fetch: app.fetch, idleTimeout: 60 });
-  console.info(`Uniformen is running on ${server.url}`);
+  logger.info(`Uniformen is running on ${server.url}`);
 
   /**
    * Fails readiness, keeps serving for `SHUTDOWN_DRAIN_MS`, then stops accepting
@@ -65,7 +88,7 @@ if (import.meta.main) {
    */
   const shutdown = async (signal: string) => {
     if (!beginShutdown()) return;
-    console.info(`${signal} received, draining for ${SHUTDOWN_DRAIN_MS}ms`);
+    logger.info(`${signal} received, draining for ${SHUTDOWN_DRAIN_MS}ms`);
     await Bun.sleep(SHUTDOWN_DRAIN_MS);
     // Wait for open requests to finish, but at most `SHUTDOWN_STOP_MS`. Then close
     // all connections, so a connection that never ends does not keep the pod alive.

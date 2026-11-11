@@ -1,0 +1,8 @@
+{
+  "messageKey": "message",
+  "levelKey": "severity",
+  "customLevels": "DEBUG:20,INFO:30,WARNING:40,ERROR:50,CRITICAL:60",
+  "ignore": "serviceContext,logType,httpRequest,correlationId,stack_trace",
+  "messageFormat": "{message}{if stack_trace}\n{stack_trace}{end}",
+  "singleLine": true
+}
