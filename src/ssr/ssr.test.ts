@@ -178,9 +178,7 @@ describe("/ssr user menu", () => {
       await app.request("/ssr?logoutUrl=/auth/logout", { headers: bearer(token) })
     ).json();
     expect(body.headerHtml).toContain('id="uniformen-user-menu-panel"');
-    expect(body.headerHtml).toContain(
-      'class="uniformen-user-menu__organisation">hallstein@entur.org<',
-    );
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">hallstein@entur.org<');
     expect(organisationMock.calls).toBe(0);
     // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
     expect(body.headerHtml).toContain(
@@ -194,7 +192,7 @@ describe("/ssr user menu", () => {
     const token = await signInternalToken({ sub: "auth0|nameless" });
     const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
     expect(body.headerHtml.match(/navnlos@entur\.org/g)).toHaveLength(2);
-    expect(body.headerHtml).not.toContain("uniformen-user-menu__organisation");
+    expect(body.headerHtml).not.toContain("uniformen-user-menu__subtitle");
     expect(body.headerHtml).not.toContain("auth0|nameless");
   });
 
@@ -203,7 +201,7 @@ describe("/ssr user menu", () => {
     const token = await signInternalToken({ sub: "auth0|bare" });
     const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
     expect(body.headerHtml).toContain("Bruker uten navn");
-    expect(body.headerHtml).not.toContain("uniformen-user-menu__organisation");
+    expect(body.headerHtml).not.toContain("uniformen-user-menu__subtitle");
     expect(body.headerHtml).not.toContain("auth0|bare");
   });
 
@@ -231,11 +229,12 @@ describe("/ssr user menu", () => {
 
 describe("/ssr organisation name", () => {
   const profile = { sub: "auth0|test", name: "Olga Organisert", email: "olga@example.org" };
-  // The organisation name is cached by id for the whole test run, so each test uses
-  // its own id.
+  // The organisation name is cached by tenant and id for the whole test run, so each
+  // test uses its own id. The id comes from userinfo, not from the access token.
   const signedInWithOrganisation = async (sub: string, organisationId: unknown, query = "") => {
-    userInfoMock.respond = () => Response.json(profile);
-    const token = await signPartnerToken({ sub, [ORGANISATION_ID_CLAIM]: organisationId });
+    userInfoMock.respond = () =>
+      Response.json({ ...profile, [ORGANISATION_ID_CLAIM]: organisationId });
+    const token = await signPartnerToken({ sub });
     return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
   };
 
@@ -250,7 +249,7 @@ describe("/ssr organisation name", () => {
       });
     };
     const body = await signedInWithOrganisation("auth0|org-ok", 101);
-    expect(body.headerHtml).toContain('class="uniformen-user-menu__organisation">Bussring<');
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">Bussring<');
     expect(body.headerHtml).not.toContain("olga@example.org");
     expect(sent).toHaveLength(1);
     expect(sent[0]?.path).toBe("/organisations/v3/organisations/101");
@@ -270,17 +269,13 @@ describe("/ssr organisation name", () => {
   test("a failed lookup shows the email instead", async () => {
     organisationMock.respond = () => new Response("nope", { status: 403 });
     const body = await signedInWithOrganisation("auth0|org-fail", 103);
-    expect(body.headerHtml).toContain(
-      'class="uniformen-user-menu__organisation">olga@example.org<',
-    );
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">olga@example.org<');
   });
 
   test("a claim that is not a positive whole number is not looked up", async () => {
     for (const [index, value] of ["104", -1, 1.5, [105]].entries()) {
       const body = await signedInWithOrganisation(`auth0|org-bad-${index}`, value);
-      expect(body.headerHtml).toContain(
-        'class="uniformen-user-menu__organisation">olga@example.org<',
-      );
+      expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">olga@example.org<');
     }
     expect(organisationMock.calls).toBe(0);
   });
@@ -290,8 +285,30 @@ describe("/ssr organisation name", () => {
       Response.json({ organisationId: 106, tradingName: "Fergeselskap" });
     for (const query of ["?simple=true", "?hideNotifications=true"]) {
       const body = await signedInWithOrganisation(`auth0|org-${query}`, 106, query);
-      expect(body.headerHtml).toContain('class="uniformen-user-menu__organisation">Fergeselskap<');
+      expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">Fergeselskap<');
     }
+  });
+
+  test("an organisation id in the access token alone is not looked up", async () => {
+    userInfoMock.respond = () => Response.json(profile);
+    const token = await signPartnerToken({
+      sub: "auth0|org-token-only",
+      [ORGANISATION_ID_CLAIM]: 107,
+    });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">olga@example.org<');
+    expect(organisationMock.calls).toBe(0);
+  });
+
+  test("a failed userinfo lookup does not call the register", async () => {
+    userInfoMock.respond = () => new Response("nope", { status: 500 });
+    const token = await signPartnerToken({
+      sub: "auth0|org-no-info",
+      [ORGANISATION_ID_CLAIM]: 108,
+    });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(body.headerHtml).not.toContain("uniformen-user-menu");
+    expect(organisationMock.calls).toBe(0);
   });
 
   test("an anonymous request does not call the register", async () => {
@@ -667,7 +684,7 @@ describe("/ssr simple query param", () => {
     expect(body.headerHtml).toContain("Hallstein Bronskimlet");
     expect(body.headerHtml).toContain('href="/auth/logout"');
     expect(body.headerHtml).toContain("data-uniformen-user-menu-toggle");
-    expect(body.headerHtml).toContain("uniformen-user-menu__organisation");
+    expect(body.headerHtml).toContain("uniformen-user-menu__subtitle");
     expect(body.headerHtml).not.toContain("Mine tilganger");
     expect(body.headerHtml).not.toContain("my-profile");
     expect(body.headerHtml).not.toContain('aria-label="Varsler"');

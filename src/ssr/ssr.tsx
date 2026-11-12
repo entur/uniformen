@@ -162,31 +162,39 @@ export function uniformenSsrRoutes(server: OpenAPIHono): void {
     const query = ctx.req.valid("query");
     const navProps = topNavigationProps(query);
 
-    // Get the user's profile, notifications and organisation name in parallel. Each
-    // lookup is cached, and each resolves to undefined when it fails. If userinfo
-    // fails, render the anonymous header. Never show the raw `sub`.
+    // Get the user's profile and notifications in parallel. The organisation name is
+    // looked up after the profile, because the organisation id comes from userinfo.
+    // Each lookup is cached, and each resolves to undefined when it fails. If
+    // userinfo fails, render the anonymous header. Never show the raw `sub`.
     const auth = payload?.sub && token && tenant ? { tenant, token, sub: payload.sub } : undefined;
-    const organisationId = organisationIdFromClaims(payload);
-    const [info, notifications, organisationName] = auth
+    const [[info, organisationName], notifications] = auth
       ? await Promise.all([
-          userInfoService.getUserInfo(auth.tenant, auth.token, auth.sub),
+          userInfoService.getUserInfo(auth.tenant, auth.token, auth.sub).then(async (profile) => {
+            const organisationId = organisationIdFromClaims(profile);
+            const name =
+              organisationId === undefined
+                ? undefined
+                : await organisationService.getOrganisationName(
+                    auth.tenant,
+                    organisationId,
+                    auth.token,
+                  );
+            return [profile, name] as const;
+          }),
           navProps.simple || navProps.hideNotifications
             ? Promise.resolve(undefined)
             : notificationService.getNotifications(auth.tenant, auth.token, auth.sub),
-          organisationId === undefined
-            ? Promise.resolve(undefined)
-            : organisationService.getOrganisationName(organisationId, auth.token),
         ])
-      : [undefined, undefined, undefined];
+      : [[undefined, undefined], undefined];
 
     // Only signed-in users get a user menu. If the profile has no name, show the
-    // email instead, or a placeholder if there is no email either. The second line
-    // shows the organisation name. Without it, the second line shows the email, but
+    // email instead, or a placeholder if there is no email either. The subtitle
+    // shows the organisation name. Without it, the subtitle shows the email, but
     // only when the name is shown, so the email is not shown twice.
     const user = info
       ? {
           name: info.name ?? info.email ?? texts[navProps.locale].brukerUtenNavn,
-          organisation: organisationName ?? (info.name ? info.email : undefined),
+          subtitle: organisationName ?? (info.name ? info.email : undefined),
         }
       : undefined;
 

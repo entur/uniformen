@@ -568,7 +568,7 @@ export function previewUser(
   environment: Environment = runningEnvironment,
 ): UserMenuUser | undefined {
   if (environment === "production" || !debugUser) return undefined;
-  return { name: debugUser, organisation: debugOrganisation };
+  return { name: debugUser, subtitle: debugOrganisation };
 }
 
 /**

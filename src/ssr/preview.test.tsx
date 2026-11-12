@@ -51,7 +51,7 @@ describe("preview page debug user", () => {
     expect(html).toContain('id="uniformen-user-menu-panel"');
     // The name appears on the chip and in the panel.
     expect(chrome.match(/Navn Navnesen/g)).toHaveLength(2);
-    expect(html).toContain('class="uniformen-user-menu__organisation">Testorganisasjon<');
+    expect(html).toContain('class="uniformen-user-menu__subtitle">Testorganisasjon<');
     expect(html).toContain('href="/auth/logout"');
     expect((await scriptBlocks(html)).join("")).toContain("data-uniformen-user-menu-toggle");
   });
@@ -61,7 +61,7 @@ describe("preview page debug user", () => {
   test("debugOrganisation is optional", async () => {
     const { html } = await preview("?debugUser=Navne+Navnesen");
     expect(html).toContain('id="uniformen-user-menu-panel"');
-    expect(html).not.toContain('class="uniformen-user-menu__organisation"');
+    expect(html).not.toContain('class="uniformen-user-menu__subtitle"');
   });
 
   test("no debugUser renders the anonymous bar", async () => {
@@ -87,7 +87,7 @@ describe("preview page debug user", () => {
     const query = { debugUser: "Navn Navnesen", debugOrganisation: "Entur" };
     expect(previewUser(query, "production")).toBeUndefined();
     for (const env of ["local", "dev", "staging"] satisfies Environment[]) {
-      expect(previewUser(query, env)).toEqual({ name: "Navn Navnesen", organisation: "Entur" });
+      expect(previewUser(query, env)).toEqual({ name: "Navn Navnesen", subtitle: "Entur" });
     }
   });
 

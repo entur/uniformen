@@ -14,8 +14,11 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
 - The line under the user's name in the user menu shows the name of the user's
   organisation instead of the email. The name comes from the organisation register.
-  If the access token has no organisation id, or the lookup fails, the line shows
+  If the user's profile has no organisation id, or the lookup fails, the line shows
   the email as before.
+- The CSS class of this line is renamed from `uniformen-user-menu__email` to
+  `uniformen-user-menu__subtitle`. Apps that style the old class must use the new
+  name.
 - The preview page parameter `debugEmail` is renamed to `debugOrganisation`.
 
 ## 2026-11-11

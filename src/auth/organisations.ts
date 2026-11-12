@@ -1,4 +1,4 @@
-import { config } from "../config";
+import { config, type AuthTenant } from "../config";
 import { CachedLookup } from "./cachedLookup";
 import { ORGANISATION_ID_CLAIM } from "./enturOrganisation";
 import { correlationHeaders, logger } from "../logging/logger";
@@ -9,7 +9,11 @@ export type OrganisationService = {
    * on any failure and never throws, so callers can show the email instead without
    * a try/catch.
    */
-  getOrganisationName(organisationId: number, token: string): Promise<string | undefined>;
+  getOrganisationName(
+    tenantName: AuthTenant["name"],
+    organisationId: number,
+    token: string,
+  ): Promise<string | undefined>;
 };
 
 export type OrganisationServiceOptions = {
@@ -24,8 +28,8 @@ export type OrganisationServiceOptions = {
 };
 
 /**
- * Returns the organisation id from the claims of a verified access token. Returns
- * `undefined` when the claim is missing or is not a positive whole number.
+ * Returns the organisation id from the user's userinfo. Returns `undefined` when
+ * the claim is missing or is not a positive whole number.
  */
 export function organisationIdFromClaims(
   claims: Record<string, unknown> | undefined,
@@ -33,6 +37,13 @@ export function organisationIdFromClaims(
   const value = claims?.[ORGANISATION_ID_CLAIM];
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
+
+/**
+ * Thrown when the register rejects the user's token. `getOrganisationName` catches
+ * it. A thrown error is not cached, so one rejected token does not hide the name
+ * for other users in the same organisation.
+ */
+class TokenRejectedError extends Error {}
 
 /** Checks whether a response body has a `tradingName` that is not blank. */
 const hasTradingName = (body: unknown): body is { tradingName: string } =>
@@ -46,11 +57,10 @@ const hasTradingName = (body: unknown): body is { tradingName: string } =>
  * Fetches organisation names from the organisation register and caches them in
  * memory.
  *
- * The cache key is only the organisation id, so all users in one organisation share
- * one entry. This is safe because the register gives any internal or partner user
- * every organisation, and the id comes from a verified token. The user's token is
- * only sent to the register, and it is not part of the key. Names rarely change, so
- * they are cached for a long time.
+ * The cache key is `tenant|organisationId`, so users in the same organisation and
+ * tenant share one entry. The id comes from the verified user's userinfo. The
+ * user's token is only sent to the register, and it is not part of the key. Names
+ * rarely change, so they are cached for a long time.
  */
 export class OrganisationServiceImpl implements OrganisationService {
   private readonly apiBaseUri: string;
@@ -68,11 +78,19 @@ export class OrganisationServiceImpl implements OrganisationService {
     });
   }
 
-  async getOrganisationName(organisationId: number, token: string): Promise<string | undefined> {
-    if (!token) return undefined;
-    return this.cache.get(String(organisationId), () =>
-      this.fetchOrganisationName(organisationId, token),
-    );
+  async getOrganisationName(
+    tenantName: AuthTenant["name"],
+    organisationId: number,
+    token: string,
+  ): Promise<string | undefined> {
+    try {
+      return await this.cache.get(`${tenantName}|${organisationId}`, () =>
+        this.fetchOrganisationName(organisationId, token),
+      );
+    } catch {
+      // The register rejected the token. fetchOrganisationName has logged it.
+      return undefined;
+    }
   }
 
   private async fetchOrganisationName(
@@ -88,6 +106,10 @@ export class OrganisationServiceImpl implements OrganisationService {
         },
         signal: AbortSignal.timeout(this.timeoutMs),
       });
+      if (res.status === 401 || res.status === 403) {
+        logger.warn(`organisation fetch rejected for id ${organisationId}: HTTP ${res.status}`);
+        throw new TokenRejectedError();
+      }
       if (!res.ok) {
         logger.warn(`organisation fetch failed for id ${organisationId}: HTTP ${res.status}`);
         return undefined;
@@ -97,8 +119,9 @@ export class OrganisationServiceImpl implements OrganisationService {
         logger.warn(`organisation fetch failed for id ${organisationId}: no tradingName`);
         return undefined;
       }
-      return body.tradingName;
+      return body.tradingName.trim();
     } catch (error) {
+      if (error instanceof TokenRejectedError) throw error;
       // Timeout, network error or invalid JSON. The caller shows the email instead.
       logger.warn({ err: error }, `organisation fetch failed for id ${organisationId}`);
       return undefined;

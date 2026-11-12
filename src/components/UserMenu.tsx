@@ -25,11 +25,11 @@ const texts = {
 } as const;
 
 /**
- * The signed-in user shown in the header. `organisation` is the line under the
+ * The signed-in user shown in the header. `subtitle` is the line under the
  * name. It is usually the name of the user's organisation, and it can be the email
  * when that name is not known.
  */
-export type UserMenuUser = { name: string; organisation?: string };
+export type UserMenuUser = { name: string; subtitle?: string };
 
 /** The Partner page where users see their own permissions and profile. */
 const MY_PROFILE_PATH = "/permission-admin/my-profile";
@@ -103,9 +103,7 @@ export function UserMenu({
             shows an icon, so this is the only place to see who is signed in. */}
         <div class="uniformen-user-menu__identity">
           <span class="uniformen-user-menu__name">{user.name}</span>
-          {user.organisation && (
-            <span class="uniformen-user-menu__organisation">{user.organisation}</span>
-          )}
+          {user.subtitle && <span class="uniformen-user-menu__subtitle">{user.subtitle}</span>}
         </div>
         {!simple && (
           <ul class="uniformen-user-menu__list">

@@ -33,7 +33,7 @@ describe("OrganisationServiceImpl", () => {
   test("returns the trading name, not the legal name", async () => {
     organisationMock.respond = organisation("Handelsnavn");
     const token = await signPartnerToken();
-    expect(await service().getOrganisationName(7, token)).toBe("Handelsnavn");
+    expect(await service().getOrganisationName("partner", 7, token)).toBe("Handelsnavn");
   });
 
   test("asks for the id in the path and sends the caller's token", async () => {
@@ -43,33 +43,56 @@ describe("OrganisationServiceImpl", () => {
       return organisation("Handelsnavn")();
     };
     const token = await signPartnerToken();
-    await service().getOrganisationName(7, token);
+    await service().getOrganisationName("partner", 7, token);
     expect(sent).toEqual([{ path: "/organisations/v3/organisations/7", auth: `Bearer ${token}` }]);
   });
 
-  test("no token means no call to the register", async () => {
-    expect(await service().getOrganisationName(7, "")).toBeUndefined();
-    expect(organisationMock.calls).toBe(0);
+  test("the trading name is trimmed", async () => {
+    organisationMock.respond = organisation("  Handelsnavn ");
+    const token = await signPartnerToken();
+    expect(await service().getOrganisationName("partner", 7, token)).toBe("Handelsnavn");
+  });
+
+  test("a rejected token is not cached, so the next user still gets the name", async () => {
+    const token = await signPartnerToken();
+    const organisations = service();
+    for (const status of [401, 403]) {
+      organisationMock.respond = () => new Response("nope", { status });
+      expect(await organisations.getOrganisationName("partner", 7, token)).toBeUndefined();
+    }
+    organisationMock.respond = organisation("Handelsnavn");
+    expect(await organisations.getOrganisationName("partner", 7, token)).toBe("Handelsnavn");
+    expect(organisationMock.calls).toBe(3);
+  });
+
+  test("each tenant has its own cache entry", async () => {
+    const token = await signPartnerToken();
+    const organisations = service();
+    organisationMock.respond = () => new Response("nope", { status: 500 });
+    expect(await organisations.getOrganisationName("internal", 7, token)).toBeUndefined();
+    organisationMock.respond = organisation("Handelsnavn");
+    expect(await organisations.getOrganisationName("partner", 7, token)).toBe("Handelsnavn");
+    expect(organisationMock.calls).toBe(2);
   });
 
   test("an HTTP error resolves to undefined", async () => {
     organisationMock.respond = () => new Response("nope", { status: 404 });
     const token = await signPartnerToken();
-    expect(await service().getOrganisationName(7, token)).toBeUndefined();
+    expect(await service().getOrganisationName("partner", 7, token)).toBeUndefined();
   });
 
   test("a missing, blank or non-string trading name resolves to undefined", async () => {
     const token = await signPartnerToken();
     for (const tradingName of [undefined, "", "   ", 42]) {
       organisationMock.respond = organisation(tradingName);
-      expect(await service().getOrganisationName(7, token)).toBeUndefined();
+      expect(await service().getOrganisationName("partner", 7, token)).toBeUndefined();
     }
   });
 
   test("a response that is not JSON resolves to undefined", async () => {
     organisationMock.respond = () => new Response("<html>", { status: 200 });
     const token = await signPartnerToken();
-    expect(await service().getOrganisationName(7, token)).toBeUndefined();
+    expect(await service().getOrganisationName("partner", 7, token)).toBeUndefined();
   });
 
   test("a timeout resolves to undefined instead of throwing", async () => {
@@ -78,19 +101,21 @@ describe("OrganisationServiceImpl", () => {
       return organisation("Treg")();
     };
     const token = await signPartnerToken();
-    expect(await service({ timeoutMs: 20 }).getOrganisationName(7, token)).toBeUndefined();
+    expect(
+      await service({ timeoutMs: 20 }).getOrganisationName("partner", 7, token),
+    ).toBeUndefined();
   });
 
   test("users in the same organisation share one lookup", async () => {
     const organisations = service();
     const [first, second] = await Promise.all([signPartnerToken(), signPartnerToken()]);
     await Promise.all([
-      organisations.getOrganisationName(7, first),
-      organisations.getOrganisationName(7, second),
+      organisations.getOrganisationName("partner", 7, first),
+      organisations.getOrganisationName("partner", 7, second),
     ]);
-    await organisations.getOrganisationName(7, first);
+    await organisations.getOrganisationName("partner", 7, first);
     expect(organisationMock.calls).toBe(1);
-    await organisations.getOrganisationName(8, first);
+    await organisations.getOrganisationName("partner", 8, first);
     expect(organisationMock.calls).toBe(2);
   });
 
@@ -98,14 +123,14 @@ describe("OrganisationServiceImpl", () => {
     organisationMock.respond = () => new Response("nope", { status: 500 });
     const token = await signPartnerToken();
     const organisations = service({ positiveTtlMs: 60_000, negativeTtlMs: 10 });
-    await organisations.getOrganisationName(7, token);
+    await organisations.getOrganisationName("partner", 7, token);
     expect(organisationMock.calls).toBe(1);
     setSystemTime(new Date(Date.now() + 11)); // move the clock past the negative TTL
     organisationMock.respond = organisation("Handelsnavn");
-    expect(await organisations.getOrganisationName(7, token)).toBe("Handelsnavn");
+    expect(await organisations.getOrganisationName("partner", 7, token)).toBe("Handelsnavn");
     expect(organisationMock.calls).toBe(2);
     setSystemTime(new Date(Date.now() + 22)); // still inside the positive TTL
-    await organisations.getOrganisationName(7, token);
+    await organisations.getOrganisationName("partner", 7, token);
     expect(organisationMock.calls).toBe(2);
   });
 });

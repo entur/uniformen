@@ -732,7 +732,7 @@
   overflow-wrap: anywhere;
 }
 
-.uniformen-user-menu__organisation {
+.uniformen-user-menu__subtitle {
   font-size: var(--uniformen-font-md);
   line-height: var(--uniformen-line-xs);
   letter-spacing: 0.02em;
