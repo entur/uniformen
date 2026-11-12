@@ -102,10 +102,10 @@ export const logger = pino(
     // OTEL_SERVICE_NAME holds the app name.
     base: { serviceContext: { service: process.env["OTEL_SERVICE_NAME"] ?? "unknown" } },
     serializers: { err: serializeError },
-    // This only finds these keys at the top level and one level down. It does not
-    // find them deeper in an object or inside the message text.
+    // This only finds these keys up to two levels down. It does not find them deeper
+    // in an object or inside the message text.
     redact: {
-      paths: [...SENSITIVE_KEYS, ...SENSITIVE_KEYS.map((key) => `*.${key}`)],
+      paths: SENSITIVE_KEYS.flatMap((key) => [key, `*.${key}`, `*.*.${key}`]),
       censor: "[REDACTED]",
     },
     formatters: {
@@ -113,9 +113,13 @@ export const logger = pino(
       // pino calls this before the serializers, so `err` is still the Error here.
       log: (object) => {
         const stack = object["err"] instanceof Error ? object["err"].stack : undefined;
+        // Remove the fields that Cloud Logging reads from the logger itself, so a
+        // caller cannot change the level or the service by accident. A caller may set
+        // `logType`.
+        const { severity: _severity, serviceContext: _serviceContext, ...fields } = object;
         return {
           logType: "app",
-          ...object,
+          ...fields,
           ...(stack ? { stack_trace: truncate(stack, MAX_STACK_LENGTH) } : {}),
         };
       },
@@ -154,6 +158,46 @@ export function logSecurityEvent(
   message: string,
 ): void {
   logger.warn({ logType: "security", securityEvent: { type, ...details } }, message);
+}
+
+const TOKEN_REJECTED_INTERVAL_MS = 60_000;
+
+/** When each kind of rejected token was last logged, and how many were left out since. */
+const tokenRejections = new Map<string, { loggedAt: number; skipped: number }>();
+
+/**
+ * Logs a `token_rejected` security event. It logs the same rejection (the same
+ * message, details and reason) at most once a minute, because anyone can send bad
+ * tokens to the public routes. The next line has `skipped`, the number of events
+ * that were left out in between.
+ */
+export function logTokenRejected(
+  error: unknown,
+  details: Record<string, string | undefined>,
+  message: string,
+): void {
+  const reason = rejectionReason(error);
+  const key = JSON.stringify([message, details, reason.reason]);
+  const now = Date.now();
+  const last = tokenRejections.get(key);
+  if (last && now - last.loggedAt < TOKEN_REJECTED_INTERVAL_MS) {
+    last.skipped++;
+    return;
+  }
+  // The keys come from our own code and from error codes, so there are few of them.
+  // Clear the map anyway if it grows, so it cannot use much memory.
+  if (tokenRejections.size >= 1000) tokenRejections.clear();
+  tokenRejections.set(key, { loggedAt: now, skipped: 0 });
+  logSecurityEvent(
+    "token_rejected",
+    { ...details, ...reason, ...(last?.skipped ? { skipped: last.skipped } : {}) },
+    message,
+  );
+}
+
+/** Forgets which rejected tokens were logged. It is exported only for tests. */
+export function resetTokenRejections(): void {
+  tokenRejections.clear();
 }
 
 /**

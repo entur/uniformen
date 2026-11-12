@@ -1,10 +1,11 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
 import { captureLogs } from "../test/captureLogs";
 import {
   correlationHeaders,
   logger,
   logLevel,
   logSecurityEvent,
+  logTokenRejected,
   rejectionReason,
   requestContext,
 } from "./logger";
@@ -92,11 +93,24 @@ describe("logger", () => {
   });
 
   test("hides sensitive keys at the top level and one level down", () => {
-    logger.info({ email: "a@example.com", user: { authorization: "Bearer x", id: 1 } }, "m");
+    logger.info(
+      {
+        email: "a@example.com",
+        user: { authorization: "Bearer x", id: 1, profile: { email: "b@example.com" } },
+      },
+      "m",
+    );
     expect(logs.lines[0]).toMatchObject({
       email: "[REDACTED]",
-      user: { authorization: "[REDACTED]", id: 1 },
+      user: { authorization: "[REDACTED]", id: 1, profile: { email: "[REDACTED]" } },
     });
+  });
+
+  test("does not let a caller change the severity or the service", () => {
+    logger.info({ severity: "ERROR", serviceContext: { service: "other" } }, "m");
+    const [line] = logs.lines;
+    expect(line?.["severity"]).toBe("INFO");
+    expect(line?.["serviceContext"]).not.toEqual({ service: "other" });
   });
 });
 
@@ -124,6 +138,23 @@ test("logSecurityEvent logs a warning with logType security", () => {
     logType: "security",
     securityEvent: { type: "token_rejected", reason: "ERR_JWT_EXPIRED" },
     message: "Rejected access token",
+  });
+});
+
+describe("logTokenRejected", () => {
+  test("logs the same rejection once a minute, and counts the ones it left out", () => {
+    setSystemTime(new Date("2026-01-01T12:00:00Z"));
+    for (let i = 0; i < 3; i++) logTokenRejected("bad", { route: "r" }, "Rejected");
+    logTokenRejected("other", { route: "r" }, "Rejected");
+    setSystemTime(new Date("2026-01-01T12:01:01Z"));
+    logTokenRejected("bad", { route: "r" }, "Rejected");
+    setSystemTime();
+
+    expect(logs.lines.map((line) => line["securityEvent"])).toEqual([
+      { type: "token_rejected", route: "r", reason: "bad" },
+      { type: "token_rejected", route: "r", reason: "other" },
+      { type: "token_rejected", route: "r", reason: "bad", skipped: 2 },
+    ]);
   });
 });
 

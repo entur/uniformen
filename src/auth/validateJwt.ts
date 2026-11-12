@@ -3,7 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { createRemoteJWKSet, decodeJwt, errors, jwtVerify } from "jose";
 import type { JWTPayload, JWTVerifyGetKey } from "jose";
 import { config, type AuthTenant } from "../config";
-import { logSecurityEvent, rejectionReason } from "../logging/logger";
+import { logTokenRejected } from "../logging/logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -41,11 +41,7 @@ function unauthorized(_ctx: { req: { url: string } }, error: string, description
  * on public endpoints.
  */
 function rejectedToken(reason: unknown, tenant?: AuthTenant["name"]): void {
-  logSecurityEvent(
-    "token_rejected",
-    { tenant, ...rejectionReason(reason) },
-    "Rejected access token",
-  );
+  logTokenRejected(reason, { tenant }, "Rejected access token");
 }
 
 /**

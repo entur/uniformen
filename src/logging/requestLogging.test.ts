@@ -7,6 +7,7 @@ import { SporaiClient } from "../chat/sporaiClient";
 import { signInternalToken } from "../test/authTestKeys";
 import { notificationMock, sporaiMock, userInfoMock } from "../test/authTestSetup";
 import { captureLogs } from "../test/captureLogs";
+import { createReadNotificationToken } from "../auth/notificationsProxy";
 
 let logs: ReturnType<typeof captureLogs>;
 
@@ -196,6 +197,18 @@ describe("security events", () => {
     expect(res.status).toBe(401);
     expect(logs.lines.find((line) => line["logType"] === "security")).toMatchObject({
       securityEvent: { type: "token_rejected", route: "chat-proxy", reason: "ERR_JWS_INVALID" },
+    });
+  });
+
+  test("logs a notification token with a message id that is not a number", async () => {
+    const token = await createReadNotificationToken("auth0|test", "../admin");
+    const res = await app.request("/notifications-proxy", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(401);
+    expect(logs.lines.find((line) => line["logType"] === "security")).toMatchObject({
+      securityEvent: { route: "notifications-proxy", reason: "messageId is not a number" },
     });
   });
 
