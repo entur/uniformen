@@ -24,8 +24,12 @@ const texts = {
   },
 } as const;
 
-/** The signed-in user shown in the header. */
-export type UserMenuUser = { name: string; email?: string };
+/**
+ * The signed-in user shown in the header. `organisation` is the line under the
+ * name. It is usually the name of the user's organisation, and it can be the email
+ * when that name is not known.
+ */
+export type UserMenuUser = { name: string; organisation?: string };
 
 /** The Partner page where users see their own permissions and profile. */
 const MY_PROFILE_PATH = "/permission-admin/my-profile";
@@ -69,8 +73,8 @@ export function UserMenu({
   const txt = texts[locale];
   return (
     // PostHog autocapture skips elements with `ph-no-capture` and everything inside
-    // them. Apps that embed the bar would otherwise send the user's name and email
-    // to PostHog when the user clicks in this menu.
+    // them. Apps that embed the bar would otherwise send the user's name, email and
+    // organisation to PostHog when the user clicks in this menu.
     <div class="uniformen-user-menu ph-no-capture">
       {/* No aria-label, because the name inside the button is its accessible name.
           At mobile widths the name is only hidden visually, so screen readers still read it. */}
@@ -99,7 +103,9 @@ export function UserMenu({
             shows an icon, so this is the only place to see who is signed in. */}
         <div class="uniformen-user-menu__identity">
           <span class="uniformen-user-menu__name">{user.name}</span>
-          {user.email && <span class="uniformen-user-menu__email">{user.email}</span>}
+          {user.organisation && (
+            <span class="uniformen-user-menu__organisation">{user.organisation}</span>
+          )}
         </div>
         {!simple && (
           <ul class="uniformen-user-menu__list">

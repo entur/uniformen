@@ -45,23 +45,23 @@ async function sha256(source: string): Promise<string> {
 describe("preview page debug user", () => {
   test("debugUser renders the signed-in bar, with its menu", async () => {
     const { res, html, chrome } = await preview(
-      "?debugUser=Navn+Navnesen&debugEmail=navn.navnesen@entur.org&logoutUrl=/auth/logout",
+      "?debugUser=Navn+Navnesen&debugOrganisation=Testorganisasjon&logoutUrl=/auth/logout",
     );
     expect(res.status).toBe(200);
     expect(html).toContain('id="uniformen-user-menu-panel"');
     // The name appears on the chip and in the panel.
     expect(chrome.match(/Navn Navnesen/g)).toHaveLength(2);
-    expect(html).toContain("navn.navnesen@entur.org");
+    expect(html).toContain('class="uniformen-user-menu__organisation">Testorganisasjon<');
     expect(html).toContain('href="/auth/logout"');
     expect((await scriptBlocks(html)).join("")).toContain("data-uniformen-user-menu-toggle");
   });
 
   // The page inlines the stylesheet, so these class names always appear in it as
   // selectors. The tests check for the `class="..."` attribute instead.
-  test("debugEmail is optional", async () => {
+  test("debugOrganisation is optional", async () => {
     const { html } = await preview("?debugUser=Navne+Navnesen");
     expect(html).toContain('id="uniformen-user-menu-panel"');
-    expect(html).not.toContain('class="uniformen-user-menu__email"');
+    expect(html).not.toContain('class="uniformen-user-menu__organisation"');
   });
 
   test("no debugUser renders the anonymous bar", async () => {
@@ -73,33 +73,30 @@ describe("preview page debug user", () => {
 
   test("the knob is the preview page's alone, never /ssr's", async () => {
     // If `/ssr` used this param, any consumer could show any name in the signed-in bar.
-    const res = await app.request("/ssr?debugUser=Spoofet+Bruker&debugEmail=spoof@entur.org");
+    const res = await app.request("/ssr?debugUser=Spoofet+Bruker&debugOrganisation=Spoofet+AS");
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.headerHtml).not.toContain("Spoofet Bruker");
-    expect(body.headerHtml).not.toContain("spoof@entur.org");
+    expect(body.headerHtml).not.toContain("Spoofet AS");
     expect(body.headerHtml).not.toContain("uniformen-user-menu");
   });
 
   test("production renders nobody, whatever the URL says", async () => {
     // The test server runs as dev (see test/authTestSetup), so this test calls
     // previewUser with each environment directly.
-    const query = { debugUser: "Navn Navnesen", debugEmail: "navn.navnesen@entur.org" };
+    const query = { debugUser: "Navn Navnesen", debugOrganisation: "Entur" };
     expect(previewUser(query, "production")).toBeUndefined();
     for (const env of ["local", "dev", "staging"] satisfies Environment[]) {
-      expect(previewUser(query, env)).toEqual({
-        name: "Navn Navnesen",
-        email: "navn.navnesen@entur.org",
-      });
+      expect(previewUser(query, env)).toEqual({ name: "Navn Navnesen", organisation: "Entur" });
     }
   });
 
   test("an empty or oversized value is rejected rather than rendered", async () => {
     for (const query of [
       "?debugUser=",
-      "?debugEmail=",
+      "?debugOrganisation=",
       `?debugUser=${"a".repeat(121)}`,
-      `?debugUser=Navn&debugEmail=${"a".repeat(121)}`,
+      `?debugUser=Navn&debugOrganisation=${"a".repeat(121)}`,
     ]) {
       const { res } = await preview(query);
       expect(res.status).toBe(400);
@@ -435,7 +432,7 @@ describe("preview page controls", () => {
     expect(where("app")).toBe("left");
     expect(where("debugEnturUser")).toBe("left");
     expect(where("debugUser")).toBe("right");
-    expect(where("debugEmail")).toBe("right");
+    expect(where("debugOrganisation")).toBe("right");
     expect(where("availableLocales")).toBe("right");
     expect(where("loginUrl")).toBe("right");
     expect(where("logoutUrl")).toBe("right");

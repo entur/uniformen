@@ -29,7 +29,7 @@ export function previewUrl(
   for (const locale of query.availableLocales ?? []) params.append("availableLocales", locale);
   if (environment !== "production") {
     if (query.debugUser) params.set("debugUser", query.debugUser);
-    if (query.debugEmail) params.set("debugEmail", query.debugEmail);
+    if (query.debugOrganisation) params.set("debugOrganisation", query.debugOrganisation);
     if (query.debugEnturUser === "true") params.set("debugEnturUser", "true");
   }
   return `/?${params}`;
@@ -245,7 +245,7 @@ export function PreviewControls({
                   </div>
                 </Field>
                 <Field
-                  label="debugUser / debugEmail"
+                  label="debugUser / debugOrganisation"
                   hint="Bare i forhåndsvisningen — kommer fra tokenet."
                 >
                   <label class="preview-controls__check">
@@ -260,13 +260,13 @@ export function PreviewControls({
                     />
                   </label>
                   <label class="preview-controls__check">
-                    <span class="preview-controls__name">debugEmail</span>
+                    <span class="preview-controls__name">debugOrganisation</span>
                     <input
                       class="preview-controls__text"
                       type="text"
-                      name="debugEmail"
-                      value={query.debugEmail}
-                      placeholder="navn.navnesen@entur.org"
+                      name="debugOrganisation"
+                      value={query.debugOrganisation}
+                      placeholder="Entur"
                       maxlength={120}
                     />
                   </label>

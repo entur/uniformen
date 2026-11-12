@@ -732,12 +732,12 @@
   overflow-wrap: anywhere;
 }
 
-.uniformen-user-menu__email {
+.uniformen-user-menu__organisation {
   font-size: var(--uniformen-font-md);
   line-height: var(--uniformen-line-xs);
   letter-spacing: 0.02em;
   color: var(--uniformen-on-panel-subdued);
-  /* Long addresses wrap instead of overflowing the panel. */
+  /* Long names and addresses wrap instead of overflowing the panel. */
   overflow-wrap: anywhere;
 }
 
