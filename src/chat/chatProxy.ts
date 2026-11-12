@@ -9,7 +9,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { machineToken } from "../auth/machineToken";
 import { environment, type Environment } from "../config";
 import { SporaiClient } from "./sporaiClient";
-import { logger, logSecurityEvent, rejectionReason } from "../logging/logger";
+import { logger, logTokenRejected } from "../logging/logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -292,11 +292,7 @@ export function chatProxyRoutes(
         });
         c.set("chatUser", payload.sub!);
       } catch (error) {
-        logSecurityEvent(
-          "token_rejected",
-          { route: "chat-proxy", ...rejectionReason(error) },
-          "Rejected chat token",
-        );
+        logTokenRejected(error, { route: "chat-proxy" }, "Rejected chat token");
         return c.text("Unauthorized", 401, { "WWW-Authenticate": 'Bearer error="invalid_token"' });
       }
       return next();

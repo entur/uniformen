@@ -12,7 +12,7 @@ import { createHmac } from "crypto";
 import { Hono } from "hono";
 import { type OpenAPIHono } from "@hono/zod-openapi";
 import { machineToken, type MachineTokenProvider } from "./machineToken";
-import { correlationHeaders, logger, logSecurityEvent, rejectionReason } from "../logging/logger";
+import { correlationHeaders, logger, logTokenRejected } from "../logging/logger";
 
 const NOTIFICATION_PROXY_AUDIENCE = "uniformen-notification-proxy";
 const NOTIFICATION_PROXY_TOKEN_LIFETIME = "1h";
@@ -52,11 +52,7 @@ export async function createReadNotificationToken(
 type ProxyPayload = { messageId: string };
 
 function rejectedToken(error: unknown): void {
-  logSecurityEvent(
-    "token_rejected",
-    { route: "notifications-proxy", ...rejectionReason(error) },
-    "Rejected notification token",
-  );
+  logTokenRejected(error, { route: "notifications-proxy" }, "Rejected notification token");
 }
 
 export function notificationsProxyRoute(server: OpenAPIHono): void {
@@ -96,6 +92,7 @@ export function notificationsProxyRoute(server: OpenAPIHono): void {
 
       // We made this token, but the id goes into a URL, so check it is only digits.
       if (!/^\d+$/.test(messageId)) {
+        rejectedToken("messageId is not a number");
         throw new HTTPException(401, { message: "Invalid token" });
       }
 
