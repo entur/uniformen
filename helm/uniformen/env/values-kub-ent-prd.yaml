@@ -17,6 +17,7 @@ common:
       AUTH0_PARTNER_USERINFO_URI: https://partner.entur.org/userinfo
       AUTH0_INTERNAL_TOKEN_URI: https://internal.entur.org/oauth/token
       NOTIFICATION_API_BASE_URI: https://api.entur.io/notification-center
+      ORGANISATIONS_API_BASE_URI: https://api.entur.io/organisations/v3
   secrets:
     posthog-credentials:
       - POSTHOG_API_KEY

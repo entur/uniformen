@@ -108,4 +108,6 @@ export const config = {
   machineUser: machineUser(),
   /** The notification center, without a path. It serves both tenants. */
   notificationApiBaseUri: requiredEnv("NOTIFICATION_API_BASE_URI"),
+  /** The organisation register, without a path. It serves both tenants. */
+  organisationsApiBaseUri: requiredEnv("ORGANISATIONS_API_BASE_URI"),
 };

@@ -16,7 +16,7 @@ const hrefs = (html: string): string[] =>
 const LOGOUT_URL = "/auth/logout";
 
 const render = (
-  user: { name: string; email?: string },
+  user: { name: string; subtitle?: string },
   environment?: Environment,
   locale: Locale = "nb-NO",
   logoutUrl: string = LOGOUT_URL,
@@ -31,15 +31,12 @@ describe("user menu rendering", () => {
     expect(html.match(/Navn Navnesen/g)).toHaveLength(2);
   });
 
-  test("the email is the panel's second line, and is left out when absent", async () => {
-    const withEmail = await render({
-      name: "Navn Navnesen",
-      email: "navn.navnesen@entur.org",
-    });
-    expect(withEmail).toContain('class="uniformen-user-menu__email">navn.navnesen@entur.org<');
+  test("the subtitle is the panel's second line, and is left out when absent", async () => {
+    const withSubtitle = await render({ name: "Navn Navnesen", subtitle: "Entur" });
+    expect(withSubtitle).toContain('class="uniformen-user-menu__subtitle">Entur<');
 
     const without = await render({ name: "Navn Navnesen" });
-    expect(without).not.toContain("uniformen-user-menu__email");
+    expect(without).not.toContain("uniformen-user-menu__subtitle");
   });
 
   test("the chip is a collapsed toggle wired to the panel", async () => {
@@ -90,10 +87,10 @@ describe("user menu rendering", () => {
   });
 
   test("the name is escaped, not interpolated", async () => {
-    const html = await render({ name: "<script>alert(1)</script>", email: "a&b@entur.org" });
+    const html = await render({ name: "<script>alert(1)</script>", subtitle: "A&B AS" });
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
-    expect(html).toContain("a&amp;b@entur.org");
+    expect(html).toContain("A&amp;B AS");
   });
 
   test("every string in the menu follows the locale, the panel's own label included", async () => {
@@ -112,7 +109,7 @@ describe("user menu rendering", () => {
 });
 
 describe("simple user menu", () => {
-  const renderSimple = (user: { name: string; email?: string }) =>
+  const renderSimple = (user: { name: string; subtitle?: string }) =>
     renderComponentToString(<UserMenu user={user} simple locale="nb-NO" logoutUrl={LOGOUT_URL} />);
 
   test("the way out is the only row", async () => {
@@ -123,9 +120,9 @@ describe("simple user menu", () => {
   });
 
   test("the identity block stays: at mobile widths the chip is an icon alone", async () => {
-    const html = await renderSimple({ name: "Navn Navnesen", email: "navn@entur.org" });
+    const html = await renderSimple({ name: "Navn Navnesen", subtitle: "Entur" });
     expect(html).toContain('class="uniformen-user-menu__name">Navn Navnesen<');
-    expect(html).toContain('class="uniformen-user-menu__email">navn@entur.org<');
+    expect(html).toContain('class="uniformen-user-menu__subtitle">Entur<');
   });
 
   test("the panel is marked simple, so the iconless indent can be dropped", async () => {

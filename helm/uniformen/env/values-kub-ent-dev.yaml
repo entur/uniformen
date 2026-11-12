@@ -18,6 +18,7 @@ common:
       SPORAI_URL: https://sporai.dev.entur.no
       AUTH0_INTERNAL_TOKEN_URI: https://internal.dev.entur.org/oauth/token
       NOTIFICATION_API_BASE_URI: https://api.dev.entur.io/notification-center
+      ORGANISATIONS_API_BASE_URI: https://api.dev.entur.io/organisations/v3
   secrets:
     posthog-credentials:
       - POSTHOG_API_KEY

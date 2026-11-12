@@ -67,7 +67,7 @@ export function TopNavigation({
   sidebar?: boolean;
   /**
    * Renders a simpler bar. It hides the app switcher, notifications and the sidebar
-   * toggle. The user menu only shows the user's name and email, plus the logout row
+   * toggle. The user menu only shows the user's name and organisation, plus the logout row
    * and language options when `logoutUrl` and `availableLocales` are set.
    */
   simple?: boolean;
