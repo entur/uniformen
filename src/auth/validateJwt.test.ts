@@ -11,6 +11,7 @@ import {
 import type { AuthTenant } from "../config";
 import { createOptionalAuth } from "./optionalAuth";
 import { createValidateJwt, validateJwt } from "./validateJwt";
+import { captureLogs } from "../test/captureLogs";
 
 const app = new Hono();
 app.use("/protected", validateJwt);
@@ -205,5 +206,25 @@ describe("JWKS endpoint unavailable", () => {
     } finally {
       await server.stop();
     }
+  });
+
+  test("optionalAuth warns once, not on every request, while JWKS cannot be fetched", async () => {
+    const server = jwksServer(() => new Response("boom", { status: 500 }));
+    const logs = captureLogs();
+    try {
+      const publicApp = new Hono();
+      publicApp.use("/public", createOptionalAuth(createValidateJwt([deadTenant(server.url)])));
+      publicApp.get("/public", (c) => c.text("ok"));
+      const token = await signInternalToken();
+      for (let i = 0; i < 3; i++) {
+        await publicApp.request("/public", { headers: bearer(token) });
+      }
+    } finally {
+      logs.restore();
+      await server.stop();
+    }
+    expect(logs.lines.map((line) => line["message"])).toEqual([
+      "Could not check access tokens. Continuing as anonymous.",
+    ]);
   });
 });

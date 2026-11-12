@@ -1,3 +1,5 @@
+import { logger } from "./logging/logger";
+
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required env var: ${name}`);
@@ -86,7 +88,7 @@ function machineUser(): MachineUser | undefined {
     );
   }
   if (!clientId && !clientSecret) {
-    console.warn(
+    logger.warn(
       "MNG_AUTH0_INT_CLIENT_ID and MNG_AUTH0_INT_CLIENT_SECRET are not set, so clicking a notification does not delete it",
     );
     return undefined;

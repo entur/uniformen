@@ -12,6 +12,7 @@ import { createHmac } from "crypto";
 import { Hono } from "hono";
 import { type OpenAPIHono } from "@hono/zod-openapi";
 import { machineToken, type MachineTokenProvider } from "./machineToken";
+import { correlationHeaders, logger, logSecurityEvent, rejectionReason } from "../logging/logger";
 
 const NOTIFICATION_PROXY_AUDIENCE = "uniformen-notification-proxy";
 const NOTIFICATION_PROXY_TOKEN_LIFETIME = "1h";
@@ -50,6 +51,14 @@ export async function createReadNotificationToken(
 
 type ProxyPayload = { messageId: string };
 
+function rejectedToken(error: unknown): void {
+  logSecurityEvent(
+    "token_rejected",
+    { route: "notifications-proxy", ...rejectionReason(error) },
+    "Rejected notification token",
+  );
+}
+
 export function notificationsProxyRoute(server: OpenAPIHono): void {
   const key = NOTIFICATION_PROXY_KEY;
   const tokens = machineToken;
@@ -68,6 +77,7 @@ export function notificationsProxyRoute(server: OpenAPIHono): void {
     createMiddleware(async (ctx, next) => {
       const token = getBearerTokenFromRequest(ctx.req);
       if (!token) {
+        rejectedToken("missing token");
         throw new HTTPException(401, { message: "Missing token" });
       }
 
@@ -78,8 +88,9 @@ export function notificationsProxyRoute(server: OpenAPIHono): void {
           audience: NOTIFICATION_PROXY_AUDIENCE,
           requiredPayloadProperties: ["messageId"],
         }));
-      } catch {
+      } catch (error) {
         // Do not log the token. It is a credential.
+        rejectedToken(error);
         throw new HTTPException(401, { message: "Invalid token" });
       }
 
@@ -122,7 +133,11 @@ async function deleteNotification(
   try {
     const response = await fetch(`${config.notificationApiBaseUri}${MESSAGES_PATH}/${messageId}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        ...correlationHeaders(),
+      },
       signal: AbortSignal.timeout(DELETE_TIMEOUT_MS),
     });
 
@@ -135,12 +150,12 @@ async function deleteNotification(
     if (response.status === 401) provider.clear();
 
     if (!response.ok) {
-      console.warn(`notification delete failed: HTTP ${response.status}`);
+      logger.warn(`notification delete failed: HTTP ${response.status}`);
       return false;
     }
     return true;
   } catch (error) {
-    console.warn("notification delete failed:", error);
+    logger.warn({ err: error }, "notification delete failed");
     return false;
   }
 }

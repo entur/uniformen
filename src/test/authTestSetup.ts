@@ -129,6 +129,8 @@ afterAll(() => server.stop());
 // Bun loads .env before this file runs. Remove the PostHog key so no test calls PostHog.
 delete process.env["POSTHOG_API_KEY"];
 process.env["ENVIRONMENT"] = "dev";
+// Keep the test output readable. Use `captureLogs` to check what is logged.
+process.env["LOG_LEVEL"] = "silent";
 process.env["AUTH0_INTERNAL_AUDIENCE"] = INTERNAL_AUDIENCE;
 process.env["AUTH0_INTERNAL_ISSUER"] = INTERNAL_ISSUER;
 process.env["AUTH0_INTERNAL_JWKS_URI"] =

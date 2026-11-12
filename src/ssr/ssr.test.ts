@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { notificationMock, userInfoMock } from "../test/authTestSetup";
+import { captureLogs } from "../test/captureLogs";
 import { ENTUR_ORGANISATION_ID, ORGANISATION_ID_CLAIM } from "../auth/enturOrganisation";
 import {
   INTERNAL_AUDIENCE,
@@ -850,7 +851,6 @@ describe("/ssr aiAgent query param", () => {
   });
 
   test("a PostHog that never answers still gives a full bar without the AI agent", async () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
     aiAgentFlag.timeoutMs = 10;
     fakePostHog(() => new Promise(() => {}));
     const token = await signInternalToken({ sub: "auth0|agent-posthog-down" });
@@ -859,7 +859,6 @@ describe("/ssr aiAgent query param", () => {
     const body = await res.json();
     expect(body.headerHtml).toContain("uniformen-top-nav__user");
     expect(body.headerHtml).not.toContain("data-uniformen-ai-agent-toggle");
-    warn.mockRestore();
   });
 
   test("anything other than true or false is rejected", async () => {
@@ -1358,36 +1357,36 @@ describe("aiAgentFlag", () => {
   });
 
   test("is off when PostHog does not answer, and asks again only after the cache expires", async () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
     aiAgentFlag.timeoutMs = 10;
     const getFlag = fakePostHog(() => new Promise(() => {}));
-    expect(await Promise.all([aiAgentFlag.isOn(user), aiAgentFlag.isOn(user)])).toEqual([
-      false,
-      false,
-    ]);
-    expect(await aiAgentFlag.isOn(user)).toBe(false);
+    const logs = captureLogs();
+    try {
+      expect(await Promise.all([aiAgentFlag.isOn(user), aiAgentFlag.isOn(user)])).toEqual([
+        false,
+        false,
+      ]);
+      expect(await aiAgentFlag.isOn(user)).toBe(false);
+    } finally {
+      logs.restore();
+    }
     expect(getFlag).toHaveBeenCalledTimes(1);
-    const message = String(warn.mock.calls[0]?.[0]);
-    expect(message).not.toContain(user.sub);
-    expect(message).not.toContain(user.email);
-    warn.mockRestore();
+    const output = JSON.stringify(logs.lines);
+    expect(output).toContain("AI agent flag check failed or timed out.");
+    expect(output).not.toContain(user.sub);
+    expect(output).not.toContain(user.email);
   });
 
   test("a failure for one user does not turn the flag off for others", async () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
     fakePostHog(async () => undefined);
     for (const sub of ["auth0|fail-1", "auth0|fail-2", "auth0|fail-3"]) {
       expect(await aiAgentFlag.isOn({ ...user, sub })).toBe(false);
     }
     fakePostHog(async () => ({ enabled: true }));
     expect(await aiAgentFlag.isOn({ ...user, sub: "auth0|fail-4" })).toBe(true);
-    warn.mockRestore();
   });
 
   test("is off when PostHog fails", async () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
     fakePostHog(() => Promise.reject(new Error("network")));
     expect(await aiAgentFlag.isOn(user)).toBe(false);
-    warn.mockRestore();
   });
 });

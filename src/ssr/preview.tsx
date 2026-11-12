@@ -17,6 +17,7 @@ import { decodeJwt } from "jose";
 import { notificationService } from "../auth/notifications";
 import type { Notifications } from "../types";
 import { uniformenOrigin } from "../auth/browserTokens";
+import { logger } from "../logging/logger";
 
 // Base styles for the preview page: fonts and layout. It is a constant so its exact
 // text can be hashed for the CSP `style-src` directive.
@@ -603,7 +604,7 @@ function devAccessToken(): { token: string; sub: string } | undefined {
   try {
     return { token, sub: decodeJwt(token).sub ?? "" };
   } catch {
-    console.warn("DEV_ACCESS_TOKEN is not a readable JWT. Showing made-up notifications.");
+    logger.warn("DEV_ACCESS_TOKEN is not a readable JWT. Showing made-up notifications.");
     return undefined;
   }
 }

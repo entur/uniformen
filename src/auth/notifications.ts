@@ -1,6 +1,7 @@
 import { config, type AuthTenant } from "../config";
 import { CachedLookup } from "./cachedLookup";
 import type { Notifications } from "../types";
+import { correlationHeaders, logger } from "../logging/logger";
 import { createReadNotificationToken, MESSAGES_PATH } from "./notificationsProxy";
 
 /** One notification text in one language. `language` is an ISO 639-3 code, e.g. "nob". */
@@ -108,22 +109,26 @@ export class NotificationServiceImpl implements NotificationService {
   private async fetchNotifications(token: string): Promise<NotificationResponse | undefined> {
     try {
       const res = await fetch(this.notificationMessagesUri, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          ...correlationHeaders(),
+        },
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       if (!res.ok) {
-        console.warn(`notifications fetch failed: HTTP ${res.status}`);
+        logger.warn(`notifications fetch failed: HTTP ${res.status}`);
         return undefined;
       }
       const body = await res.json();
       if (!Array.isArray(body)) {
-        console.warn("notifications fetch failed: response was not an array");
+        logger.warn("notifications fetch failed: response was not an array");
         return undefined;
       }
       return body as NotificationResponse;
     } catch (error) {
       // Timeout, network error or invalid JSON. The caller renders without notifications.
-      console.warn("notifications fetch failed:", error);
+      logger.warn({ err: error }, "notifications fetch failed");
       return undefined;
     }
   }
@@ -156,7 +161,7 @@ async function transformNotificationResponse(
       try {
         markAsReadToken = await createReadNotificationToken(sub, item.id);
       } catch (error) {
-        console.warn("failed to create markAsReadToken:", error);
+        logger.warn({ err: error }, "failed to create markAsReadToken");
       }
 
       return {

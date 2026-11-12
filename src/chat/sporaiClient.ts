@@ -1,4 +1,5 @@
 import type { MachineTokenProvider } from "../auth/machineToken";
+import { correlationHeaders, logger } from "../logging/logger";
 
 export type SporaiConfig = {
   /** The base URL of sporai, without a trailing slash. */
@@ -65,7 +66,7 @@ export class SporaiClient {
     // Invalid JSON is handled in the same way as a missing session id.
     const sessionId = readField(await res.json().catch(() => undefined), "sessionId");
     if (typeof sessionId === "string") return { kind: "ok", sessionId };
-    console.warn("sporai createSession failed: no session id in the response");
+    logger.warn("sporai createSession failed: no session id in the response");
     return { kind: "error" };
   }
 
@@ -84,11 +85,11 @@ export class SporaiClient {
     try {
       reply = await res.text();
     } catch (error) {
-      console.warn("sporai chat failed while reading the reply:", errorName(error));
+      logger.warn(`sporai chat failed while reading the reply: ${errorName(error)}`);
       return { kind: "error" };
     }
     if (reply.length > MAX_REPLY_CHARS) {
-      console.warn("sporai chat failed: the reply is too long");
+      logger.warn("sporai chat failed: the reply is too long");
       return { kind: "error" };
     }
     return { kind: "ok", reply };
@@ -114,26 +115,27 @@ export class SporaiClient {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json, text/plain",
+          ...correlationHeaders(),
           ...init.headers,
         },
         signal: signal ? AbortSignal.any([timeout, signal]) : timeout,
       });
       // Do not clear the token here. Uniformen also uses it for notifications.
       if (res.status === 401 || res.status === 403) {
-        console.error(
+        logger.error(
           `sporai rejected the machine token: HTTP ${res.status}. Check the Auth0 client.`,
         );
       }
       return res;
     } catch (error) {
-      console.warn(`sporai request failed for ${init.method} ${path}:`, errorName(error));
+      logger.warn(`sporai request failed for ${init.method} ${path}: ${errorName(error)}`);
       return { kind: "error" };
     }
   }
 
   /** Logs the status of a failed answer from sporai. */
   private logFailure(status: number): SporaiError {
-    console.warn(`sporai request failed: HTTP ${status}`);
+    logger.warn(`sporai request failed: HTTP ${status}`);
     return { kind: "error" };
   }
 }

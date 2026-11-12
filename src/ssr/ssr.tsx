@@ -14,12 +14,13 @@ import { renderUniformenHeadScript, uniformenHeadScriptHash } from "./uniformenH
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import { clientVersionLabel, ssrRequestMetric } from "../metrics";
 import { PostHog } from "posthog-node";
+import { logger } from "../logging/logger";
 
 const featureFlagTimeoutMs = 200;
 
 // Without POSTHOG_API_KEY, the AI agent feature flag is off for everyone.
 const posthogApiKey = process.env["POSTHOG_API_KEY"];
-if (!posthogApiKey) console.warn("AI agent flag is off. POSTHOG_API_KEY is not set.");
+if (!posthogApiKey) logger.warn("AI agent flag is off. POSTHOG_API_KEY is not set.");
 const posthog = posthogApiKey
   ? new PostHog(posthogApiKey, {
       host: "https://eu.i.posthog.com",
@@ -76,7 +77,7 @@ export const aiAgentFlag = {
     ])
       .then((result) => {
         // The SDK returns undefined when the request fails or the flag does not exist.
-        if (result === undefined) console.warn("AI agent flag check failed or timed out.");
+        if (result === undefined) logger.warn("AI agent flag check failed or timed out.");
         const on = result?.enabled ?? false;
         // `Map` keeps keys in insertion order, and `set` does not move a key that
         // already exists. So delete the key first. Then the first key is always the

@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { MachineTokenProvider } from "../auth/machineToken";
 import { INTERNAL_AUDIENCE } from "../test/authTestKeys";
 import { machineTokenMock, SPORAI_SESSION_ID, sporaiMock } from "../test/authTestSetup";
+import { captureLogs } from "../test/captureLogs";
 import { SporaiClient } from "./sporaiClient";
 
 const tokenOptions = {
@@ -153,20 +154,14 @@ describe("chat", () => {
 });
 
 describe("logging", () => {
-  const logged: string[] = [];
-  const spies: ReturnType<typeof spyOn>[] = [];
+  let logs: ReturnType<typeof captureLogs>;
 
   beforeEach(() => {
-    logged.length = 0;
-    for (const method of ["info", "warn", "error"] as const) {
-      spies.push(
-        spyOn(console, method).mockImplementation((...args) => void logged.push(args.join(" "))),
-      );
-    }
+    logs = captureLogs();
   });
 
   afterEach(() => {
-    for (const spy of spies.splice(0)) spy.mockRestore();
+    logs.restore();
   });
 
   test("never contains the client secret or a token", async () => {
@@ -175,8 +170,8 @@ describe("logging", () => {
     machineTokenMock.respond = () => new Response("no", { status: 500 });
     await newClient().chat(question);
 
-    expect(logged.length).toBeGreaterThan(0);
-    const output = logged.join("\n");
+    expect(logs.lines.length).toBeGreaterThan(0);
+    const output = JSON.stringify(logs.lines);
     expect(output).not.toContain(tokenOptions.clientSecret);
     expect(output).not.toContain("machine-token");
   });

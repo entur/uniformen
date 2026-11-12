@@ -13,6 +13,7 @@ import {
   signSessionId,
 } from "./chatProxy";
 import { SporaiClient } from "./sporaiClient";
+import { captureLogs } from "../test/captureLogs";
 
 const ORIGIN = "https://partner.dev.entur.org";
 // `USER` is the user in the default `token`, and `SUB` is its id. `OTHER_USER` is someone else.
@@ -364,11 +365,13 @@ describe("CORS", () => {
 
 describe("loadChatProxyConfig", () => {
   test("turns chat off and names the missing variable", () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    const logs = captureLogs();
     const env = { ...process.env, SPORAI_URL: "" };
     expect(loadChatProxyConfig(env)).toBeUndefined();
-    expect(warn).toHaveBeenCalledWith("Chat is off. Missing env vars: SPORAI_URL");
-    warn.mockRestore();
+    logs.restore();
+    expect(logs.lines.map((line) => line["message"])).toEqual([
+      "Chat is off. Missing env vars: SPORAI_URL",
+    ]);
   });
 
   test("adds no route when chat is off", async () => {

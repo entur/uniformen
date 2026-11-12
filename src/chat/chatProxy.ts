@@ -9,6 +9,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { machineToken } from "../auth/machineToken";
 import { environment, type Environment } from "../config";
 import { SporaiClient } from "./sporaiClient";
+import { logger, logSecurityEvent, rejectionReason } from "../logging/logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -54,7 +55,7 @@ export function loadChatProxyConfig(
   const names = ["SPORAI_URL", "MNG_AUTH0_INT_CLIENT_SECRET"] as const;
   const missing = names.filter((name) => !env[name]);
   if (missing.length > 0 || !machineToken) {
-    console.warn(`Chat is off. Missing env vars: ${missing.join(", ")}`);
+    logger.warn(`Chat is off. Missing env vars: ${missing.join(", ")}`);
     return undefined;
   }
   const clientSecret = env["MNG_AUTH0_INT_CLIENT_SECRET"]!;
@@ -283,14 +284,19 @@ export function chatProxyRoutes(
     createMiddleware(async (c, next) => {
       const token = /^Bearer (\S+)$/i.exec(c.req.header("Authorization") ?? "")?.[1];
       try {
-        if (!token) throw new Error("no token");
+        if (!token) throw new Error("missing token");
         const { payload } = await jwtVerify(token, key, {
           algorithms: ["HS256"],
           audience: CHAT_TOKEN_AUDIENCE,
           requiredClaims: ["sub", "exp"],
         });
         c.set("chatUser", payload.sub!);
-      } catch {
+      } catch (error) {
+        logSecurityEvent(
+          "token_rejected",
+          { route: "chat-proxy", ...rejectionReason(error) },
+          "Rejected chat token",
+        );
         return c.text("Unauthorized", 401, { "WWW-Authenticate": 'Bearer error="invalid_token"' });
       }
       return next();

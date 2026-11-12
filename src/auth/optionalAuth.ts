@@ -2,6 +2,9 @@ import type { MiddlewareHandler } from "hono";
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { JwksUnavailableError, validateJwt } from "./validateJwt";
+import { logger } from "../logging/logger";
+
+const JWKS_WARNING_INTERVAL_MS = 60_000;
 
 /**
  * Wraps `validate` so that a failed login does not reject the request. If
@@ -10,6 +13,7 @@ import { JwksUnavailableError, validateJwt } from "./validateJwt";
  * other error is thrown again.
  */
 export function createOptionalAuth(validate: MiddlewareHandler) {
+  let lastJwksWarning = Number.NEGATIVE_INFINITY;
   return createMiddleware(async (c, next) => {
     try {
       // On success, `validate` sets `jwtPayload` and calls `next()` itself.
@@ -22,6 +26,12 @@ export function createOptionalAuth(validate: MiddlewareHandler) {
       if (error instanceof JwksUnavailableError) {
         // We cannot check the token without the signing keys. The endpoint is
         // public, so it should not fail because of this. Continue as anonymous.
+        // Log at most once a minute. While the keys are unavailable, every signed-in
+        // request ends here.
+        if (Date.now() - lastJwksWarning > JWKS_WARNING_INTERVAL_MS) {
+          lastJwksWarning = Date.now();
+          logger.warn({ err: error }, "Could not check access tokens. Continuing as anonymous.");
+        }
         return next();
       }
       throw error;
