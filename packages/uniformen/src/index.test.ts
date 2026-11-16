@@ -159,6 +159,15 @@ describe("fetchUniformenLayout", () => {
     });
   });
 
+  it("sends consumerApp in the X-Uniformen-Consumer header", async () => {
+    mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
+    await fetchUniformenLayout({ consumerApp: "partner" });
+    expect(globalThis.fetch).toHaveBeenCalledWith("https://uniformen.entur.no/ssr", {
+      headers: { ...CLIENT_HEADER, "X-Uniformen-Consumer": "partner" },
+      signal: expect.any(AbortSignal),
+    });
+  });
+
   it("defaults to production URL", async () => {
     mockFetch({ headerHtml: "", footerHtml: "", headAssets: "", scripts: "" });
     await fetchUniformenLayout();
