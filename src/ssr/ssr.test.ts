@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { notificationMock, userInfoMock } from "../test/authTestSetup";
+import { notificationMock, organisationMock, userInfoMock } from "../test/authTestSetup";
 import { captureLogs } from "../test/captureLogs";
 import { ENTUR_ORGANISATION_ID, ORGANISATION_ID_CLAIM } from "../auth/enturOrganisation";
 import {
@@ -48,6 +48,7 @@ async function enturSignedIn(
 beforeEach(() => {
   userInfoMock.reset();
   notificationMock.reset();
+  organisationMock.reset();
 });
 
 const originalChat = { ...chat };
@@ -164,7 +165,7 @@ describe("/ssr user in top navigation", () => {
 });
 
 describe("/ssr user menu", () => {
-  test("the signed-in user gets a menu, with the email under the name", async () => {
+  test("a user without an organisation id gets a menu, with the email under the name", async () => {
     userInfoMock.respond = () =>
       Response.json({
         sub: "auth0|test",
@@ -177,7 +178,8 @@ describe("/ssr user menu", () => {
       await app.request("/ssr?logoutUrl=/auth/logout", { headers: bearer(token) })
     ).json();
     expect(body.headerHtml).toContain('id="uniformen-user-menu-panel"');
-    expect(body.headerHtml).toContain("hallstein@entur.org");
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">hallstein@entur.org<');
+    expect(organisationMock.calls).toBe(0);
     // Tests run with ENVIRONMENT=dev (see test/authTestSetup).
     expect(body.headerHtml).toContain(
       'href="https://entur-partner.dev.entur.org/permission-admin/my-profile"',
@@ -190,7 +192,7 @@ describe("/ssr user menu", () => {
     const token = await signInternalToken({ sub: "auth0|nameless" });
     const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
     expect(body.headerHtml.match(/navnlos@entur\.org/g)).toHaveLength(2);
-    expect(body.headerHtml).not.toContain("uniformen-user-menu__email");
+    expect(body.headerHtml).not.toContain("uniformen-user-menu__subtitle");
     expect(body.headerHtml).not.toContain("auth0|nameless");
   });
 
@@ -199,7 +201,7 @@ describe("/ssr user menu", () => {
     const token = await signInternalToken({ sub: "auth0|bare" });
     const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
     expect(body.headerHtml).toContain("Bruker uten navn");
-    expect(body.headerHtml).not.toContain("uniformen-user-menu__email");
+    expect(body.headerHtml).not.toContain("uniformen-user-menu__subtitle");
     expect(body.headerHtml).not.toContain("auth0|bare");
   });
 
@@ -222,6 +224,96 @@ describe("/ssr user menu", () => {
     const body = await (await app.request("/ssr")).json();
     expect(body.headerHtml).not.toContain("uniformen-user-menu");
     expect(body.headerHtml).not.toContain("/auth/logout");
+  });
+});
+
+describe("/ssr organisation name", () => {
+  const profile = { sub: "auth0|test", name: "Olga Organisert", email: "olga@example.org" };
+  // The organisation name is cached by tenant and id for the whole test run, so each
+  // test uses its own id. The id comes from userinfo, not from the access token.
+  const signedInWithOrganisation = async (sub: string, organisationId: unknown, query = "") => {
+    userInfoMock.respond = () =>
+      Response.json({ ...profile, [ORGANISATION_ID_CLAIM]: organisationId });
+    const token = await signPartnerToken({ sub });
+    return (await app.request(`/ssr${query}`, { headers: bearer(token) })).json();
+  };
+
+  test("the trading name from the register is the line under the name", async () => {
+    const sent: { path: string; auth: string | null }[] = [];
+    organisationMock.respond = (req) => {
+      sent.push({ path: new URL(req.url).pathname, auth: req.headers.get("Authorization") });
+      return Response.json({
+        organisationId: 101,
+        tradingName: "Bussring",
+        legalName: "Bussring AS",
+      });
+    };
+    const body = await signedInWithOrganisation("auth0|org-ok", 101);
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">Bussring<');
+    expect(body.headerHtml).not.toContain("olga@example.org");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.path).toBe("/organisations/v3/organisations/101");
+    expect(sent[0]?.auth).toStartWith("Bearer ");
+  });
+
+  test("the trading name is inside the part hidden from PostHog autocapture", async () => {
+    organisationMock.respond = () =>
+      Response.json({ organisationId: 102, tradingName: "Trikkelag" });
+    const html: string = (await signedInWithOrganisation("auth0|org-capture", 102)).headerHtml;
+    const menuStart = html.indexOf('<div class="uniformen-user-menu ph-no-capture">');
+    expect(menuStart).toBeGreaterThan(-1);
+    expect(html.slice(0, menuStart)).not.toContain("Trikkelag");
+    expect(html.slice(menuStart)).toContain("Trikkelag");
+  });
+
+  test("a failed lookup shows the email instead", async () => {
+    organisationMock.respond = () => new Response("nope", { status: 403 });
+    const body = await signedInWithOrganisation("auth0|org-fail", 103);
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">olga@example.org<');
+  });
+
+  test("a claim that is not a positive whole number is not looked up", async () => {
+    for (const [index, value] of ["104", -1, 1.5, [105]].entries()) {
+      const body = await signedInWithOrganisation(`auth0|org-bad-${index}`, value);
+      expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">olga@example.org<');
+    }
+    expect(organisationMock.calls).toBe(0);
+  });
+
+  test("the name is looked up in simple mode and without notifications too", async () => {
+    organisationMock.respond = () =>
+      Response.json({ organisationId: 106, tradingName: "Fergeselskap" });
+    for (const query of ["?simple=true", "?hideNotifications=true"]) {
+      const body = await signedInWithOrganisation(`auth0|org-${query}`, 106, query);
+      expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">Fergeselskap<');
+    }
+  });
+
+  test("an organisation id in the access token alone is not looked up", async () => {
+    userInfoMock.respond = () => Response.json(profile);
+    const token = await signPartnerToken({
+      sub: "auth0|org-token-only",
+      [ORGANISATION_ID_CLAIM]: 107,
+    });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(body.headerHtml).toContain('class="uniformen-user-menu__subtitle">olga@example.org<');
+    expect(organisationMock.calls).toBe(0);
+  });
+
+  test("a failed userinfo lookup does not call the register", async () => {
+    userInfoMock.respond = () => new Response("nope", { status: 500 });
+    const token = await signPartnerToken({
+      sub: "auth0|org-no-info",
+      [ORGANISATION_ID_CLAIM]: 108,
+    });
+    const body = await (await app.request("/ssr", { headers: bearer(token) })).json();
+    expect(body.headerHtml).not.toContain("uniformen-user-menu");
+    expect(organisationMock.calls).toBe(0);
+  });
+
+  test("an anonymous request does not call the register", async () => {
+    await app.request("/ssr");
+    expect(organisationMock.calls).toBe(0);
   });
 });
 
@@ -592,7 +684,7 @@ describe("/ssr simple query param", () => {
     expect(body.headerHtml).toContain("Hallstein Bronskimlet");
     expect(body.headerHtml).toContain('href="/auth/logout"');
     expect(body.headerHtml).toContain("data-uniformen-user-menu-toggle");
-    expect(body.headerHtml).toContain("uniformen-user-menu__email");
+    expect(body.headerHtml).toContain("uniformen-user-menu__subtitle");
     expect(body.headerHtml).not.toContain("Mine tilganger");
     expect(body.headerHtml).not.toContain("my-profile");
     expect(body.headerHtml).not.toContain('aria-label="Varsler"');

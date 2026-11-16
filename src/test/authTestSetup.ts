@@ -69,6 +69,27 @@ export const notificationMock = {
 };
 
 /**
+ * A mock of the organisation register. By default it answers every id with the
+ * organisation with the trading name "Testorganisasjon". Works like `userInfoMock`.
+ */
+export const organisationMock = {
+  calls: 0,
+  respond: (_req: Request): Response | Promise<Response> => defaultOrganisationResponse(),
+  reset(): void {
+    this.calls = 0;
+    this.respond = (_req) => defaultOrganisationResponse();
+  },
+};
+
+function defaultOrganisationResponse(): Response {
+  return Response.json({
+    organisationId: 42,
+    tradingName: "Testorganisasjon",
+    legalName: "Testorganisasjon AS",
+  });
+}
+
+/**
  * A mock of deleting one notification. `ids` holds the ids of every delete the test
  * server was asked for, in order.
  */
@@ -99,6 +120,10 @@ const server = Bun.serve({
     if (pathname === "/internal/userinfo" || pathname === "/partner/userinfo") {
       userInfoMock.calls++;
       return userInfoMock.respond(req);
+    }
+    if (pathname.startsWith("/organisations/v3/organisations/")) {
+      organisationMock.calls++;
+      return organisationMock.respond(req);
     }
     if (pathname === "/notification-center/v1/messages") {
       notificationMock.calls++;
@@ -147,3 +172,4 @@ process.env["AUTH0_PARTNER_JWKS_URI"] =
   `http://localhost:${server.port}/partner/.well-known/jwks.json`;
 process.env["AUTH0_PARTNER_USERINFO_URI"] = `http://localhost:${server.port}/partner/userinfo`;
 process.env["NOTIFICATION_API_BASE_URI"] = `http://localhost:${server.port}/notification-center`;
+process.env["ORGANISATIONS_API_BASE_URI"] = `http://localhost:${server.port}/organisations/v3`;

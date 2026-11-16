@@ -540,10 +540,10 @@ const previewCsp = [
  * any page show any name as the signed-in user. The user must come from the token.
  */
 const previewQuerySchema = uniformenQuerySchema.extend({
-  // Any text up to 120 characters. The email is not validated, so you can test long
+  // Any text up to 120 characters. The text is not validated, so you can test long
   // names and odd values.
   debugUser: z.string().min(1).max(120).optional(),
-  debugEmail: z.string().min(1).max(120).optional(),
+  debugOrganisation: z.string().min(1).max(120).optional(),
   // Whether to render the bar for an Entur user. In `/ssr` this comes from the token.
   // The preview page has no token, so it is a parameter here.
   debugEnturUser: z.enum(["true", "false"]).optional(),
@@ -564,11 +564,11 @@ export type PreviewQuery = z.infer<typeof previewQuerySchema>;
  * parameter so tests can check the production case.
  */
 export function previewUser(
-  { debugUser, debugEmail }: Pick<PreviewQuery, "debugUser" | "debugEmail">,
+  { debugUser, debugOrganisation }: Pick<PreviewQuery, "debugUser" | "debugOrganisation">,
   environment: Environment = runningEnvironment,
 ): UserMenuUser | undefined {
   if (environment === "production" || !debugUser) return undefined;
-  return { name: debugUser, email: debugEmail };
+  return { name: debugUser, subtitle: debugOrganisation };
 }
 
 /**
