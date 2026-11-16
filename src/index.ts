@@ -28,12 +28,27 @@ const SHUTDOWN_DRAIN_MS = 5_000;
 /** How long open requests get to finish before their connections are closed. */
 const SHUTDOWN_STOP_MS = 10_000;
 
+/**
+ * Files that browsers and crawlers ask for at the root of the site, mapped to the
+ * file on disk. Browsers ask for the icons even when the page does not link to them.
+ */
+const ROOT_FILES: Record<string, string> = {
+  "/favicon.ico": "./src/static/icons/favicon.ico",
+  "/favicon.svg": "./src/static/icons/favicon.svg",
+  "/apple-touch-icon.png": "./src/static/icons/apple-touch-icon.png",
+  "/apple-touch-icon-precomposed.png": "./src/static/icons/apple-touch-icon.png",
+  "/robots.txt": "./src/static/robots.txt",
+};
+
 // Do not log health checks, metrics, static files or CORS preflight requests.
 app.use(
   "*",
   requestLogging(
     (method, path) =>
-      method === "OPTIONS" || path.startsWith("/actuator") || path.startsWith("/static/"),
+      method === "OPTIONS" ||
+      path.startsWith("/actuator") ||
+      path.startsWith("/static/") ||
+      path in ROOT_FILES,
   ),
 );
 // Returns the same responses as Hono's default error handler, but does not print the
@@ -57,6 +72,19 @@ app.get("/actuator/health/readiness", (c) =>
 );
 
 app.use("/static/*", serveStatic({ root: "./src" }));
+for (const [route, file] of Object.entries(ROOT_FILES)) {
+  app.get(
+    route,
+    serveStatic({
+      path: file,
+      onFound: (_path, c) => {
+        // The files rarely change, so browsers can keep them for a week. The names
+        // have no hash, so a new icon can take up to a week to show everywhere.
+        c.header("Cache-Control", "public, max-age=604800");
+      },
+    }),
+  );
+}
 
 uniformenSsrRoutes(app);
 previewRoutes(app);
