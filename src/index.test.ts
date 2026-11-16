@@ -20,6 +20,24 @@ describe("server", () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toContain("Entur");
   });
+
+  test.each([
+    ["/favicon.ico", "image/x-icon"],
+    ["/favicon.svg", "image/svg+xml; charset=utf-8"],
+    ["/apple-touch-icon.png", "image/png"],
+    ["/apple-touch-icon-precomposed.png", "image/png"],
+    ["/robots.txt", "text/plain; charset=utf-8"],
+  ])("%s responds with %s", async (path, contentType) => {
+    const res = await app.request(path);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe(contentType);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=604800");
+  });
+
+  test("robots.txt disallows all crawling", async () => {
+    const res = await app.request("/robots.txt");
+    expect(await res.text()).toBe("User-agent: *\nDisallow: /\n");
+  });
 });
 
 // Keep this block last in the file. Nothing resets the shutdown state, so every

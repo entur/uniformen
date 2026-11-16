@@ -8,6 +8,15 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-16
+
+### Added
+
+- The service serves `/favicon.ico`, `/favicon.svg`, `/apple-touch-icon.png`,
+  `/apple-touch-icon-precomposed.png` and `/robots.txt`. Before, these paths
+  returned 404. `robots.txt` asks crawlers not to index the service.
+- The preview page has a title and an Entur icon in the browser tab.
+
 ## 2026-11-12
 
 ### Changed
