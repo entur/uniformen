@@ -706,6 +706,8 @@
   border-top: 1px solid var(--uniformen-panel-border);
   padding: var(--uniformen-space-medium);
   justify-content: center;
+  align-items: center;
+  line-height: 1.5rem;
   text-decoration: none;
   color: inherit;
 }
