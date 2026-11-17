@@ -12,14 +12,14 @@ export const AppGridIcon = () => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <rect x="2.5" y="2.5" width="3" height="3" fill="currentColor" />
-    <rect x="2.5" y="8.5" width="3" height="3" fill="currentColor" />
-    <rect x="2.5" y="14.5" width="3" height="3" fill="currentColor" />
-    <rect x="8.5" y="2.5" width="3" height="3" fill="currentColor" />
-    <rect x="8.5" y="8.5" width="3" height="3" fill="currentColor" />
-    <rect x="8.5" y="14.5" width="3" height="3" fill="currentColor" />
-    <rect x="14.5" y="2.5" width="3" height="3" fill="currentColor" />
-    <rect x="14.5" y="8.5" width="3" height="3" fill="currentColor" />
-    <rect x="14.5" y="14.5" width="3" height="3" fill="currentColor" />
+    <rect x="3" y="3" width="3" height="3" fill="currentColor" />
+    <rect x="3" y="9" width="3" height="3" fill="currentColor" />
+    <rect x="3" y="15" width="3" height="3" fill="currentColor" />
+    <rect x="9" y="3" width="3" height="3" fill="currentColor" />
+    <rect x="9" y="9" width="3" height="3" fill="currentColor" />
+    <rect x="9" y="15" width="3" height="3" fill="currentColor" />
+    <rect x="15" y="3" width="3" height="3" fill="currentColor" />
+    <rect x="15" y="9" width="3" height="3" fill="currentColor" />
+    <rect x="15" y="15" width="3" height="3" fill="currentColor" />
   </svg>
 );
