@@ -48,12 +48,11 @@ const darkForm = componentVariables.dark.components.form.baseForm;
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
 
-// Colours for one environment badge in one colour mode. `pointer` is the triangle
-// above the badge. `fill` and `fillHover` are the badge background, and `text` is
-// used for the label and the chevron. The border is 2px wide in every mode. A
-// transparent border keeps the badge the same size as one with a visible border.
+// Colours for one environment badge in one colour mode. `fill` and `fillHover` are
+// the badge background, and `text` is used for the label and the chevron. The
+// border is 2px wide in every mode. A transparent border keeps the badge the same
+// size as one with a visible border.
 type EnvBadgeColors = {
-  pointer: string;
   fill: string;
   fillHover: string;
   border: string;
@@ -61,7 +60,8 @@ type EnvBadgeColors = {
 };
 
 type EnvPalette = {
-  // The strip along the top of the header. It has the same colour in every mode.
+  // The strip along the top of the header and the pointer above the badge. They have
+  // the same colour in every mode, so the pointer looks like part of the strip.
   strip: string;
   standard: EnvBadgeColors;
   contrast: EnvBadgeColors;
@@ -76,21 +76,18 @@ const ENV_PALETTES = {
   local: {
     strip: "#B482FB",
     standard: {
-      pointer: "#B482FB",
       fill: "#F0E7FF",
       fillHover: "#E0CCFE",
       border: "#B482FB",
       text: semantic.text.accent,
     },
     contrast: {
-      pointer: "#B482FB",
       fill: "#B482FB",
       fillHover: "#E0CCFE",
       border: semantic.stroke.colorless,
       text: semantic.text.accent,
     },
     dark: {
-      pointer: "#B482FB",
       fill: "#24123F",
       fillHover: "#3D2266",
       border: "#B482FB",
@@ -100,21 +97,18 @@ const ENV_PALETTES = {
   dev: {
     strip: primitive.mint._60,
     standard: {
-      pointer: semantic.stroke.success,
       fill: semantic.fill.success.muted,
       fillHover: semantic.fill.success.tint,
       border: semantic.stroke.success,
       text: semantic.text.accent,
     },
     contrast: {
-      pointer: semantic.fill.success.contrast,
       fill: semantic.fill.success.contrast,
       fillHover: semantic.fill.success.tint,
       border: semantic.stroke.colorless,
       text: semantic.text.accent,
     },
     dark: {
-      pointer: semantic.stroke.success,
       fill: semantic.fill.success.accent,
       fillHover: primitive.mint._90,
       border: semantic.stroke.success,
@@ -124,46 +118,39 @@ const ENV_PALETTES = {
   staging: {
     strip: primitive.canary._60,
     standard: {
-      pointer: semantic.stroke.warning,
       fill: semantic.fill.warning.muted,
       fillHover: semantic.fill.warning.tint,
       border: semantic.stroke.warning,
       text: semantic.text.accent,
     },
     contrast: {
-      pointer: semantic.fill.warning.contrast,
       fill: semantic.fill.warning.contrast,
       fillHover: semantic.fill.warning.tint,
       border: semantic.stroke.colorless,
       text: semantic.text.accent,
     },
     dark: {
-      pointer: semantic.stroke.warning,
       fill: semantic.fill.warning.accent,
       fillHover: primitive.canary._90,
       border: semantic.stroke.warning,
       text: semantic.text.lightalt,
     },
   },
-  // Production has no pointer, so its pointer colour is never shown.
   production: {
     strip: primitive.blue._60,
     standard: {
-      pointer: semantic.stroke.subdued,
       fill: secondaryButton.standard.default,
       fillHover: secondaryButton.standard.hover,
       border: semantic.stroke.subdued,
       text: semantic.text.accent,
     },
     contrast: {
-      pointer: semantic.stroke.subdued,
       fill: secondaryButton.contrast.default,
       fillHover: secondaryButton.contrast.hover,
       border: semantic.stroke.subdued,
       text: semantic.text.light,
     },
     dark: {
-      pointer: semantic.stroke.subdued,
       fill: secondaryButton.standard.default,
       fillHover: darkSecondaryButton.standard.hover,
       border: semantic.stroke.subdued,
@@ -173,8 +160,7 @@ const ENV_PALETTES = {
 } satisfies Record<Environment, EnvPalette>;
 
 /** Returns the CSS variables for the environment badge in one colour mode. */
-const envBadgeVars = (c: EnvBadgeColors): string => `  --uniformen-color-env-pointer: ${c.pointer};
-  --uniformen-color-env-fill: ${c.fill};
+const envBadgeVars = (c: EnvBadgeColors): string => `  --uniformen-color-env-fill: ${c.fill};
   --uniformen-color-env-fill-hover: ${c.fillHover};
   --uniformen-color-env-border: ${c.border};
   --uniformen-color-env-text: ${c.text};

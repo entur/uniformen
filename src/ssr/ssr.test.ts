@@ -1134,7 +1134,6 @@ describe("/ssr top bar chrome", () => {
     const body = await (await app.request("/ssr")).json();
     for (const name of [
       "--uniformen-color-env:",
-      "--uniformen-color-env-pointer:",
       "--uniformen-color-env-fill:",
       "--uniformen-color-env-fill-hover:",
       "--uniformen-color-env-border:",
