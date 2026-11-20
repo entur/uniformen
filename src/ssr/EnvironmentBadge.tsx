@@ -17,8 +17,8 @@ const texts = {
 
 /**
  * Labels for the badge and the switcher rows. They are not translated. The label is
- * the chip's only text and the button's accessible name, so it is shown at every
- * screen width.
+ * the chip's only text and the button's accessible name, so it stays in the markup
+ * at every screen width.
  */
 const ENV_LABELS: Record<Environment, string> = {
   local: "LOCAL",
@@ -67,7 +67,16 @@ export function EnvironmentBadge({
     <span class="uniformen-env-badge__pointer" aria-hidden="true"></span>
   );
 
-  const label = <span class="uniformen-env-badge__label">{ENV_LABELS[environment]}</span>;
+  /* On narrow screens the badge shows only the first letter. CSS hides the full
+     label visually there, but screen readers still read it. They skip the letter. */
+  const label = (
+    <>
+      <span class="uniformen-env-badge__label">{ENV_LABELS[environment]}</span>
+      <span class="uniformen-env-badge__short" aria-hidden="true">
+        {ENV_LABELS[environment].charAt(0)}
+      </span>
+    </>
+  );
 
   if (!switchable) {
     return (

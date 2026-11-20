@@ -8,6 +8,23 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-20
+
+### Changed
+
+- New icons for the sidebar toggle button. While the sidebar is collapsed, the icon
+  shows a sidebar with a list.
+- New look for the environment badge. All badges are the same size, with a 2px
+  border and dark text. The text and the arrow are centred vertically, and the
+  arrow turns with an animation when the switcher opens and closes. The switcher
+  button gets a hover colour. Contrast mode and dark mode have their own badge
+  colours.
+- On screens up to 672 pixels wide, the environment badge shows only the first
+  letter of the environment, so that the app name has more room.
+- The icon buttons in the top bar are 36 by 36 pixels, and the buttons with a label
+  are 36 pixels high. Without a label the icon is centred in the button. The dot on
+  the notifications button is inside the button.
+
 ## 2026-11-16
 
 ### Added

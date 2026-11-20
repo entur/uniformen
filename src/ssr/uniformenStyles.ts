@@ -48,31 +48,152 @@ const darkForm = componentVariables.dark.components.form.baseForm;
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
 
-// Colours per environment. `strip` is used for the strip along the top of the header
-// and the pointer above the badge. `tint`, `border` and `text` are used for the badge.
-// The text colour is dark enough for a contrast of at least 4.5:1 on the tint. The
-// local colours are picked by hand, not taken from the tokens.
+// Colours for one environment badge in one colour mode. `pointer` is the triangle
+// above the badge. `fill` and `fillHover` are the badge background, and `text` is
+// used for the label and the chevron. The border is 2px wide in every mode. A
+// transparent border keeps the badge the same size as one with a visible border.
+type EnvBadgeColors = {
+  pointer: string;
+  fill: string;
+  fillHover: string;
+  border: string;
+  text: string;
+};
+
+type EnvPalette = {
+  // The strip along the top of the header. It has the same colour in every mode.
+  strip: string;
+  standard: EnvBadgeColors;
+  contrast: EnvBadgeColors;
+  dark: EnvBadgeColors;
+};
+
+// Colours per environment, from the design's "Miljøswitch" component. The design
+// has no hover colour for dark mode, so the hover colours there are one step lighter
+// on the same scale. The design has no colours for local, so they are picked by hand.
+// Every text colour has a contrast of at least 4.5:1 on its fill.
 const ENV_PALETTES = {
-  local: { strip: "#B482FB", tint: "#F0E7FF", border: "#B482FB", text: "#5A2EA6" },
+  local: {
+    strip: "#B482FB",
+    standard: {
+      pointer: "#B482FB",
+      fill: "#F0E7FF",
+      fillHover: "#E0CCFE",
+      border: "#B482FB",
+      text: semantic.text.accent,
+    },
+    contrast: {
+      pointer: "#B482FB",
+      fill: "#B482FB",
+      fillHover: "#E0CCFE",
+      border: semantic.stroke.colorless,
+      text: semantic.text.accent,
+    },
+    dark: {
+      pointer: "#B482FB",
+      fill: "#24123F",
+      fillHover: "#3D2266",
+      border: "#B482FB",
+      text: semantic.text.lightalt,
+    },
+  },
   dev: {
     strip: primitive.mint._60,
-    tint: primitive.mint._20,
-    border: primitive.mint._70,
-    text: primitive.mint._80,
+    standard: {
+      pointer: semantic.stroke.success,
+      fill: semantic.fill.success.muted,
+      fillHover: semantic.fill.success.tint,
+      border: semantic.stroke.success,
+      text: semantic.text.accent,
+    },
+    contrast: {
+      pointer: semantic.fill.success.contrast,
+      fill: semantic.fill.success.contrast,
+      fillHover: semantic.fill.success.tint,
+      border: semantic.stroke.colorless,
+      text: semantic.text.accent,
+    },
+    dark: {
+      pointer: semantic.stroke.success,
+      fill: semantic.fill.success.accent,
+      fillHover: primitive.mint._90,
+      border: semantic.stroke.success,
+      text: semantic.text.lightalt,
+    },
   },
   staging: {
     strip: primitive.canary._60,
-    tint: primitive.canary._20,
-    border: primitive.canary._70,
-    text: primitive.canary._90,
+    standard: {
+      pointer: semantic.stroke.warning,
+      fill: semantic.fill.warning.muted,
+      fillHover: semantic.fill.warning.tint,
+      border: semantic.stroke.warning,
+      text: semantic.text.accent,
+    },
+    contrast: {
+      pointer: semantic.fill.warning.contrast,
+      fill: semantic.fill.warning.contrast,
+      fillHover: semantic.fill.warning.tint,
+      border: semantic.stroke.colorless,
+      text: semantic.text.accent,
+    },
+    dark: {
+      pointer: semantic.stroke.warning,
+      fill: semantic.fill.warning.accent,
+      fillHover: primitive.canary._90,
+      border: semantic.stroke.warning,
+      text: semantic.text.lightalt,
+    },
   },
+  // Production has no pointer, so its pointer colour is never shown.
   production: {
     strip: primitive.blue._60,
-    tint: colors.brand.white,
-    border: primitive.blue._60,
-    text: colors.brand.blue,
+    standard: {
+      pointer: semantic.stroke.subdued,
+      fill: secondaryButton.standard.default,
+      fillHover: secondaryButton.standard.hover,
+      border: semantic.stroke.subdued,
+      text: semantic.text.accent,
+    },
+    contrast: {
+      pointer: semantic.stroke.subdued,
+      fill: secondaryButton.contrast.default,
+      fillHover: secondaryButton.contrast.hover,
+      border: semantic.stroke.subdued,
+      text: semantic.text.light,
+    },
+    dark: {
+      pointer: semantic.stroke.subdued,
+      fill: secondaryButton.standard.default,
+      fillHover: darkSecondaryButton.standard.hover,
+      border: semantic.stroke.subdued,
+      text: semantic.text.lightalt,
+    },
   },
-} satisfies Record<Environment, Record<string, string>>;
+} satisfies Record<Environment, EnvPalette>;
+
+/** Returns the CSS variables for the environment badge in one colour mode. */
+const envBadgeVars = (c: EnvBadgeColors): string => `  --uniformen-color-env-pointer: ${c.pointer};
+  --uniformen-color-env-fill: ${c.fill};
+  --uniformen-color-env-fill-hover: ${c.fillHover};
+  --uniformen-color-env-border: ${c.border};
+  --uniformen-color-env-text: ${c.text};
+`;
+
+/**
+ * Returns the badge colours for contrast mode and dark mode, for one environment.
+ * The dark selector has two parts, so it wins over `.uniformen-contrast`. A contrast
+ * header in dark mode gets the dark colours, as in the design.
+ */
+export function buildEnvModeVars(env: Environment): string {
+  const palette = ENV_PALETTES[env];
+  return `.uniformen-contrast {
+${envBadgeVars(palette.contrast)}}
+
+[data-color-mode="dark"] .uniformen-top-nav {
+${envBadgeVars(palette.dark)}}
+`;
+}
 
 /**
  * Returns the height of the coloured strip along the top of the header. The strip
@@ -103,10 +224,7 @@ export function buildRootVars(env: Environment): string {
   --uniformen-color-grey-30: ${primitive.grey._30};
   --uniformen-color-menu-hover: ${sideNavigation.standard.fill.hover};
   --uniformen-color-env: ${palette.strip};
-  --uniformen-color-env-tint: ${palette.tint};
-  --uniformen-color-env-border: ${palette.border};
-  --uniformen-color-env-text: ${palette.text};
-  --uniformen-env-strip-height: ${envStripHeight(env)};
+${envBadgeVars(palette.standard)}  --uniformen-env-strip-height: ${envStripHeight(env)};
   --uniformen-space-xs2: ${rem(space.rem.extraSmall2)};
   --uniformen-space-xs: ${rem(space.rem.extraSmall)};
   --uniformen-space-small: ${rem(space.rem.small)};
@@ -179,8 +297,7 @@ const PANELS = [
  * values inside the panels. It also sets the text colour again, because text without
  * its own colour inherits the white text colour of the bar.
  *
- * The environment badge keeps its colours. It has its own background, so its text
- * contrast does not depend on the bar colour.
+ * The environment badge gets its contrast colours from `buildEnvModeVars`.
  */
 const CONTRAST_VARS = `.uniformen-contrast {
   --uniformen-surface: ${semantic.fill.background.contrast.lightalt2};
@@ -290,7 +407,11 @@ const DARK_VARS = `[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-f
 
 // Built once at startup, for the environment this instance runs in.
 const UNIFORMEN_CSS =
-  buildRootVars(environment).trim() + uniformenCss.trim() + CONTRAST_VARS + DARK_VARS;
+  buildRootVars(environment).trim() +
+  uniformenCss.trim() +
+  CONTRAST_VARS +
+  DARK_VARS +
+  buildEnvModeVars(environment);
 
 export const uniformenCssHash = await sha256Source(UNIFORMEN_CSS);
 

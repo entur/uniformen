@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
-import { buildRootVars, envStripHeight } from "./uniformenStyles";
+import { buildEnvModeVars, buildRootVars, envStripHeight } from "./uniformenStyles";
 import type { Environment } from "../config";
 import { portalApplicationUrls, type PortalApplicationId } from "../components/portalApplications";
 import type { Locale } from "../types";
@@ -75,7 +75,9 @@ describe("root vars per environment", () => {
       const vars = buildRootVars(env);
       for (const name of [
         "--uniformen-color-env:",
-        "--uniformen-color-env-tint:",
+        "--uniformen-color-env-pointer:",
+        "--uniformen-color-env-fill:",
+        "--uniformen-color-env-fill-hover:",
         "--uniformen-color-env-border:",
         "--uniformen-color-env-text:",
       ]) {
@@ -84,6 +86,32 @@ describe("root vars per environment", () => {
       expect(vars).toContain(`--uniformen-env-strip-height: ${envStripHeight(env)}`);
       // The regex matches a variable whose value is empty or `undefined`.
       expect(vars).not.toMatch(/:\s*(undefined)?;/);
+    }
+  });
+});
+
+describe("badge colours per mode", () => {
+  test("contrast and dark mode set every badge colour for each environment", () => {
+    for (const env of ENVIRONMENTS) {
+      const css = buildEnvModeVars(env);
+      for (const selector of [
+        ".uniformen-contrast {",
+        '[data-color-mode="dark"] .uniformen-top-nav {',
+      ]) {
+        expect(css).toContain(selector);
+      }
+      expect(css.match(/--uniformen-color-env-fill-hover:/g)).toHaveLength(2);
+      expect(css).not.toMatch(/:\s*(undefined)?;/);
+    }
+  });
+
+  test("dark mode has a hover colour that differs from the fill", () => {
+    for (const env of ENVIRONMENTS) {
+      const dark = buildEnvModeVars(env).split("[data-color-mode")[1] ?? "";
+      const fill = dark.match(/--uniformen-color-env-fill: ([^;]+);/)?.[1];
+      const hover = dark.match(/--uniformen-color-env-fill-hover: ([^;]+);/)?.[1];
+      expect(hover).toBeDefined();
+      expect(hover).not.toBe(fill);
     }
   });
 });
@@ -107,10 +135,12 @@ describe("environment badge", () => {
     for (const env of ENVIRONMENTS) {
       const html = await render({ environment: env });
       expect(html.match(/uniformen-env-badge__label/g)).toHaveLength(1);
-      expect(html).not.toMatch(/aria-hidden="true">[^<]/);
+      // The short letter is the only visible text that screen readers skip.
+      expect(html.match(/aria-hidden="true">[^<]/g)).toHaveLength(1);
     }
     const staging = await render({ environment: "staging" });
     expect(staging).toContain('class="uniformen-env-badge__label">STAGING');
+    expect(staging).toContain('class="uniformen-env-badge__short" aria-hidden="true">S<');
   });
 
   test("without an application the chip is static: no host to switch between", async () => {
