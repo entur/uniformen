@@ -24,12 +24,8 @@ export const SidebarToggleIcon = () => (
         d="M13.5996 3C14.3726 3 14.9997 3.62647 15 4.39941V11.5996C15 12.3728 14.3728 13 13.5996 13H2.39941C1.62647 12.9997 1 12.3726 1 11.5996V4.39941C1.0003 3.62666 1.62666 3.0003 2.39941 3H13.5996ZM2.39941 4.19922C2.2894 4.19952 2.19952 4.2894 2.19922 4.39941V11.5996C2.19922 11.7099 2.28921 11.7995 2.39941 11.7998H13.5996C13.7101 11.7998 13.7998 11.7101 13.7998 11.5996V4.39941C13.7995 4.28922 13.7099 4.19922 13.5996 4.19922H2.39941Z"
       />
     </g>
-    {/* Shown while collapsed. It is a frame divided by a line, with three short
-        lines in the left part. */}
+    {/* Shown while collapsed. It is a frame divided by a line. */}
     <g class="uniformen-sidebar-toggle__line--collapsed" fill="currentColor">
-      <path d="M5 10.5H3V9.5H5V10.5Z" />
-      <path d="M5 8.5H3V7.5H5V8.5Z" />
-      <path d="M5 6.5H3V5.5H5V6.5Z" />
       <path
         fill-rule="evenodd"
         clip-rule="evenodd"

@@ -25,6 +25,18 @@ API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
   are 36 pixels high. Without a label the icon is centred in the button. The dot on
   the notifications button is inside the button.
 
+### Fixed
+
+- An app name with a space, such as "Ops Center", no longer wraps onto two lines on
+  screens between about 800 and 1000 pixels wide. The name stays on one line and is
+  cut off with an ellipsis when there is not enough room.
+- The arrow above the environment badge now has the same colour as the environment
+  strip in every colour mode. Before, the colours were different for dev in
+  contrast mode and for staging in every mode.
+- The notifications panel opens with its left edge under the notifications button
+  and extends to the right. When there is not room for that, it is lined up with
+  the right end of the bar as before.
+
 ## 2026-11-16
 
 ### Added
