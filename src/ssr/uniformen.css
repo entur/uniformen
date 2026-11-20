@@ -74,11 +74,12 @@
 }
 
 .uniformen-top-nav__sidebar-toggle {
-  height: 2rem;
-  width: 2rem;
+  flex: none;
+  height: 2.25rem;
+  width: 2.25rem;
 }
 
-/* The icon contains a line for each sidebar state. The sidebar attribute on the
+/* The icon contains a drawing for each sidebar state. The sidebar attribute on the
    root element decides which one is shown. The selector checks for "not collapsed"
    instead of "expanded", so a missing attribute shows the expanded state. */
 :root[data-uniformen-sidebar="collapsed"] .uniformen-sidebar-toggle__line--expanded,
@@ -95,7 +96,7 @@
   justify-content: center;
   gap: var(--uniformen-space-xs);
   box-sizing: border-box;
-  height: 2rem;
+  height: 2.25rem;
   padding: 0 var(--uniformen-space-xs);
   background: none;
   border: none;
@@ -185,18 +186,21 @@
 }
 
 .uniformen-env-badge {
+  --uniformen-env-badge-height: 2rem;
+  --uniformen-env-badge-border: 2px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  /* 2rem (32px) is the smallest height we allow for something the user clicks. */
-  height: 2rem;
-  min-width: 6rem;
+  /* All badges have the same width, so the badge does not change size between
+     environments. STAGING is the longest label and fits. */
+  width: 7rem;
+  height: var(--uniformen-env-badge-height);
   padding: 0 var(--uniformen-space-small);
-  background: var(--uniformen-color-env-tint);
-  border: 1px solid var(--uniformen-color-env-border);
-  border-radius: var(--uniformen-radius-md);
+  background: var(--uniformen-color-env-fill);
+  border: var(--uniformen-env-badge-border) solid var(--uniformen-color-env-border);
+  border-radius: 0.375rem;
   color: var(--uniformen-color-env-text);
   font-size: var(--uniformen-font-md);
   line-height: 1;
@@ -205,16 +209,33 @@
   user-select: none;
 }
 
-/* A triangle in the strip colour, pointing down at the badge. It is placed 17.5px
-   above the top of the badge, so it overlaps the strip. */
+.uniformen-env-badge__short {
+  display: none;
+}
+
+/* Trim the text box to the top and bottom of the capital letters, so that
+   `align-items: center` centres the visible letters. Without the trim, the font's
+   line box is centred and the letters sit about 1px too high. Browsers without
+   `text-box` support still show the label about 1px too high. */
+.uniformen-env-badge__label,
+.uniformen-env-badge__short {
+  text-box: trim-both cap alphabetic;
+}
+
+/* A triangle pointing down at the badge. Its top is placed 0.5px above the bottom
+   of the strip, so it overlaps the strip whatever the bar and badge heights are.
+   `top` is measured from inside the border, so the border width is subtracted. */
 .uniformen-env-badge__pointer {
   position: absolute;
   left: 50%;
-  top: -17.5px;
+  top: calc(
+    (var(--top-nav-height) - var(--uniformen-env-badge-height)) / -2 -
+      var(--uniformen-env-badge-border) - 0.5px
+  );
   width: 1rem;
   height: 0.5rem;
   transform: translateX(-50%);
-  background: var(--uniformen-color-env);
+  background: var(--uniformen-color-env-pointer);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
@@ -229,10 +250,15 @@
 /* The interactive chip is a button. Reset the browser's button font so it looks
    like the static chip. */
 .uniformen-env-badge--interactive {
+  justify-content: space-between;
   gap: var(--uniformen-space-xs2);
   font-family: inherit;
   font-weight: inherit;
   cursor: pointer;
+}
+
+.uniformen-env-badge--interactive:hover {
+  background: var(--uniformen-color-env-fill-hover);
 }
 
 .uniformen-env-badge--interactive:focus-visible {
@@ -240,14 +266,21 @@
   box-shadow: var(--uniformen-shadow-focus);
 }
 
-/* Move the icon up by 0.08em, like the other icons in the bar. */
+/* The label's text box is trimmed to the capital letters, so the icon is centred
+   without the 0.08em shift that the other icons in the bar use. */
 .uniformen-env-badge--interactive > svg {
   flex: none;
-  transform: translateY(-0.08em);
+  transition: transform 0.2s ease;
 }
 
 .uniformen-env-badge--interactive[aria-expanded="true"] > svg {
-  transform: translateY(-0.08em) rotate(180deg);
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uniformen-env-badge--interactive > svg {
+    transition: none;
+  }
 }
 
 [data-uniformen-env-switcher-toggle][aria-expanded="false"] + .uniformen-env-switcher__panel {
@@ -327,9 +360,22 @@
   .uniformen-top-nav__action-label {
     display: none;
   }
+  /* Without a label the buttons are square, like the sidebar toggle. The icon is
+     not moved up, because there are no letters to line it up with. */
+  .uniformen-top-nav__action,
+  .uniformen-top-nav__user,
+  .uniformen-top-nav__login {
+    width: 2.25rem;
+    padding: 0;
+  }
+  .uniformen-top-nav__action > svg,
+  .uniformen-top-nav__user > svg,
+  .uniformen-top-nav__login > svg {
+    transform: none;
+  }
   /* The user button has no aria-label, so hide the name visually but keep it for
      screen readers. With `display: none` a screen reader would only find an icon.
-     The environment label is not hidden, because it is the badge's only text. */
+     The environment label is hidden at a smaller width. See the 42rem media query. */
   .uniformen-top-nav__user-name {
     position: absolute;
     width: 1px;
@@ -356,6 +402,32 @@
   }
 }
 
+/* Below this width the full environment label takes space from the app name, so
+   the badge shows only the first letter of the environment. @entur/tokens has no
+   breakpoint near this width. */
+@media (max-width: 42rem) {
+  .uniformen-env-badge {
+    width: 3rem;
+    padding: 0 var(--uniformen-space-xs);
+  }
+  .uniformen-env-badge__short {
+    display: inline;
+  }
+  /* Hide the full label visually, but keep it for screen readers. It is the
+     badge's accessible name. */
+  .uniformen-env-badge__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 /* On phones there is only room for the logo and the environment badge next to the
    icons on the right, so the app name is hidden. */
 @media (max-width: 30rem) {
@@ -368,6 +440,13 @@
   }
   .uniformen-logo__app {
     display: none;
+  }
+  .uniformen-env-badge {
+    --uniformen-env-badge-height: 1.5rem;
+  }
+  .uniformen-env-badge__pointer {
+    width: 0.75rem;
+    height: 0.375rem;
   }
 }
 
@@ -660,7 +739,7 @@
 .uniformen-notifications-button__badge::before {
   content: "";
   position: absolute;
-  top: 0;
+  top: 0.25rem;
   left: calc(var(--uniformen-space-xs) + 0.75rem);
   z-index: 1;
 }
