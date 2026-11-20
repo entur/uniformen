@@ -3,6 +3,7 @@ import { EnvironmentBadge } from "./EnvironmentBadge";
 import { TopNavigation } from "./TopNavigation";
 import { renderComponentToString } from "./renderComponentToString";
 import { buildEnvModeVars, buildRootVars, envStripHeight } from "./uniformenStyles";
+import uniformenCss from "./uniformen.css" with { type: "text" };
 import type { Environment } from "../config";
 import { portalApplicationUrls, type PortalApplicationId } from "../components/portalApplications";
 import type { Locale } from "../types";
@@ -75,7 +76,6 @@ describe("root vars per environment", () => {
       const vars = buildRootVars(env);
       for (const name of [
         "--uniformen-color-env:",
-        "--uniformen-color-env-pointer:",
         "--uniformen-color-env-fill:",
         "--uniformen-color-env-fill-hover:",
         "--uniformen-color-env-border:",
@@ -102,6 +102,14 @@ describe("badge colours per mode", () => {
       }
       expect(css.match(/--uniformen-color-env-fill-hover:/g)).toHaveLength(2);
       expect(css).not.toMatch(/:\s*(undefined)?;/);
+    }
+  });
+
+  test("the pointer uses the strip colour, which no colour mode changes", () => {
+    const pointerRule = uniformenCss.match(/\.uniformen-env-badge__pointer \{[^}]*\}/)?.[0];
+    expect(pointerRule).toContain("background: var(--uniformen-color-env);");
+    for (const env of ENVIRONMENTS) {
+      expect(buildEnvModeVars(env)).not.toContain("--uniformen-color-env:");
     }
   });
 
