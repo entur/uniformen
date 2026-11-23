@@ -8,6 +8,32 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-23
+
+### Changed
+
+- The preview page has a box for the left part of the bar and a box for the right
+  part, on the same sides as those parts. The card between them has the controls
+  for who is looking and for the whole page. The labels are in Norwegian, and the
+  query parameter is shown in small text next to the label.
+- "Hvem ser på?" picks a user who is not signed in, a signed-in user or a signed-in
+  Entur employee. It replaces the separate `debugEnturUser` control. A signed-in
+  user without a name gets the name "Navn Navnesen". The login link is shown with a
+  user who is not signed in, and the logout link with a signed-in user. One click
+  turns a link on with the path `/auth/login` or `/auth/logout`, which can then be
+  changed.
+- On the preview page, `debugEnturUser` only works together with `debugUser`.
+- One "Varsler" control on the preview page sets both `hideNotifications` and
+  `debugNotifications`. The copyable link now keeps `debugNotifications`.
+- The preview page controls use the colours and sizes of the Entur design system's
+  form components. Checkboxes and radio buttons are panels with a large click area,
+  and the text fields have the label inside the box.
+- A control that has no effect with the other choices is greyed out and says why.
+- On the preview page, the bar stays at the top of the window when you scroll, and
+  the page keeps its scroll position after a change.
+- A preview link with an invalid value shows the preview page with an error message
+  and the default values, instead of a JSON error. The status is still `400`.
+
 ## 2026-11-20
 
 ### Changed

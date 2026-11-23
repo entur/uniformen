@@ -137,11 +137,19 @@ describe("preview page debug Entur user", () => {
   });
 
   test("production renders no chip, whatever the URL says", async () => {
-    expect(previewIsEnturUser({ debugEnturUser: "true" }, "production")).toBe(false);
+    const query = { debugUser: "Navn", debugEnturUser: "true" } as const;
+    expect(previewIsEnturUser(query, "production")).toBe(false);
     for (const env of ["local", "dev", "staging"] satisfies Environment[]) {
-      expect(previewIsEnturUser({ debugEnturUser: "true" }, env)).toBe(true);
-      expect(previewIsEnturUser({ debugEnturUser: undefined }, env)).toBe(false);
+      expect(previewIsEnturUser(query, env)).toBe(true);
+      expect(previewIsEnturUser({ debugUser: "Navn" }, env)).toBe(false);
     }
+  });
+
+  test("without a debug user there is no chip, and the link leaves the param out", async () => {
+    const { html } = await preview("?debugEnturUser=true&app=nplan");
+    expect(html).not.toContain('class="uniformen-env-badge');
+    expect(html).toContain(">/?app=nplan&amp;locale=nb-NO<");
+    expect(previewIsEnturUser({ debugEnturUser: "true" }, "dev")).toBe(false);
   });
 
   test("anything other than true or false is rejected", async () => {
@@ -252,7 +260,9 @@ describe("preview page hideNotifications", () => {
     const prod = await renderComponentToString(
       <PreviewControls query={query} environment="production" />,
     );
-    expect(prod).toContain('name="hideNotifications" value="true" checked');
+    expect(prod).toContain('name="notifications" value="hidden" checked=""');
+    expect(prod).toContain('name="hideNotifications" value="true" data-preview-hide-notifications');
+    expect(prod).not.toContain('name="debugNotifications"');
     expect(prod).toContain(">/?hideNotifications=true&amp;locale=nb-NO<");
   });
 });
@@ -319,13 +329,6 @@ describe("preview page aiAgent", () => {
   test("the drawer on the dev preview page has no chat token", async () => {
     const { chrome } = await preview("?aiAgent=true&debugUser=Test");
     expect(chrome).not.toContain("data-uniformen-chat-token");
-  });
-
-  test("the control sits with the right side of the bar", async () => {
-    const { html } = await preview();
-    const groups = html.split(/class="preview-controls__group preview-controls__group--/);
-    const group = groups.find((part) => part.includes('name="aiAgent"'));
-    expect(group?.match(/^[a-z]+/)?.[0]).toBe("right");
   });
 });
 
@@ -423,23 +426,38 @@ describe("preview page controls", () => {
     expect(handler).toContain("locked.disabled");
   });
 
-  test("a knob sits where in the bar it has its effect", async () => {
+  test("a control sits in the box for the part of the bar it changes", async () => {
     const { html } = await preview();
-    const groups = html.split(/class="preview-controls__group preview-controls__group--/);
+    const sections = html.split(/class="preview-controls__section preview-controls__section--/);
     const where = (param: string) =>
-      groups.find((group) => group.includes(`name="${param}"`))?.match(/^[a-z]+/)?.[0];
-    expect(where("sidebar")).toBe("left");
-    expect(where("app")).toBe("left");
-    expect(where("debugEnturUser")).toBe("left");
-    expect(where("debugUser")).toBe("right");
-    expect(where("debugOrganisation")).toBe("right");
-    expect(where("availableLocales")).toBe("right");
-    expect(where("loginUrl")).toBe("right");
-    expect(where("logoutUrl")).toBe("right");
-    expect(where("simple")).toBe("whole");
-    expect(where("contrast")).toBe("whole");
-    expect(where("colorMode")).toBe("whole");
-    expect(where("locale")).toBe("whole");
+      sections.find((section) => section.includes(`name="${param}"`))?.match(/^[a-z]+/)?.[0];
+    for (const param of ["app", "sidebar"]) expect(where(param)).toBe("left");
+    for (const param of [
+      "locale",
+      "availableLocales",
+      "aiAgent",
+      "notifications",
+      "hideNotifications",
+      "debugNotifications",
+    ]) {
+      expect(where(param)).toBe("right");
+    }
+    for (const param of [
+      "viewer",
+      "debugUser",
+      "debugOrganisation",
+      "debugEnturUser",
+      "loginUrl",
+    ]) {
+      expect(where(param)).toBe("viewer");
+    }
+    expect(where("logoutUrl")).toBeUndefined();
+    const signedIn = (await preview("?debugUser=Navn")).html.split(
+      /class="preview-controls__section preview-controls__section--/,
+    );
+    const logout = signedIn.find((section) => section.includes('name="logoutUrl"'));
+    expect(logout?.match(/^[a-z]+/)?.[0]).toBe("viewer");
+    for (const param of ["simple", "contrast", "colorMode"]) expect(where(param)).toBe("page");
   });
 
   test("a change applies itself, and the reload it costs keeps the focus", async () => {
@@ -450,7 +468,8 @@ describe("preview page controls", () => {
     expect(handler).toContain("requestSubmit()");
     expect(handler).toContain("sessionStorage.setItem");
     expect(handler).toContain("sessionStorage.removeItem");
-    expect(handler).toContain(".focus()");
+    expect(handler).toContain(".focus(");
+    expect(handler).toContain("window.scrollTo");
   });
 
   test("the page prints the query it validated, not the URL it was asked for", async () => {
@@ -493,6 +512,116 @@ describe("preview page controls", () => {
     const dev = await renderComponentToString(<PreviewControls query={query} environment="dev" />);
     expect(dev).toContain('name="debugUser" value="Navn"');
     expect(dev).toContain(">/?locale=nb-NO&amp;debugUser=Navn&amp;debugEnturUser=true<");
+  });
+});
+
+describe("preview page viewer", () => {
+  test("the query picks one of the three viewers", async () => {
+    const checked = async (query: string) =>
+      (await preview(query)).html.match(/name="viewer" value="([a-z]+)" checked=""/)?.[1];
+    expect(await checked("")).toBe("anonymous");
+    expect(await checked("?debugUser=Navn")).toBe("external");
+    expect(await checked("?debugUser=Navn&debugEnturUser=true")).toBe("entur");
+    expect(await checked("?debugEnturUser=true")).toBe("anonymous");
+  });
+
+  test("the name fields are hidden and not submitted without a signed-in user", async () => {
+    const anonymous = (await preview()).html;
+    expect(anonymous).toMatch(/<fieldset class="preview-controls__person" hidden="" disabled=""/);
+    expect(anonymous).toContain('name="debugEnturUser" value="true" disabled=""');
+
+    const entur = (await preview("?debugUser=Navn&debugEnturUser=true")).html;
+    expect(entur).toContain('<fieldset class="preview-controls__person" data-preview-person');
+    expect(entur).toContain('name="debugEnturUser" value="true" data-preview-entur');
+  });
+
+  test("the page script turns the choices into parameters before it submits", async () => {
+    const handler = (await scriptBlocks((await preview()).html)).find((block) =>
+      block.includes("data-preview-controls"),
+    );
+    expect(handler).toContain("[data-preview-viewer]:checked");
+    expect(handler).toContain("person.disabled");
+    expect(handler).toContain("entur.disabled");
+    expect(handler).toContain("[data-preview-notifications]:checked");
+    expect(handler).toContain("helper.disabled");
+  });
+
+  test("a picked user without a name gets the default name", async () => {
+    const { html } = await preview();
+    expect(html).toContain('data-default="Navn Navnesen"');
+  });
+});
+
+describe("preview page notifications control", () => {
+  test("one choice covers both the button and the amount", async () => {
+    const checked = async (query: string) =>
+      (await preview(query)).html.match(/name="notifications" value="([a-z]+)" checked=""/)?.[1];
+    expect(await checked("?debugUser=Navn")).toBe("max");
+    expect(await checked("?debugUser=Navn&debugNotifications=some")).toBe("some");
+    expect(await checked("?debugUser=Navn&hideNotifications=true")).toBe("hidden");
+  });
+
+  test("the copyable link keeps an amount other than the default", async () => {
+    const { html } = await preview("?debugUser=Navn&debugNotifications=none");
+    expect(html).toContain("debugNotifications=none");
+    expect((await preview("?debugUser=Navn&debugNotifications=max")).html).not.toContain(
+      "debugNotifications=max",
+    );
+  });
+});
+
+describe("preview page inactive controls", () => {
+  test("a control that has no effect says why", async () => {
+    const simple = (await preview("?simple=true")).html;
+    expect(simple.match(/Skjult fordi «Enkel side» er på\./g)?.length).toBe(3);
+    expect((await preview()).html).toContain("Vises bare for innlogget bruker.");
+    expect((await preview("?debugUser=Navn")).html).not.toContain(
+      "Vises bare for innlogget bruker.",
+    );
+  });
+
+  test("only the link for the current viewer is shown, and the other one is kept", async () => {
+    const anonymous = (await preview("?logoutUrl=/auth/logout")).html;
+    expect(anonymous).toContain('name="loginUrl"');
+    expect(anonymous).toContain('<input type="hidden" name="logoutUrl" value="/auth/logout"/>');
+
+    const signedIn = (await preview("?debugUser=Navn&loginUrl=/auth/login")).html;
+    expect(signedIn).toContain('<input type="hidden" name="loginUrl" value="/auth/login"/>');
+    expect(signedIn).toContain('name="logoutUrlOn" value="true" data-preview-link="logoutUrl"');
+  });
+
+  test("one click turns a link on with a default path", async () => {
+    const off = (await preview()).html;
+    expect(off).toContain('name="loginUrlOn" value="true" data-preview-link="loginUrl"');
+    expect(off).toContain(
+      '<input type="hidden" name="loginUrl" value="/auth/login" disabled="" data-default="/auth/login"/>',
+    );
+
+    const on = (await preview("?loginUrl=/oauth/start")).html;
+    expect(on).toContain('name="loginUrlOn" value="true" checked=""');
+    expect(on).toContain('type="text" name="loginUrl" value="/oauth/start"');
+
+    const handler = (await scriptBlocks(off)).find((block) => block.includes("data-preview-link"));
+    expect(handler).toContain("path.disabled = !toggle.checked");
+  });
+});
+
+describe("preview page rejected query", () => {
+  test("the page is rendered with the defaults and the error, still with status 400", async () => {
+    const { res, html } = await preview("?app=finnes-ikke&sidebar=true");
+    expect(res.status).toBe(400);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(res.headers.get("content-security-policy")).toContain("script-src");
+    expect(html).toContain('class="preview-controls__error" role="alert"');
+    expect(html).toContain("app:");
+    expect(html).not.toContain('class="preview-sidebar"');
+  });
+});
+
+describe("preview page sticky bar", () => {
+  test("the bar stays in view while the controls scroll", async () => {
+    const { html } = await preview();
+    expect(html).toMatch(/#top-navigation \{\s*position: sticky;/);
   });
 });
 
