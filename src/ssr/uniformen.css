@@ -36,7 +36,7 @@
 
 .uniformen-top-nav__nav {
   display: flex;
-  /* For the notifications menu to use screen width as placement base */
+  /* The notifications panel is positioned against this element. */
   position: relative;
   /* Paint the bar and its shadow above the app's content. Without a z-index,
      positioned elements in the app, such as cards, come later in the page and
@@ -222,8 +222,9 @@
   text-box: trim-both cap alphabetic;
 }
 
-/* A triangle pointing down at the badge. Its top is placed 0.5px above the bottom
-   of the strip, so it overlaps the strip whatever the bar and badge heights are.
+/* A triangle pointing down at the badge. It has the strip's colour. Its top is
+   placed 0.5px above the bottom of the strip, so it overlaps the strip whatever the
+   bar and badge heights are.
    `top` is measured from inside the border, so the border width is subtracted. */
 .uniformen-env-badge__pointer {
   position: absolute;
@@ -235,7 +236,7 @@
   width: 1rem;
   height: 0.5rem;
   transform: translateX(-50%);
-  background: var(--uniformen-color-env-pointer);
+  background: var(--uniformen-color-env);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
@@ -396,9 +397,6 @@
   }
   .uniformen-logo__app {
     font-size: var(--uniformen-font-xl);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
 
@@ -493,6 +491,11 @@
   letter-spacing: 0;
   padding: 0;
   margin: 0;
+  /* Keep a name with a space, such as "Ops Center", on one line. When there is not
+     enough room, the name is cut off with an ellipsis. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .uniformen-app-switcher {
@@ -658,6 +661,9 @@
   align-items: center;
 }
 
+/* The panel's right edge is at the right end of the bar. When there is room,
+   `notificationsPanelPlacement` moves the panel so its left edge is under the bell
+   button. The left padding keeps the panel away from the left edge of the screen. */
 .uniformen-notifications-menu__panel {
   position: absolute;
   top: calc(50% + var(--top-nav-height) / 2 + var(--uniformen-space-xs2));
