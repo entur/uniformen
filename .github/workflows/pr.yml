@@ -4,7 +4,7 @@ on:
 
 jobs:
   docker-lint:
-    uses: entur/gha-docker/.github/workflows/lint.yml@dcdc76ce2d251de20f35a92c566d8fe99036e03e # v1.13.0
+    uses: entur/gha-docker/.github/workflows/lint.yml@a1d476b895a271d0fe8557f1b763529b64fb0554 # v1.14.0
 
   helm-lint:
     uses: entur/gha-helm/.github/workflows/lint.yml@080c3d42794f3be06b42e3a81ff23a3a0e3b0235 # v2.1.0
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
           # Dependabot does not update this version. Bump it by hand.
           version: 2026.9.18
@@ -46,7 +46,7 @@ jobs:
         working-directory: packages/uniformen
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
           # Dependabot does not update this version. Bump it by hand.
           version: 2026.9.18
@@ -68,7 +68,7 @@ jobs:
           package_manager: bun
 
   docker-build:
-    uses: entur/gha-docker/.github/workflows/build.yml@dcdc76ce2d251de20f35a92c566d8fe99036e03e # v1.13.0
+    uses: entur/gha-docker/.github/workflows/build.yml@a1d476b895a271d0fe8557f1b763529b64fb0554 # v1.14.0
 
   docker-scan:
     name: Docker Scan
