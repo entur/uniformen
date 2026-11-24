@@ -3,7 +3,7 @@ import { type ChatAccessToken, chatProxyConfig, issueChatToken } from "../chat/c
 import { environment as runningEnvironment, type Environment } from "../config";
 import type { UserMenuUser } from "../components/UserMenu";
 import { Footer } from "./Footer";
-import { PreviewControls } from "./PreviewControls";
+import { PreviewControls, previewViewer } from "./PreviewControls";
 import { PreviewSidebar } from "./PreviewSidebar";
 import { renderComponentToString } from "./renderComponentToString";
 import { sha256Source } from "./sha256";
@@ -14,10 +14,35 @@ import { renderUniformenStyleTag, uniformenCssHash } from "./uniformenStyles";
 import { topNavigationProps, uniformenQuerySchema } from "./uniformenQuery";
 import notificationsDummyData from "./notificationsDummyData.json";
 import { decodeJwt } from "jose";
+import { componentVariables, semantic } from "@entur/tokens";
 import { notificationService } from "../auth/notifications";
 import type { Notifications } from "../types";
 import { uniformenOrigin } from "../auth/browserTokens";
 import { logger } from "../logging/logger";
+
+// Colours from the Entur design system, so the controls look like its components.
+const formComponents = componentVariables.light.components.form;
+const formField = formComponents.baseForm.standard;
+const panel = formComponents.basePanel.standard;
+const checkbox = formComponents.checkbox.standard;
+const radio = formComponents.radio.standard;
+const primaryButton = componentVariables.light.components.button.primary.standard;
+const secondaryButton = componentVariables.light.components.button.secondary.standard;
+const negative = semantic.fill.negative;
+const tint = semantic.fill.background.tint.light;
+const divider = semantic.fill.selected.default.neutral;
+
+/** Returns an SVG icon as a URL for CSS. */
+function svgUrl(svg: string): string {
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+const checkIcon = svgUrl(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" fill="none" stroke="${checkbox.icon}" stroke-width="2"/></svg>`,
+);
+const chevronIcon = svgUrl(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="${formField.icon}" stroke-width="1.5"/></svg>`,
+);
 
 // Base styles for the preview page: fonts and layout. It is a constant so its exact
 // text can be hashed for the CSP `style-src` directive.
@@ -43,15 +68,22 @@ const PREVIEW_BASE_CSS = `
                     *, *::before, *::after { box-sizing: border-box; }
 
                     html, body {
-                        height: 100%;
                         margin: 0;
                         padding: 0;
                     }
 
+                    /* min-height, not height. A sticky element only sticks inside its
+                       parent, so a body as high as the window would let the bar scroll
+                       away at the bottom of a long page. */
+                    html { height: 100%; }
+                    body { min-height: 100%; }
+
                     body {
                         font-family: Nationale, sans-serif;
+                        font-weight: 500;
                         display: flex;
                         flex-direction: column;
+                        background: ${tint};
                     }
                     main { flex: 1 0 auto; display: flex; }
 
@@ -157,135 +189,411 @@ const PREVIEW_BASE_CSS = `
 
                     .preview-sidebar__link:hover { background: #e9eaf3; }
 
-                    /* The parameter controls, in the content area. */
-                    .preview-controls {
-                        flex: 1 1 auto;
-                        /* Without this, a flex item cannot get narrower than its content.
-                           The box would then make the page scroll sideways instead of
-                           putting the two groups in one column. */
-                        min-width: 0;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        gap: 0.75rem;
-                        padding: 2rem 1rem;
-                        color: #181c56;
+                    /* Keep the bar in view while the controls scroll, so every change
+                       can be seen at once. This applies only to the preview page. */
+                    #top-navigation {
+                        position: sticky;
+                        top: 0;
+                        /* Greyed-out controls use opacity, which paints them above an
+                           element without a z-index. This keeps the bar on top. */
+                        z-index: 10;
                     }
 
-                    .preview-controls__form {
-                        width: 100%;
-                        max-width: 52rem;
+                    /* The controls, in the content area. The colours and sizes are
+                       the ones the Entur design system uses for its form components.
+
+                       Three columns: the box for the left part of the bar, the middle
+                       column, and the box for the right part. The middle column has
+                       the card with the other controls and, below it, the code. */
+                    .preview-controls {
+                        display: grid;
+                        grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr) minmax(15rem, 20rem);
+                        grid-template-rows: auto 1fr;
+                        grid-template-areas: "left card right" "left code right";
+                        align-items: start;
+                        gap: 0.75rem;
+                        padding: 0.75rem 1rem 1.5rem;
+                        color: ${formField.textContent};
+                        font-size: 0.875rem;
+                        line-height: 1.25rem;
+                    }
+
+                    /* The boxes and the card are items of the grid above, even though
+                       they are inside the form. */
+                    .preview-controls__form { display: contents; }
+
+                    .preview-controls__section--left { grid-area: left; }
+                    .preview-controls__section--right { grid-area: right; }
+                    .preview-controls__card { grid-area: card; }
+                    .preview-code { grid-area: code; }
+
+                    /* The widths depend on the space next to the example sidebar, so
+                       they use a container query. */
+                    .preview-content {
+                        flex: 1 1 auto;
+                        min-width: 0;
+                        container-type: inline-size;
+                    }
+
+                    @container (max-width: 66rem) {
+                        .preview-controls {
+                            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                            grid-template-rows: auto;
+                            grid-template-areas: "left right" "card card" "code code";
+                        }
+                    }
+
+                    @container (max-width: 38rem) {
+                        .preview-controls {
+                            grid-template-columns: minmax(0, 1fr);
+                            grid-template-areas: "card" "left" "right" "code";
+                        }
+                    }
+
+                    /* Read by screen readers, but not shown. */
+                    .preview-controls__visually-hidden {
+                        position: absolute;
+                        width: 1px;
+                        height: 1px;
+                        overflow: hidden;
+                        clip-path: inset(50%);
+                        white-space: nowrap;
+                    }
+
+                    .preview-controls__form > .preview-controls__section,
+                    .preview-controls__card,
+                    .preview-code {
+                        min-width: 0;
+                        padding: 1rem;
+                        border: 0;
+                        border-radius: 0.5rem;
+                        background: #ffffff;
+                        box-shadow: 0 1px 3px rgba(8, 9, 28, 0.1);
+                    }
+
+                    .preview-controls__form > .preview-controls__section .preview-controls__fields {
+                        grid-template-columns: minmax(0, 1fr);
+                    }
+
+                    .preview-controls__card {
                         display: flex;
                         flex-direction: column;
-                        gap: 1.25rem;
-                        padding: 1.5rem;
-                        border: 1px solid #e5e5e9;
-                        border-radius: 0.5rem;
-                        background: #fff;
+                        gap: 1rem;
                     }
 
                     .preview-controls__title {
                         margin: 0;
                         font-size: 1.25rem;
                         font-weight: 600;
+                        line-height: 1.75rem;
                     }
 
-                    .preview-controls__intro {
-                        margin: -0.75rem 0 0;
-                        font-size: 0.875rem;
-                        color: #4c4f70;
+                    .preview-controls__error,
+                    .preview-controls__note {
+                        margin: 0;
+                        padding: 0.5rem 0.75rem;
+                        border-radius: 0.25rem;
                     }
 
-                    /* The left and right groups, on the same sides as the parts of the
-                       bar they control. When there is not enough room they wrap into one
-                       column, and the group titles show which side is which. */
-                    .preview-controls__sides {
-                        display: flex;
-                        flex-wrap: wrap;
-                        justify-content: space-between;
-                        gap: 1.25rem 2rem;
+                    .preview-controls__error {
+                        border-left: 4px solid ${negative.deep};
+                        background: ${negative.muted};
                     }
 
-                    .preview-controls__group {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 1.25rem;
+                    .preview-controls__note { background: ${tint}; }
+
+                    .preview-controls__section {
+                        margin: 0;
+                        padding: 1rem 0 0;
+                        border: 0;
+                        border-top: 1px solid ${divider};
+                        min-width: 0;
+                    }
+
+                    .preview-controls__section-title {
+                        float: left;
+                        width: 100%;
+                        padding: 0 0 0.5rem;
+                        font-size: 1rem;
+                        font-weight: 600;
+                    }
+
+                    .preview-controls__section--right .preview-controls__section-title {
+                        text-align: right;
+                    }
+
+                    /* Two columns where there is room, one column on narrow screens. */
+                    .preview-controls__fields {
+                        clear: both;
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+                        gap: 0.75rem 1rem;
+                    }
+
+                    .preview-controls__field--wide,
+                    .preview-controls__person { grid-column: 1 / -1; }
+
+                    .preview-controls__person {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+                        gap: 0.75rem 1rem;
                         margin: 0;
                         padding: 0;
                         border: 0;
                         min-width: 0;
                     }
 
-                    .preview-controls__group--left,
-                    .preview-controls__group--right { flex: 0 1 21rem; }
-
-                    /* The group for the whole bar is below the other two, with a line
-                       above it. */
-                    .preview-controls__group--whole {
-                        padding-top: 1.25rem;
-                        border-top: 1px solid #e5e5e9;
-                    }
-
-                    .preview-controls__group-title {
-                        padding: 0 0 0.5rem;
-                        font-size: 0.75rem;
-                        font-weight: 600;
-                        letter-spacing: 0.03em;
-                        text-transform: uppercase;
-                        color: #6b708f;
-                    }
-
-                    .preview-controls__group--right .preview-controls__group-title {
-                        margin-left: auto;
-                    }
+                    .preview-controls__person[hidden] { display: none; }
 
                     .preview-controls__field {
                         display: flex;
                         flex-direction: column;
                         gap: 0.375rem;
+                        min-width: 0;
                     }
 
-                    /* Options in one row, used for the short list of locales. */
-                    .preview-controls__row {
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 0.25rem 1.5rem;
+                    /* A control that has no effect with the other choices. It still
+                       works, so its value is kept for later. */
+                    .preview-controls__field--inactive > :not(.preview-controls__inactive) {
+                        opacity: 0.45;
                     }
 
-                    .preview-controls__label {
-                        font-family: ui-monospace, monospace;
+                    .preview-controls__inactive {
                         font-size: 0.8125rem;
-                        font-weight: 600;
-                        letter-spacing: 0.02em;
+                        font-style: italic;
+                        color: ${panel.textSubdued};
+                    }
+
+                    .preview-controls__head {
+                        display: flex;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 0.5rem;
+                    }
+
+                    .preview-controls__label { font-weight: 600; }
+
+                    /* The query parameter, as a small tag like the package names on
+                       the design system's pages. */
+                    .preview-controls__param {
+                        padding: 0 0.25rem;
+                        border: 1px solid ${formField.borderDefault};
+                        border-radius: 0.125rem;
+                        font-family: ui-monospace, monospace;
+                        font-size: 0.6875rem;
+                        font-weight: 400;
+                        line-height: 1rem;
+                        color: ${panel.textSubdued};
                     }
 
                     .preview-controls__hint {
                         font-size: 0.8125rem;
-                        color: #6b708f;
+                        color: ${panel.textSubdued};
                     }
 
-                    .preview-controls__check {
+                    /* Text fields and menus with the label inside the box. */
+                    .preview-controls__input {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        min-height: 2.5rem;
+                        padding: 0.125rem 0.75rem;
+                        border: 2px solid ${formField.borderDefault};
+                        border-radius: 0.25rem;
+                        background: ${formField.fillDefault};
+                        cursor: text;
+                        transition: border-color 100ms ease-in-out;
+                    }
+
+                    .preview-controls__input:hover,
+                    .preview-controls__input:focus-within {
+                        border-color: ${formField.borderInteractive};
+                    }
+
+                    .preview-controls__input:has(select) { cursor: pointer; }
+
+                    .preview-controls__input-label {
                         display: flex;
                         align-items: center;
-                        gap: 0.5rem;
-                        font-size: 0.875rem;
+                        gap: 0.375rem;
+                        font-size: 0.6875rem;
+                        line-height: 1rem;
+                        color: ${formField.textLabel};
+                    }
+
+                    .preview-controls__input-label .preview-controls__param {
+                        padding: 0;
+                        border: 0;
+                        line-height: inherit;
                     }
 
                     .preview-controls__select,
                     .preview-controls__text {
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        border: 0;
+                        background: transparent;
                         font: inherit;
-                        font-size: 0.875rem;
-                        padding: 0.375rem 0.5rem;
-                        border: 1px solid #b8bad0;
-                        border-radius: 0.25rem;
-                        background: #fff;
-                        color: inherit;
+                        line-height: 1.25rem;
+                        color: ${formField.textContent};
+                        outline: none;
                     }
 
-                    .preview-controls__text { flex: 1 1 auto; min-width: 0; }
+                    .preview-controls__text::placeholder { color: ${panel.textSubdued}; opacity: 0.7; }
 
-                    /* Fixed label width, so the two text fields line up. */
-                    .preview-controls__name { flex: 0 0 5.5rem; }
+                    .preview-controls__select {
+                        appearance: none;
+                        padding-right: 1.5rem;
+                        background: url("${chevronIcon}") no-repeat right center / 1rem;
+                        cursor: pointer;
+                    }
+
+                    .preview-controls__row {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 0.375rem;
+                    }
+
+                    /* The panels in a row share the width. In a narrow box they are
+                       one below the other. */
+                    .preview-controls__row > * { flex: 1 1 auto; }
+
+                    .preview-controls__choices {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.375rem;
+                    }
+
+                    .preview-controls__section--viewer .preview-controls__choices {
+                        flex-direction: row;
+                        flex-wrap: wrap;
+                    }
+
+                    /* Checkboxes and radio buttons in panels with a large click area,
+                       like the checkbox panel in the design system. The first line of
+                       text is as high as the checkbox, so they line up. */
+                    .preview-controls__choice,
+                    .preview-controls__check {
+                        display: grid;
+                        grid-template-columns: auto 1fr;
+                        align-items: center;
+                        align-content: start;
+                        column-gap: 0.5rem;
+                        row-gap: 0.125rem;
+                        padding: 0.5rem 0.75rem;
+                        border: 2px solid ${panel.borderDefault};
+                        border-radius: 0.25rem;
+                        background: #ffffff;
+                        cursor: pointer;
+                        transition: background 100ms ease-in-out, border-color 100ms ease-in-out;
+                    }
+
+                    .preview-controls__choice input { grid-row: span 2; align-self: start; margin-top: 0.0625rem; }
+
+                    .preview-controls__choice .preview-controls__head {
+                        min-height: 1.25rem;
+                        font-weight: 500;
+                    }
+
+                    .preview-controls__choice .preview-controls__hint { grid-column: 2; }
+
+                    /* A link panel: the checkbox row, and the path field below it when
+                       the box is checked. The path lines up with the label text. */
+                    .preview-controls__link {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.375rem;
+                        padding: 0.5rem 0.75rem;
+                        border: 2px solid ${panel.borderDefault};
+                        border-radius: 0.25rem;
+                        background: #ffffff;
+                        transition: background 100ms ease-in-out, border-color 100ms ease-in-out;
+                    }
+
+                    .preview-controls__link:hover { background: ${panel.fillHover}; }
+
+                    .preview-controls__link:has(:checked) {
+                        border-color: ${panel.borderSelected};
+                        background: ${panel.fillSelected};
+                    }
+
+                    .preview-controls__link .preview-controls__choice {
+                        padding: 0;
+                        border: 0;
+                        background: none;
+                    }
+
+                    .preview-controls__path {
+                        width: calc(100% - 1.625rem);
+                        margin-left: 1.625rem;
+                        padding: 0.25rem 0.5rem;
+                        border: 1px solid ${formField.borderDefault};
+                        border-radius: 0.25rem;
+                        background: #ffffff;
+                        font-family: ui-monospace, monospace;
+                        font-size: 0.8125rem;
+                        color: ${formField.textContent};
+                    }
+
+                    .preview-controls__path:hover,
+                    .preview-controls__path:focus { border-color: ${formField.borderInteractive}; outline: none; }
+                    .preview-controls__choices > .preview-controls__choice { flex: 1 1 9rem; }
+
+                    .preview-controls__choice:hover,
+                    .preview-controls__check:hover { background: ${panel.fillHover}; }
+
+                    .preview-controls__choice:has(:checked),
+                    .preview-controls__check:has(:checked) {
+                        border-color: ${panel.borderSelected};
+                        background: ${panel.fillSelected};
+                    }
+
+                    .preview-controls__choice:has(:focus-visible),
+                    .preview-controls__check:has(:focus-visible),
+                    .preview-controls__input:has(:focus-visible),
+                    .preview-controls__path:focus-visible {
+                        outline: 2px solid ${formField.borderInteractive};
+                        outline-offset: 2px;
+                    }
+
+                    /* The locked language cannot be changed, so it does not look
+                       clickable. */
+                    .preview-controls__check:has(:disabled) { cursor: default; }
+                    .preview-controls__check:has(:disabled):hover { background: ${panel.fillSelected}; }
+
+                    /* Checkboxes and radio buttons drawn like the ones in the design
+                       system, with a 2 pixel border. */
+                    .preview-controls__form input:is([type="checkbox"], [type="radio"]) {
+                        appearance: none;
+                        flex: 0 0 auto;
+                        width: 1.125rem;
+                        height: 1.125rem;
+                        margin: 0;
+                        border: 2px solid ${checkbox.border};
+                        background: ${checkbox.fillDefault} no-repeat center / 0.75rem;
+                        cursor: inherit;
+                        outline: none;
+                    }
+
+                    .preview-controls__form input[type="checkbox"] { border-radius: 0.125rem; }
+                    .preview-controls__form input[type="radio"] { border-radius: 50%; }
+
+                    .preview-controls__form input[type="checkbox"]:checked {
+                        background-color: ${checkbox.fillSelected};
+                        background-image: url("${checkIcon}");
+                    }
+
+                    /* A white ring inside the border leaves a dot in the middle. */
+                    .preview-controls__form input[type="radio"]:checked {
+                        background: ${radio.fillSelected};
+                        box-shadow: inset 0 0 0 3px #ffffff;
+                    }
+
+                    .preview-controls__form input[type="checkbox"]:disabled {
+                        border-color: ${panel.textSubdued};
+                        background-color: ${panel.textSubdued};
+                    }
 
                     .preview-controls__actions {
                         display: flex;
@@ -293,105 +601,135 @@ const PREVIEW_BASE_CSS = `
                         gap: 1rem;
                     }
 
+                    /* Buttons like the primary and secondary buttons in the design
+                       system. */
                     .preview-controls__submit {
-                        font: inherit;
-                        font-size: 0.875rem;
-                        font-weight: 600;
-                        padding: 0.5rem 1.25rem;
+                        min-height: 2.25rem;
+                        padding: 0 1rem;
                         border: 0;
                         border-radius: 0.25rem;
-                        background: #181c56;
-                        color: #fff;
+                        background: ${primaryButton.default};
+                        color: ${primaryButton.text};
+                        font: inherit;
+                        font-weight: 500;
                         cursor: pointer;
                     }
 
+                    .preview-controls__submit:hover { background: ${primaryButton.hover}; }
+                    .preview-controls__submit:active { background: ${primaryButton.active}; }
+
                     .preview-controls__reset {
-                        font-size: 0.875rem;
-                        color: #181c56;
+                        font-weight: 500;
+                        color: ${formField.textContent};
                     }
 
-                    .preview-controls__url {
-                        width: 100%;
-                        max-width: 52rem;
+                    /* The code that fetches the layout, and the link to this view. */
+                    .preview-code {
                         display: flex;
-                        align-items: center;
+                        flex-direction: column;
                         gap: 0.75rem;
                     }
 
-                    .preview-controls__url-text {
-                        flex: 1 1 auto;
-                        min-width: 0;
-                        overflow-x: auto;
-                        white-space: nowrap;
-                        font-size: 0.8125rem;
-                        padding: 0.5rem;
-                        border-radius: 0.25rem;
-                        background: #e9eaf3;
+                    .preview-code__title {
+                        margin: 0;
+                        font-size: 1rem;
+                        font-weight: 600;
                     }
 
-                    .preview-controls__copy {
-                        font: inherit;
-                        flex: 0 0 auto;
-                        white-space: nowrap;
-                        font-size: 0.8125rem;
-                        padding: 0.4375rem 0.75rem;
-                        border: 1px solid #b8bad0;
-                        border-radius: 0.25rem;
-                        background: #fff;
-                        color: inherit;
-                        cursor: pointer;
-                    }
-
-                    /* Code that fetches the layout with the selected parameters. */
-                    .preview-code {
-                        width: 100%;
-                        max-width: 52rem;
-                        display: flex;
-                        flex-direction: column;
-                        gap: 0.5rem;
+                    .preview-code__subtitle {
+                        margin: 0.25rem 0 -0.375rem;
+                        font-size: 0.875rem;
+                        font-weight: 600;
                     }
 
                     .preview-code__head {
                         display: flex;
+                        flex-wrap: wrap;
                         align-items: center;
                         justify-content: space-between;
                         gap: 0.75rem;
                     }
 
+                    /* The tabs look like the segmented control in the design system. */
                     .preview-code__tabs {
                         display: flex;
                         flex-wrap: wrap;
                         gap: 0.25rem;
+                        padding: 0.25rem;
+                        border-radius: 0.375rem;
+                        background: ${divider};
                     }
 
                     .preview-code__tab {
                         display: flex;
                         align-items: center;
-                        gap: 0.375rem;
                         padding: 0.375rem 0.75rem;
-                        border: 1px solid #b8bad0;
                         border-radius: 0.25rem;
-                        background: #fff;
                         font-family: ui-monospace, monospace;
                         font-size: 0.8125rem;
                         cursor: pointer;
                     }
 
-                    .preview-code__tab:has(:checked) {
-                        border-color: #181c56;
-                        background: #181c56;
-                        color: #fff;
+                    /* The radio button is hidden but can still be focused. */
+                    .preview-code__tab input {
+                        position: absolute;
+                        opacity: 0;
+                        pointer-events: none;
                     }
 
-                    .preview-code__block {
+                    .preview-code__tab:has(:checked) {
+                        background: #ffffff;
+                        box-shadow: 0 1px 2px rgba(8, 9, 28, 0.15);
+                    }
+
+                    .preview-code__tab:has(:focus-visible) {
+                        outline: 2px solid ${formField.borderInteractive};
+                        outline-offset: 2px;
+                    }
+
+                    .preview-code__block,
+                    .preview-controls__url-text {
                         margin: 0;
-                        overflow-x: auto;
+                        padding: 1rem;
+                        border-radius: 0.25rem;
+                        background: ${tint};
+                        font-family: ui-monospace, monospace;
                         font-size: 0.8125rem;
                         line-height: 1.5;
-                        padding: 0.75rem;
-                        border-radius: 0.25rem;
-                        background: #e9eaf3;
                     }
+
+                    .preview-code__block { overflow-x: auto; }
+
+                    .preview-controls__url {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 0.75rem;
+                    }
+
+                    /* The link wraps at any character, so the box does not scroll
+                       sideways. */
+                    .preview-controls__url-text {
+                        flex: 1 1 auto;
+                        min-width: 0;
+                        overflow-wrap: anywhere;
+                    }
+
+                    .preview-controls__copy {
+                        flex: 0 0 auto;
+                        min-height: 2rem;
+                        padding: 0 0.75rem;
+                        border: 2px solid ${secondaryButton.border};
+                        border-radius: 0.25rem;
+                        background: #ffffff;
+                        color: ${secondaryButton.text};
+                        font: inherit;
+                        font-size: 0.875rem;
+                        font-weight: 500;
+                        white-space: nowrap;
+                        cursor: pointer;
+                    }
+
+                    .preview-controls__copy:hover { background: ${secondaryButton.hover}; }
 
                     /* Show only the block for the checked tab. */
                     .preview-code:has([value=layout]:checked) [data-preview-code=react],
@@ -426,6 +764,48 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
 
   const controls = document.querySelector<HTMLFormElement>("[data-preview-controls]");
   controls?.addEventListener("submit", () => {
+    // "Hvem ser på?" sets debugUser and debugEnturUser. A signed-in user needs a
+    // name, so fill in the default name when the field is empty.
+    const viewer = controls.querySelector<HTMLInputElement>("[data-preview-viewer]:checked");
+    const person = controls.querySelector<HTMLFieldSetElement>("[data-preview-person]");
+    const userName = controls.querySelector<HTMLInputElement>("input[name=debugUser]");
+    const entur = controls.querySelector<HTMLInputElement>("[data-preview-entur]");
+    if (viewer && person && userName && entur) {
+      const signedIn = viewer.value !== "anonymous";
+      person.disabled = !signedIn;
+      if (signedIn && !userName.value.trim()) userName.value = userName.dataset["default"] ?? "";
+      entur.disabled = viewer.value !== "entur";
+    }
+
+    // "Varsler" sets hideNotifications, or debugNotifications when it is not the
+    // default "max".
+    const notifications = controls.querySelector<HTMLInputElement>(
+      "[data-preview-notifications]:checked",
+    )?.value;
+    const hide = controls.querySelector<HTMLInputElement>("[data-preview-hide-notifications]");
+    const count = controls.querySelector<HTMLInputElement>("[data-preview-notifications-count]");
+    if (notifications && hide) hide.disabled = notifications !== "hidden";
+    if (notifications && count) {
+      count.value = notifications;
+      count.disabled = notifications === "hidden" || notifications === "max";
+    }
+
+    // A checked link box turns its path on. An empty path gets the default path.
+    for (const toggle of controls.querySelectorAll<HTMLInputElement>("[data-preview-link]")) {
+      const path = controls.querySelector<HTMLInputElement>(
+        `[name=${toggle.dataset["previewLink"]}]`,
+      );
+      if (!path) continue;
+      path.disabled = !toggle.checked;
+      if (toggle.checked && !path.value.trim()) path.value = path.dataset["default"] ?? "";
+    }
+
+    // The radio buttons and boxes above are not parameters, so they are not submitted.
+    const helpers = controls.querySelectorAll<HTMLInputElement>(
+      "[data-preview-viewer], [data-preview-notifications], [data-preview-link]",
+    );
+    for (const helper of helpers) helper.disabled = true;
+
     const fields = controls.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
       "input[type=text], select",
     );
@@ -452,16 +832,20 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
   const FOCUS_KEY = "uniformen-preview-focus";
   controls?.addEventListener("change", (event) => {
     const field = event.target;
-    // Submitting loads a new page, which loses focus. Save the control's name and value
-    // so it can be focused again, even if the form renders differently.
+    // Submitting loads a new page, which loses focus and scroll position. Save the
+    // control's name and value and the scroll position, so they can be restored, even
+    // if the form renders differently.
     if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
-      sessionStorage.setItem(FOCUS_KEY, `${field.name}\n${field.value}`);
+      sessionStorage.setItem(FOCUS_KEY, `${field.name}\n${field.value}\n${window.scrollY}`);
     }
     controls.requestSubmit();
   });
 
-  const [name = "", value = ""] = (sessionStorage.getItem(FOCUS_KEY) ?? "").split("\n");
+  const [name = "", value = "", scroll = ""] = (sessionStorage.getItem(FOCUS_KEY) ?? "").split(
+    "\n",
+  );
   sessionStorage.removeItem(FOCUS_KEY);
+  if (scroll) window.scrollTo(0, Number(scroll));
   if (controls && name) {
     // Radio buttons and checkboxes share a name, so use the value to find the right one.
     // If that finds nothing, for example for a text field, find the control by name only.
@@ -471,7 +855,7 @@ const PREVIEW_SCRIPT = `(${function previewHandlers() {
           `[name=${CSS.escape(name)}][value=${CSS.escape(value)}]`,
         )) ||
       controls.querySelector<HTMLElement>(`[name=${CSS.escape(name)}]`);
-    field?.focus();
+    field?.focus({ preventScroll: true });
   }
 
   // Copies `text` and shows the result on the button. If the clipboard is blocked, it
@@ -628,14 +1012,15 @@ export async function previewNotifications({
 
 /**
  * Checks whether the preview bar is rendered for an Entur user, which shows the
- * environment chip and switcher. Always false in production, for the same reason
+ * environment chip and switcher. It needs `debugUser` too, because a user who is not
+ * signed in cannot be an Entur user. Always false in production, for the same reason
  * as in `previewUser`.
  */
 export function previewIsEnturUser(
-  { debugEnturUser }: Pick<PreviewQuery, "debugEnturUser">,
+  query: Pick<PreviewQuery, "debugUser" | "debugEnturUser">,
   environment: Environment = runningEnvironment,
 ): boolean {
-  return environment !== "production" && debugEnturUser === "true";
+  return previewViewer(query, environment) === "entur";
 }
 
 /**
@@ -666,22 +1051,48 @@ export function previewRoutes(server: OpenAPIHono): void {
     },
   });
 
-  server.openapi(previewRoute, async (ctx) => {
-    ctx.header("Content-Security-Policy", previewCsp);
-    // Never cache this developer tool. Its output depends on the instance's
-    // environment as well as on the URL.
-    ctx.header("Cache-Control", "no-store");
-    const query = ctx.req.valid("query");
-    const navProps = topNavigationProps(query);
-    const user = previewUser(query);
-    // With `?sidebar=true`, also render the example sidebar, so the collapse button
-    // has something to collapse.
-    const sidebar = navProps.sidebar ? await renderComponentToString(<PreviewSidebar />) : "";
-    const notifications =
-      navProps.simple || navProps.hideNotifications ? undefined : await previewNotifications(query);
+  server.openapi(
+    previewRoute,
+    async (ctx) => htmlResponse(await renderPreviewPage(ctx.req.valid("query")), 200),
+    // A rejected query shows the page with the default values and the error, instead
+    // of a JSON error. The status is still 400.
+    (result): Promise<Response> | undefined => {
+      if (result.success) return undefined;
+      const error = result.error.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join(" ");
+      return renderPreviewPage(previewQuerySchema.parse({}), error).then((html) =>
+        htmlResponse(html, 400),
+      );
+    },
+  );
+}
 
-    // The locale codes are valid BCP 47 language tags.
-    return ctx.html(`
+function htmlResponse(html: string, status: number): Response {
+  return new Response(html, {
+    status,
+    headers: {
+      "Content-Type": "text/html; charset=UTF-8",
+      "Content-Security-Policy": previewCsp,
+      // Never cache this developer tool. Its output depends on the instance's
+      // environment as well as on the URL.
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+/** Returns the preview page for a validated query. `error` is shown above the controls. */
+async function renderPreviewPage(query: PreviewQuery, error?: string): Promise<string> {
+  const navProps = topNavigationProps(query);
+  const user = previewUser(query);
+  // With `?sidebar=true`, also render the example sidebar, so the collapse button
+  // has something to collapse.
+  const sidebar = navProps.sidebar ? await renderComponentToString(<PreviewSidebar />) : "";
+  const notifications =
+    navProps.simple || navProps.hideNotifications ? undefined : await previewNotifications(query);
+
+  // The locale codes are valid BCP 47 language tags.
+  return `
         <html lang="${navProps.locale}"${query.colorMode === "dark" ? ' data-color-mode="dark"' : ""}>
             <head>
                 <meta charset="UTF-8" />
@@ -706,13 +1117,12 @@ export function previewRoutes(server: OpenAPIHono): void {
                 )}
                 <main>
                     ${sidebar}
-                    ${await renderComponentToString(<PreviewControls query={query} />)}
+                    <div class="preview-content">${await renderComponentToString(<PreviewControls query={query} error={error} />)}</div>
                 </main>
                 ${await renderComponentToString(<Footer contrast={navProps.contrast} />)}
                 ${renderUniformenScripts()}
                 <script>${PREVIEW_SCRIPT}</script>
             </body>
         </html>
-    `);
-  });
+    `;
 }
