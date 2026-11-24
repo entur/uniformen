@@ -8,6 +8,17 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-24
+
+### Changed
+
+- The top bar has a 1px border along the bottom in contrast mode and dark mode.
+- The divider between the menu items in the top bar is darker in dark mode.
+- The environment strip along the top and the arrow above the environment badge
+  have their own colours in contrast mode, so they match the badge. The staging
+  strip is a darker yellow in light mode and dark mode.
+- The header and footer have a lighter background in dark mode.
+
 ## 2026-11-23
 
 ### Changed

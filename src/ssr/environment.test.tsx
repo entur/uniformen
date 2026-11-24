@@ -105,12 +105,25 @@ describe("badge colours per mode", () => {
     }
   });
 
-  test("the pointer uses the strip colour, which no colour mode changes", () => {
+  test("the pointer and the strip use the same colour variable", () => {
     const pointerRule = uniformenCss.match(/\.uniformen-env-badge__pointer \{[^}]*\}/)?.[0];
     expect(pointerRule).toContain("background: var(--uniformen-color-env);");
+    expect(uniformenCss).toContain(
+      "border-top: var(--uniformen-env-strip-height) solid var(--uniformen-color-env);",
+    );
+  });
+
+  test("contrast and dark mode set their own strip colour", () => {
     for (const env of ENVIRONMENTS) {
-      expect(buildEnvModeVars(env)).not.toContain("--uniformen-color-env:");
+      expect(buildEnvModeVars(env).match(/--uniformen-color-env:/g)).toHaveLength(2);
     }
+  });
+
+  test("the dev strip in contrast mode matches the badge fill", () => {
+    const contrast = buildEnvModeVars("dev").split("[data-color-mode")[0] ?? "";
+    const strip = contrast.match(/--uniformen-color-env: ([^;]+);/)?.[1];
+    const fill = contrast.match(/--uniformen-color-env-fill: ([^;]+);/)?.[1];
+    expect(strip).toBe(fill);
   });
 
   test("dark mode has a hover colour that differs from the fill", () => {

@@ -6,7 +6,8 @@
   --uniformen-surface-hover: var(--uniformen-color-blue-20);
   --uniformen-surface-active: var(--uniformen-color-brand-lavender);
   --uniformen-on-surface: var(--uniformen-color-brand-blue);
-  --uniformen-divider: var(--uniformen-color-grey-30);
+  --uniformen-divider: var(--uniformen-color-stroke-neutral);
+  --uniformen-bar-border: var(--uniformen-color-stroke-colorless);
   --uniformen-panel: var(--uniformen-color-brand-white);
   --uniformen-panel-body: var(--uniformen-color-blue-90);
   --uniformen-panel-hover: var(--uniformen-color-menu-hover);
@@ -52,6 +53,7 @@
   box-sizing: border-box;
   height: var(--top-nav-height);
   padding: 0 var(--uniformen-space-medium);
+  border-bottom: 1px solid var(--uniformen-bar-border);
   box-shadow: var(--uniformen-shadow-bar);
 }
 
@@ -222,7 +224,8 @@
   text-box: trim-both cap alphabetic;
 }
 
-/* A triangle pointing down at the badge. It has the strip's colour. Its top is
+/* A triangle pointing down at the badge. It has the strip's colour in every colour
+   mode, so it looks like part of the strip. Its top is
    placed 0.5px above the bottom of the strip, so it overlaps the strip whatever the
    bar and badge heights are.
    `top` is measured from inside the border, so the border width is subtracted. */
