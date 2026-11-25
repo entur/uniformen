@@ -48,11 +48,13 @@ const darkForm = componentVariables.dark.components.form.baseForm;
 // The `rem` fields in @entur/tokens are numbers without a unit (px divided by 16).
 const rem = (n: number) => `${n}rem`;
 
-// Colours for one environment badge in one colour mode. `fill` and `fillHover` are
-// the badge background, and `text` is used for the label and the chevron. The
-// border is 2px wide in every mode. A transparent border keeps the badge the same
-// size as one with a visible border.
+// Colours for one environment in one colour mode. `strip` is the strip along the top
+// of the header and the pointer above the badge. `fill` and `fillHover` are the badge
+// background, and `text` is used for the label and the chevron. The border is 2px
+// wide in every mode. A transparent border keeps the badge the same size as one with
+// a visible border.
 type EnvBadgeColors = {
+  strip: string;
   fill: string;
   fillHover: string;
   border: string;
@@ -60,34 +62,34 @@ type EnvBadgeColors = {
 };
 
 type EnvPalette = {
-  // The strip along the top of the header and the pointer above the badge. They have
-  // the same colour in every mode, so the pointer looks like part of the strip.
-  strip: string;
   standard: EnvBadgeColors;
   contrast: EnvBadgeColors;
   dark: EnvBadgeColors;
 };
 
-// Colours per environment, from the design's "Miljøswitch" component. The design
+// Colours per environment, from the design's "Miljøswitch" and "Topbar" components.
+// Production has no strip, so its strip colour is never seen. The design
 // has no hover colour for dark mode, so the hover colours there are one step lighter
 // on the same scale. The design has no colours for local, so they are picked by hand.
 // Every text colour has a contrast of at least 4.5:1 on its fill.
 const ENV_PALETTES = {
   local: {
-    strip: "#B482FB",
     standard: {
+      strip: "#B482FB",
       fill: "#F0E7FF",
       fillHover: "#E0CCFE",
       border: "#B482FB",
       text: semantic.text.accent,
     },
     contrast: {
+      strip: "#B482FB",
       fill: "#B482FB",
       fillHover: "#E0CCFE",
       border: semantic.stroke.colorless,
       text: semantic.text.accent,
     },
     dark: {
+      strip: "#B482FB",
       fill: "#24123F",
       fillHover: "#3D2266",
       border: "#B482FB",
@@ -95,20 +97,22 @@ const ENV_PALETTES = {
     },
   },
   dev: {
-    strip: primitive.mint._60,
     standard: {
+      strip: semantic.stroke.success,
       fill: semantic.fill.success.muted,
       fillHover: semantic.fill.success.tint,
       border: semantic.stroke.success,
       text: semantic.text.accent,
     },
     contrast: {
+      strip: semantic.stroke.successalt,
       fill: semantic.fill.success.contrast,
       fillHover: semantic.fill.success.tint,
       border: semantic.stroke.colorless,
       text: semantic.text.accent,
     },
     dark: {
+      strip: semantic.stroke.success,
       fill: semantic.fill.success.accent,
       fillHover: primitive.mint._90,
       border: semantic.stroke.success,
@@ -116,20 +120,22 @@ const ENV_PALETTES = {
     },
   },
   staging: {
-    strip: primitive.canary._60,
     standard: {
+      strip: semantic.stroke.warning,
       fill: semantic.fill.warning.muted,
       fillHover: semantic.fill.warning.tint,
       border: semantic.stroke.warning,
       text: semantic.text.accent,
     },
     contrast: {
+      strip: semantic.fill.warning.contrast,
       fill: semantic.fill.warning.contrast,
       fillHover: semantic.fill.warning.tint,
       border: semantic.stroke.colorless,
       text: semantic.text.accent,
     },
     dark: {
+      strip: semantic.stroke.warning,
       fill: semantic.fill.warning.accent,
       fillHover: primitive.canary._90,
       border: semantic.stroke.warning,
@@ -137,20 +143,22 @@ const ENV_PALETTES = {
     },
   },
   production: {
-    strip: primitive.blue._60,
     standard: {
+      strip: semantic.stroke.colorless,
       fill: secondaryButton.standard.default,
       fillHover: secondaryButton.standard.hover,
       border: semantic.stroke.subdued,
       text: semantic.text.accent,
     },
     contrast: {
+      strip: semantic.stroke.colorless,
       fill: secondaryButton.contrast.default,
       fillHover: secondaryButton.contrast.hover,
       border: semantic.stroke.subdued,
       text: semantic.text.light,
     },
     dark: {
+      strip: semantic.stroke.colorless,
       fill: secondaryButton.standard.default,
       fillHover: darkSecondaryButton.standard.hover,
       border: semantic.stroke.subdued,
@@ -159,15 +167,17 @@ const ENV_PALETTES = {
   },
 } satisfies Record<Environment, EnvPalette>;
 
-/** Returns the CSS variables for the environment badge in one colour mode. */
-const envBadgeVars = (c: EnvBadgeColors): string => `  --uniformen-color-env-fill: ${c.fill};
+/** Returns the CSS variables for the strip and the badge in one colour mode. */
+const envBadgeVars = (c: EnvBadgeColors): string => `  --uniformen-color-env: ${c.strip};
+  --uniformen-color-env-fill: ${c.fill};
   --uniformen-color-env-fill-hover: ${c.fillHover};
   --uniformen-color-env-border: ${c.border};
   --uniformen-color-env-text: ${c.text};
 `;
 
 /**
- * Returns the badge colours for contrast mode and dark mode, for one environment.
+ * Returns the strip and badge colours for contrast mode and dark mode, for one
+ * environment.
  * The dark selector has two parts, so it wins over `.uniformen-contrast`. A contrast
  * header in dark mode gets the dark colours, as in the design.
  */
@@ -207,9 +217,9 @@ export function buildRootVars(env: Environment): string {
   --uniformen-color-blue-70: ${colors.blues.blue70};
   --uniformen-color-blue-80: ${colors.blues.blue80};
   --uniformen-color-blue-90: ${colors.blues.blue90};
-  --uniformen-color-grey-30: ${primitive.grey._30};
+  --uniformen-color-stroke-neutral: ${semantic.stroke.neutral};
+  --uniformen-color-stroke-colorless: ${semantic.stroke.colorless};
   --uniformen-color-menu-hover: ${sideNavigation.standard.fill.hover};
-  --uniformen-color-env: ${palette.strip};
 ${envBadgeVars(palette.standard)}  --uniformen-env-strip-height: ${envStripHeight(env)};
   --uniformen-space-xs2: ${rem(space.rem.extraSmall2)};
   --uniformen-space-xs: ${rem(space.rem.extraSmall)};
@@ -283,14 +293,15 @@ const PANELS = [
  * values inside the panels. It also sets the text colour again, because text without
  * its own colour inherits the white text colour of the bar.
  *
- * The environment badge gets its contrast colours from `buildEnvModeVars`.
+ * The environment strip and badge get their contrast colours from `buildEnvModeVars`.
  */
 const CONTRAST_VARS = `.uniformen-contrast {
   --uniformen-surface: ${semantic.fill.background.contrast.lightalt2};
   --uniformen-surface-hover: ${semantic.fill.background.contrast.lightalt};
   --uniformen-surface-active: ${semantic.fill.selected.hover.contrast};
   --uniformen-on-surface: ${semantic.text.light};
-  --uniformen-divider: ${semantic.fill.selected.hover.contrast};
+  --uniformen-divider: ${semantic.stroke.contrastalt};
+  --uniformen-bar-border: ${semantic.stroke.contrastalt};
   --uniformen-shadow-bar: ${shadows.boxShadowContrast};
   --uniformen-shadow-focus: ${shadows.focusContrast};
   --uniformen-secondary: ${secondaryButton.contrast.default};
@@ -336,11 +347,12 @@ const topbarDark = componentColors.dark.components.menu.topbar.contrast;
  */
 const DARK_VARS = `[data-color-mode="dark"] :is(.uniformen-top-nav, .uniformen-footer, ${PANELS}) {
   color-scheme: dark;
-  --uniformen-surface: ${topbarDark.background};
+  --uniformen-surface: ${semantic.fill.background.subdued.dark};
   --uniformen-surface-hover: ${topbarDark.fillHover};
   --uniformen-surface-active: ${semantic.fill.selected.hover.dark};
   --uniformen-on-surface: ${topbarDark.text};
-  --uniformen-divider: ${topbarDark.divide};
+  --uniformen-divider: ${semantic.fill.selected.default.darktint};
+  --uniformen-bar-border: ${semantic.fill.selected.default.darktint};
   --uniformen-panel: ${semantic.fill.background.overlay.solid};
   --uniformen-panel-body: ${semantic.fill.background.subdued.dark};
   --uniformen-panel-hover: ${semantic.fill.background.overlay.solidalt};
