@@ -8,6 +8,12 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-26
+
+### Changed
+
+- The top bar has no drop shadow along the bottom in contrast mode.
+
 ## 2026-11-24
 
 ### Changed

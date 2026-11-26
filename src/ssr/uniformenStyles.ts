@@ -302,7 +302,7 @@ const CONTRAST_VARS = `.uniformen-contrast {
   --uniformen-on-surface: ${semantic.text.light};
   --uniformen-divider: ${semantic.stroke.contrastalt};
   --uniformen-bar-border: ${semantic.stroke.contrastalt};
-  --uniformen-shadow-bar: ${shadows.boxShadowContrast};
+  --uniformen-shadow-bar: none;
   --uniformen-shadow-focus: ${shadows.focusContrast};
   --uniformen-secondary: ${secondaryButton.contrast.default};
   --uniformen-secondary-hover: ${secondaryButton.contrast.hover};
