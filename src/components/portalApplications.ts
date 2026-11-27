@@ -50,6 +50,16 @@ const APPLICATIONS = [
     },
   },
   {
+    id: "backoffice",
+    appName: "ID-basert Backoffice",
+    unlisted: true,
+    hosts: {
+      dev: "backoffice-abt.dev.entur.org",
+      staging: "backoffice-abt.staging.entur.org",
+      production: "backoffice-abt.entur.org",
+    },
+  },
+  {
     id: "miljokalkulator",
     appName: "Miljøkalkulator",
     unlisted: true,

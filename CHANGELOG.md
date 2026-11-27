@@ -8,6 +8,14 @@ next request, whatever version of [`@entur/uniformen`](./packages/uniformen) it 
 That is why entries have dates instead of version numbers. Changes to the package's
 API are listed in [its own changelog](./packages/uniformen/CHANGELOG.md).
 
+## 2026-11-27
+
+### Added
+
+- `app=backoffice` shows "ID-basert Backoffice" next to the logo. The app is
+  not listed in the app switcher.
+- The bar shows the signed-in user for an ID-basert Backoffice access token.
+
 ## 2026-11-26
 
 ### Changed
