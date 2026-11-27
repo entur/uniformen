@@ -1,7 +1,10 @@
 import { createElement, type FC, type ScriptHTMLAttributes } from "react";
 import parse, { attributesToProps, Element } from "html-react-parser";
-import { fetchUniformenLayout, type FetchUniformenLayoutProps } from "./lib/fetchUniformenLayout";
-import type { UniformenLayout } from "./types";
+import {
+  fetchUniformenLayout,
+  type FetchUniformenLayoutProps,
+} from "./lib/fetchUniformenLayout.js";
+import type { UniformenLayout } from "./types.js";
 
 /**
  * A component that renders one `<script>` element, for example `Script` from

@@ -1,4 +1,4 @@
-import type { Locale } from "../types";
+import type { Locale } from "../types.js";
 
 /** The name of the cookie that stores the user's language choice. */
 export const LOCALE_COOKIE = "entur_locale";
