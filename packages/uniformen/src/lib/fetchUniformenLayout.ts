@@ -1,6 +1,6 @@
-import type { Environment, UniformenLayout, FetchUniformenParams } from "../types";
-import { PACKAGE_VERSION } from "../version";
-import { cacheGeneration, clearCache, readCache, writeCache } from "./layoutCache";
+import type { Environment, UniformenLayout, FetchUniformenParams } from "../types.js";
+import { PACKAGE_VERSION } from "../version.js";
+import { cacheGeneration, clearCache, readCache, writeCache } from "./layoutCache.js";
 
 /**
  * How long to wait for the layout, retry included, before the call gives up. Every

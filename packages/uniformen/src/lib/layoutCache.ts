@@ -1,4 +1,4 @@
-import type { UniformenLayout } from "../types";
+import type { UniformenLayout } from "../types.js";
 
 /**
  * How long a cached layout can be used when Uniformen fails. An anonymous layout is
