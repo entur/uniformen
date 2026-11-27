@@ -13,7 +13,7 @@ export type FetchUniformenParams = {
    * call returns `null`.
    */
   app?:
-    | "abt-backoffice"
+    | "backoffice"
     | "bedrift"
     | "cleos"
     | "miljokalkulator"
